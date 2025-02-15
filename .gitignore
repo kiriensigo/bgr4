@@ -1,0 +1,20 @@
+# Rails
+/bgr4-api/tmp/
+/bgr4-api/log/
+/bgr4-api/.env
+/bgr4-api/config/master.key
+/bgr4-api/config/credentials.yml.enc
+/bgr4-api/storage/
+/bgr4-api/public/assets
+
+# Next.js
+/bgr4-front/.next/
+/bgr4-front/node_modules/
+/bgr4-front/.env
+/bgr4-front/.env.local
+/bgr4-front/out/
+/bgr4-front/build/
+
+# その他
+.DS_Store
+*.log 
