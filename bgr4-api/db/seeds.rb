@@ -10,70 +10,29 @@
 
 # サンプルユーザーの作成
 user = User.create!(
-  username: "test_user",
+  name: "test_user",
   email: "test@example.com",
-  password: "password123"
+  password: "Password123"
 )
 
-# サンプルゲームデータの作成
-games = [
-  {
-    name: "カタン",
-    description: "資源を集めて開拓地を発展させる定番ボードゲーム。プレイヤーは開拓者となり、資源を集めて道路や集落を建設し、勝利点を競い合います。",
-    image_url: "http://localhost:3001/images/games/catan.jpg",
-    min_players: 3,
-    max_players: 4,
-    play_time: 90,
-    average_score: 8.5
-  },
-  {
-    name: "カルカソンヌ",
-    description: "タイルを配置して街や道路を作っていく戦略ゲーム。中世フランスの街を舞台に、城壁や修道院、道路を作りながら領地を広げていきます。",
-    image_url: "http://localhost:3001/images/games/carcassonne.jpg",
-    min_players: 2,
-    max_players: 5,
-    play_time: 45,
-    average_score: 8.0
-  },
-  {
-    name: "ドミニオン",
-    description: "デッキ構築型カードゲームの先駆け。中世の領主となって領地を広げ、効率的なデッキを作り上げていきます。",
-    image_url: "/images/games/dominion.jpg",
-    min_players: 2,
-    max_players: 4,
-    play_time: 30,
-    average_score: 8.2
-  },
-  {
-    name: "パンデミック",
-    description: "協力型ボードゲーム。プレイヤーたちは疾病対策チームのメンバーとなり、世界的な感染症の蔓延を防ぐために協力します。",
-    image_url: "/images/games/pandemic.jpg",
-    min_players: 2,
-    max_players: 4,
-    play_time: 60,
-    average_score: 8.7
-  },
-  {
-    name: "宝石の煌き",
-    description: "宝石商となってトークンを集め、カードを獲得していく軽量級エンジンビルディングゲーム。",
-    image_url: "/images/games/splendor.jpg",
-    min_players: 2,
-    max_players: 4,
-    play_time: 30,
-    average_score: 7.8
-  }
-]
+# BGGから人気ゲームを取得して保存
+popular_games = BggService.get_popular_games(20)
+popular_games.each do |game_data|
+  game = Game.create!(
+    bgg_id: game_data[:bgg_id],
+    name: game_data[:name],
+    description: game_data[:description],
+    image_url: game_data[:image_url],
+    min_players: game_data[:min_players],
+    max_players: game_data[:max_players],
+    play_time: game_data[:play_time],
+    average_score: game_data[:average_score]
+  )
 
-# ゲームデータの作成
-games.each do |game_data|
-  Game.create!(game_data)
-end
-
-# サンプルレビューの作成
-Game.all.each do |game|
+  # サンプルレビューの作成
   Review.create!(
     user: user,
-    game_id: game.id.to_s,
+    game: game,
     overall_score: rand(6.0..9.0).round(1),
     play_time: rand(1..5),
     rule_complexity: rand(1.0..5.0).round(1),

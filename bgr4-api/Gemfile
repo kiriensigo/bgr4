@@ -38,6 +38,9 @@ gem "rack-cors"
 # Use JWT for token-based authentication
 gem "jwt"
 
+# HTTP通信用のgem
+gem 'http'
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

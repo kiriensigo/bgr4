@@ -5,6 +5,24 @@ class ApplicationController < ActionController::API
   # ログ出力を追加
   before_action :log_request_details
 
+  def authenticate_user!
+    unless current_user
+      render json: { error: '認証が必要です' }, status: :unauthorized
+    end
+  end
+
+  def current_user
+    return nil unless request.headers['Authorization']
+    
+    token = request.headers['Authorization'].split(' ').last
+    begin
+      decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base, true, algorithm: 'HS256')
+      User.find(decoded_token[0]['user_id'])
+    rescue JWT::DecodeError, ActiveRecord::RecordNotFound
+      nil
+    end
+  end
+
   private
 
   def not_found

@@ -12,8 +12,6 @@ class User < ApplicationRecord
                                message: 'は英大文字・小文字・数字をそれぞれ1文字以上含む必要があります' },
                       if: -> { new_record? || changes[:password_digest] }
 
-  validates :password_digest, presence: true
-
   before_save :downcase_email
 
   private
@@ -21,4 +19,4 @@ class User < ApplicationRecord
   def downcase_email
     self.email = email.downcase
   end
-end
+end 

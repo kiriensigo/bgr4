@@ -24,7 +24,7 @@ class CreateReviews < ActiveRecord::Migration[7.0]
       t.timestamps
     end
 
-    add_index :reviews, [:user_id, :game_id], unique: true
+    add_index :reviews, [:user_id, :game_id]
     add_index :reviews, :game_id
   end
 end 

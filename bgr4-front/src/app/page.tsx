@@ -11,6 +11,8 @@ import {
   Container,
   Box,
   CircularProgress,
+  Paper,
+  Rating,
 } from "@mui/material";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,14 +21,15 @@ import type { BGGGame } from "@/lib/bggApi";
 export default function Home() {
   const [hotGames, setHotGames] = useState<BGGGame[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
         const games = await getHotGames();
         setHotGames(games);
-      } catch (error) {
-        console.error("Error fetching games:", error);
+      } catch (err) {
+        setError('ゲームの取得に失敗しました');
       } finally {
         setLoading(false);
       }
@@ -37,112 +40,87 @@ export default function Home() {
 
   if (loading) {
     return (
-      <Container maxWidth="lg">
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            minHeight: "60vh",
-          }}
-        >
+      <Container>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />
         </Box>
       </Container>
     );
   }
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 6 }}>
-        <Typography
-          variant="h3"
-          component="h1"
-          align="center"
-          gutterBottom
-          sx={{
-            fontWeight: "bold",
-            color: "primary.main",
-          }}
-        >
-          人気のボードゲーム
+  if (error) {
+    return (
+      <Container>
+        <Typography color="error" align="center" sx={{ py: 8 }}>
+          {error}
         </Typography>
-        <Typography
-          variant="h6"
-          align="center"
-          color="text.secondary"
-          sx={{ mb: 6 }}
-        >
-          BoardGameGeekで注目を集めているゲーム
-        </Typography>
-      </Box>
+      </Container>
+    );
+  }
 
-      <Grid container spacing={4}>
-        {hotGames.slice(0, 12).map((game) => (
-          <Grid item key={game.id} xs={12} sm={6} md={4} lg={3}>
-            <Link href={`/games/${game.id}`} style={{ textDecoration: "none" }}>
-              <Card
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: 6,
-                  },
-                }}
-              >
-                <Box sx={{ position: "relative", pt: "100%" }}>
-                  <Image
-                    src={game.thumbnail || "/images/placeholder.jpg"}
-                    alt={game.name}
-                    fill
-                    style={{
-                      objectFit: "contain",
-                      padding: "8px",
-                    }}
-                  />
-                </Box>
-                <CardContent>
-                  <Typography
-                    gutterBottom
-                    variant="h6"
-                    component="h2"
-                    noWrap
-                    sx={{
-                      fontWeight: "bold",
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4 }}>
+        人気のボードゲーム
+      </Typography>
+
+      <Grid container spacing={3}>
+        {hotGames.map((game) => (
+          <Grid item xs={12} sm={6} md={4} key={game.id}>
+            <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box>
+                <Link href={`/games/${game.id}`}>
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      width: '100%',
+                      paddingTop: '100%',
                       mb: 2,
+                      overflow: 'hidden',
+                      borderRadius: 1
                     }}
                   >
-                    {game.name}
+                    {game.thumbnail && (
+                      <Image
+                        src={game.thumbnail}
+                        alt={game.name}
+                        fill
+                        style={{ 
+                          objectFit: 'cover',
+                          objectPosition: 'center'
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Link>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Link href={`/games/${game.id}`}>
+                    <Typography variant="h6" component="h2" gutterBottom noWrap>
+                      {game.name}
+                    </Typography>
+                  </Link>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Rating 
+                      value={game.averageRating ? game.averageRating / 2 : 0} 
+                      precision={0.5} 
+                      readOnly 
+                      size="small" 
+                    />
+                    {game.averageRating && (
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        {game.averageRating.toFixed(1)}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    プレイ人数: {game.minPlayers}-{game.maxPlayers}人
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      評価: {game.averageRating.toFixed(1)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      #{game.rank}位
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {game.yearPublished}年 • {game.minPlayers}-
-                      {game.maxPlayers}人
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      プレイ時間: {game.playingTime}分
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Link>
+                  <Typography variant="body2" color="text.secondary">
+                    プレイ時間: {game.playingTime}分
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
           </Grid>
         ))}
       </Grid>

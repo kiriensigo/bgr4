@@ -52,20 +52,21 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
 
   const [review, setReview] = useState({
-    overallScore: 5,
-    playTime: 3,
-    ruleComplexity: 3,
-    luckFactor: 3,
+    overall_score: 5,
+    play_time: 3,
+    rule_complexity: 3,
+    luck_factor: 3,
     interaction: 3,
     downtime: 3,
-    recommendedPlayers: [] as string[],
+    recommended_players: [] as string[],
     mechanics: [] as string[],
     tags: [] as string[],
-    customTags: '',
-    shortComment: '',
+    custom_tags: '',
+    short_comment: '',
   })
 
   const playTimeMarks = [
@@ -110,7 +111,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement> | any) => {
     const { name, value, type, checked } = e.target
 
-    if (name === 'customTags') {
+    if (name === 'custom_tags') {
       const normalizedValue = value.replace(/　/g, ' ').replace(/\s+/g, ' ')
       setReview(prev => ({
         ...prev,
@@ -133,25 +134,18 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!review.shortComment.trim()) {
-      setFlashMessage('一言コメントは必須です')
-      return
-    }
-
+    setSubmitting(true)
     try {
       await postReview(params.id, review)
-      setFlashMessage('レビューを投稿しました')
-      
-      setTimeout(() => {
-        router.push(`/games/${params.id}`)
-      }, 2000)
+      router.push(`/games/${params.id}`)
     } catch (error) {
-      if (error instanceof Error) {
-        setFlashMessage(error.message)
+      if (error instanceof Error && error.message === 'ログインが必要です') {
+        router.push('/login?redirect=' + encodeURIComponent(`/games/${params.id}/review`))
       } else {
-        setFlashMessage('レビューの投稿に失敗しました')
+        setError(error instanceof Error ? error.message : '予期せぬエラーが発生しました')
       }
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -219,11 +213,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <form onSubmit={handleSubmit}>
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                総合評価: {review.overallScore}
+                総合評価: {review.overall_score}
               </Typography>
               <Slider
-                name="overallScore"
-                value={review.overallScore}
+                name="overall_score"
+                value={review.overall_score}
                 onChange={handleChange}
                 min={0}
                 max={10}
@@ -239,11 +233,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                プレイ時間: {playTimeMarks.find(mark => mark.value === review.playTime)?.label}
+                プレイ時間: {playTimeMarks.find(mark => mark.value === review.play_time)?.label}
               </Typography>
               <Slider
-                name="playTime"
-                value={review.playTime}
+                name="play_time"
+                value={review.play_time}
                 onChange={handleChange}
                 min={1}
                 max={5}
@@ -256,11 +250,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                ルールの複雑さ: {review.ruleComplexity}
+                ルールの複雑さ: {review.rule_complexity}
               </Typography>
               <Slider
-                name="ruleComplexity"
-                value={review.ruleComplexity}
+                name="rule_complexity"
+                value={review.rule_complexity}
                 onChange={handleChange}
                 min={1}
                 max={5}
@@ -276,11 +270,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" gutterBottom>
-                運要素: {review.luckFactor}
+                運要素: {review.luck_factor}
               </Typography>
               <Slider
-                name="luckFactor"
-                value={review.luckFactor}
+                name="luck_factor"
+                value={review.luck_factor}
                 onChange={handleChange}
                 min={1}
                 max={5}
@@ -344,12 +338,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     onClick={() => {
                       setReview(prev => ({
                         ...prev,
-                        recommendedPlayers: prev.recommendedPlayers.includes(String(num))
-                          ? prev.recommendedPlayers.filter(p => p !== String(num))
-                          : [...prev.recommendedPlayers, String(num)]
+                        recommended_players: prev.recommended_players.includes(String(num))
+                          ? prev.recommended_players.filter(p => p !== String(num))
+                          : [...prev.recommended_players, String(num)]
                       }))
                     }}
-                    color={review.recommendedPlayers.includes(String(num)) ? "primary" : "default"}
+                    color={review.recommended_players.includes(String(num)) ? "primary" : "default"}
                     sx={{ m: 0.5 }}
                   />
                 ))}
@@ -406,8 +400,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               <Typography variant="h6" gutterBottom>カスタムタグ</Typography>
               <TextField
                 fullWidth
-                name="customTags"
-                value={review.customTags}
+                name="custom_tags"
+                value={review.custom_tags}
                 onChange={handleChange}
                 placeholder="スペース区切りでタグを入力（全角スペースも可）"
                 helperText="例: 初心者向け 戦略的 テーブルトーク"
@@ -422,8 +416,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 fullWidth
                 multiline
                 rows={3}
-                name="shortComment"
-                value={review.shortComment}
+                name="short_comment"
+                value={review.short_comment}
                 onChange={handleChange}
                 placeholder="このゲームの魅力を一言で表現してください（必須）"
                 required
@@ -435,9 +429,10 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 type="submit"
                 variant="contained"
                 size="large"
+                disabled={submitting}
                 sx={{ minWidth: 200 }}
               >
-                レビューを投稿
+                {submitting ? 'レビューを投稿中...' : 'レビューを投稿'}
               </Button>
             </Box>
           </form>
