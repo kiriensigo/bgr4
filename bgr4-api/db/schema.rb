@@ -55,6 +55,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_16_123460) do
     t.string "password_digest", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "provider"
+    t.string "uid"
+    t.string "avatar_url"
+    t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
   end
 
   add_foreign_key "reviews", "users"

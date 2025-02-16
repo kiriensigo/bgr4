@@ -208,3 +208,26 @@ export async function getAllReviews() {
   }
 }
 
+// ソーシャルログイン用の関数を追加
+export const socialLogin = async (provider: 'google' | 'twitter') => {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/${provider}`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('ソーシャルログインに失敗しました');
+  }
+
+  return response.json();
+};
+
+// コールバック処理用の関数
+export const handleAuthCallback = async (token: string) => {
+  if (token) {
+    localStorage.setItem('token', token);
+    return true;
+  }
+  return false;
+};
+

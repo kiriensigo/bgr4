@@ -19,4 +19,9 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  # OmniAuth用のルーティング
+  get '/auth/google_oauth2/callback', to: 'auth/omniauth_callbacks#callback'
+  get '/auth/failure', to: 'auth/omniauth_callbacks#failure'
+  get '/auth/google', to: 'auth/omniauth_callbacks#passthru'
 end

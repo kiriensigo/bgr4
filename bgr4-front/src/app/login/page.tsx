@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { login } from '@/lib/api'
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { login } from "@/lib/api";
 import {
   Container,
   Paper,
@@ -13,44 +13,46 @@ import {
   Box,
   Alert,
   Divider,
-} from '@mui/material'
+} from "@mui/material";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const message = searchParams.get('message')
-  const redirect = searchParams.get('redirect') || '/'
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const message = searchParams.get("message");
+  const redirect = searchParams.get("redirect") || "/";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     try {
-      await login(formData.email, formData.password)
-      router.push(redirect)
+      await login(formData.email, formData.password);
+      router.push(redirect);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'ログインに失敗しました')
+      setError(
+        error instanceof Error ? error.message : "ログインに失敗しました"
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <Container maxWidth="sm">
+    <Container component="main" maxWidth="xs">
       <Box sx={{ my: 4 }}>
         <Paper sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
@@ -101,22 +103,33 @@ export default function LoginPage() {
               disabled={loading}
               sx={{ mt: 3 }}
             >
-              {loading ? 'ログイン中...' : 'ログイン'}
+              {loading ? "ログイン中..." : "ログイン"}
             </Button>
 
             <Divider sx={{ my: 3 }} />
 
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ mt: 2, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
                 アカウントをお持ちでない方は
-                <Link href="/signup" style={{ textDecoration: 'none' }}>
-                  こちら
-                </Link>
               </Typography>
+              <Link href="/signup" style={{ textDecoration: "none" }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  sx={{
+                    mt: 1,
+                    mb: 2,
+                    textTransform: "none",
+                    fontSize: "1rem",
+                  }}
+                >
+                  新規会員登録
+                </Button>
+              </Link>
             </Box>
           </form>
         </Paper>
       </Box>
     </Container>
-  )
-} 
+  );
+}
