@@ -21,6 +21,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import StarIcon from '@mui/icons-material/Star'
 import RateReviewIcon from '@mui/icons-material/RateReview'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import GameCard from '@/components/GameCard'
 
 interface Game {
   id: number;
@@ -297,19 +298,17 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </Box>
               
               {game.reviews && game.reviews.length > 0 ? (
-                game.reviews.map((review) => (
-                  <Paper key={review.id} sx={{ p: 3, mb: 2, bgcolor: 'grey.50' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Rating value={review.overall_score / 2} readOnly size="small" />
-                      <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body1">
-                      {review.short_comment}
-                    </Typography>
-                  </Paper>
-                ))
+                <Grid container spacing={3}>
+                  {game.reviews.map((review) => (
+                    <Grid item xs={12} sm={6} md={4} key={review.id}>
+                      <GameCard 
+                        game={game}
+                        review={review}
+                        type="review"
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
               ) : (
                 <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50' }}>
                   <Typography variant="body1" color="text.secondary">

@@ -17,6 +17,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import type { BGGGame } from "@/lib/bggApi";
+import GameCard from "@/components/GameCard";
 
 export default function Home() {
   const [hotGames, setHotGames] = useState<BGGGame[]>([]);
@@ -67,60 +68,19 @@ export default function Home() {
       <Grid container spacing={3}>
         {hotGames.map((game) => (
           <Grid item xs={12} sm={6} md={4} key={game.id}>
-            <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <Box>
-                <Link href={`/games/${game.id}`}>
-                  <Box 
-                    sx={{ 
-                      position: 'relative',
-                      width: '100%',
-                      paddingTop: '100%',
-                      mb: 2,
-                      overflow: 'hidden',
-                      borderRadius: 1
-                    }}
-                  >
-                    {game.thumbnail && (
-                      <Image
-                        src={game.thumbnail}
-                        alt={game.name}
-                        fill
-                        style={{ 
-                          objectFit: 'cover',
-                          objectPosition: 'center'
-                        }}
-                      />
-                    )}
-                  </Box>
-                </Link>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Link href={`/games/${game.id}`}>
-                    <Typography variant="h6" component="h2" gutterBottom noWrap>
-                      {game.name}
-                    </Typography>
-                  </Link>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Rating 
-                      value={game.averageRating ? game.averageRating / 2 : 0} 
-                      precision={0.5} 
-                      readOnly 
-                      size="small" 
-                    />
-                    {game.averageRating && (
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        {game.averageRating.toFixed(1)}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    プレイ人数: {game.minPlayers}-{game.maxPlayers}人
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    プレイ時間: {game.playingTime}分
-                  </Typography>
-                </Box>
-              </Box>
-            </Paper>
+            <GameCard 
+              game={{
+                id: game.id,
+                bgg_id: game.id,
+                name: game.name,
+                image_url: game.image,
+                average_score: game.averageRating,
+                min_players: game.minPlayers,
+                max_players: game.maxPlayers,
+                play_time: game.playingTime
+              }} 
+              type="game" 
+            />
           </Grid>
         ))}
       </Grid>
