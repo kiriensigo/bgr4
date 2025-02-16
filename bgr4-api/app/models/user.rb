@@ -1,4 +1,9 @@
 class User < ApplicationRecord
+  # Include default devise modules. Others available are:
+  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  devise :database_authenticatable, :registerable,
+         :recoverable, :rememberable, :validatable,
+         :omniauthable
   has_secure_password
   has_many :reviews
 
@@ -17,12 +22,20 @@ class User < ApplicationRecord
   before_save :downcase_email
 
   def self.from_omniauth(auth)
-    where(provider: auth.provider, uid: auth.uid).first_or_create do |user|
-      user.email = auth.info.email
-      user.name = auth.info.name
-      user.password = SecureRandom.urlsafe_base64
-      user.avatar_url = auth.info.image
-    end
+    user = find_or_initialize_by(provider: auth.provider, uid: auth.uid)
+    
+    # パスワードがない場合は生成
+    user.password = SecureRandom.urlsafe_base64 if user.new_record?
+    
+    user.assign_attributes({
+      name: auth.info.name,
+      email: auth.info.email || "#{auth.uid}@twitter.example.com",
+      avatar_url: auth.info.image
+    })
+
+    # バリデーションをスキップしてセーブ
+    user.save(validate: false)
+    user
   end
 
   private

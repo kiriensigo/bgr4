@@ -14,6 +14,8 @@ import {
   Alert,
   Divider,
 } from "@mui/material";
+import TwitterIcon from "@mui/icons-material/Twitter";
+import GoogleIcon from "@mui/icons-material/Google";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -51,10 +53,18 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
+  };
+
+  const handleTwitterLogin = () => {
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/twitter`;
+  };
+
   return (
-    <Container component="main" maxWidth="xs">
-      <Box sx={{ my: 4 }}>
-        <Paper sx={{ p: 4 }}>
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 8, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
             ログイン
           </Typography>
@@ -104,6 +114,34 @@ export default function LoginPage() {
               sx={{ mt: 3 }}
             >
               {loading ? "ログイン中..." : "ログイン"}
+            </Button>
+
+            <Divider sx={{ my: 2 }}>または</Divider>
+
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              fullWidth
+              sx={{ mt: 2 }}
+            >
+              Googleでログイン
+            </Button>
+
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<TwitterIcon />}
+              sx={{
+                mt: 1,
+                mb: 2,
+                textTransform: "none",
+                fontSize: "1rem",
+              }}
+              onClick={handleTwitterLogin}
+            >
+              Twitterでログイン
             </Button>
 
             <Divider sx={{ my: 3 }} />

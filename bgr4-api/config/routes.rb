@@ -1,4 +1,23 @@
 Rails.application.routes.draw do
+  # Deviseのルートを制限して、omniauth_callbacksのみを使用
+  devise_for :users, skip: [:sessions], controllers: { 
+    omniauth_callbacks: 'auth/omniauth_callbacks' 
+  }
+
+  # セッション関連のルートを手動で定義
+  as :user do
+    get 'signin', to: 'devise/sessions#new', as: :new_user_session
+    post 'signin', to: 'devise/sessions#create', as: :user_session
+    delete 'signout', to: 'devise/sessions#destroy', as: :destroy_user_session
+  end
+
+  # コールバック用のルートを追加
+  get '/auth/callback', to: 'auth/omniauth_callbacks#callback'
+  get '/auth/failure', to: 'auth/omniauth_callbacks#failure'
+  get '/auth/:provider', to: 'auth/omniauth_callbacks#passthru'
+  get '/auth/:provider/callback', to: 'auth/omniauth_callbacks#callback'
+
+  # API routes
   namespace :api do
     namespace :v1 do
       resources :games, only: [:index, :show] do
@@ -19,9 +38,4 @@ Rails.application.routes.draw do
       end
     end
   end
-
-  # OmniAuth用のルーティング
-  get '/auth/google_oauth2/callback', to: 'auth/omniauth_callbacks#callback'
-  get '/auth/failure', to: 'auth/omniauth_callbacks#failure'
-  get '/auth/google', to: 'auth/omniauth_callbacks#passthru'
 end
