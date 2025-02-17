@@ -40,8 +40,6 @@ gem "jwt"
 
 # HTTP通信用のgem
 gem 'http'
-
-# 既存のGemfile内に追加
 gem 'omniauth'
 gem 'omniauth-google-oauth2'
 gem 'omniauth-twitter' # Twitter API用のgemを使用
