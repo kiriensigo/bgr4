@@ -1,10 +1,12 @@
 class User < ApplicationRecord
+  # Include devise_token_auth functionality
+  include DeviseTokenAuth::Concerns::User
+  
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
-         :omniauthable
-  has_secure_password
+         :confirmable, :omniauthable, omniauth_providers: [:google_oauth2, :twitter]
   has_many :reviews
 
   validates :name, presence: true
@@ -15,9 +17,7 @@ class User < ApplicationRecord
                       length: { minimum: 8 },
                       format: { with: /\A(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])/,
                                message: 'は英大文字・小文字・数字をそれぞれ1文字以上含む必要があります' },
-                      if: -> { new_record? || changes[:password_digest] }
-
-  validates :password_digest, presence: true
+                      if: -> { new_record? || changes[:encrypted_password] }
 
   before_save :downcase_email
 

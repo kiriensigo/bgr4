@@ -2,25 +2,56 @@ module Api
   module V1
     class GamesController < ApplicationController
       def index
-        # BGGの評価が7.0以上で、評価数が1000以上のゲームを取得
-        games = Game.where('average_score >= ?', 7.0)
-                   .order(average_score: :desc)
-                   .limit(50)
-        
-        games_data = games.map do |game|
-          {
-            id: game.id,
-            bgg_id: game.bgg_id,
-            name: game.name,
-            image_url: game.image_url,
-            min_players: game.min_players,
-            max_players: game.max_players,
-            play_time: game.play_time,
-            average_score: game.average_score
-          }
-        end
+        begin
+          games = Game.all.order(average_score: :desc)
+          
+          games_data = games.map do |game|
+            {
+              id: game.id,
+              bgg_id: game.bgg_id,
+              name: game.name,
+              image_url: game.image_url,
+              min_players: game.min_players,
+              max_players: game.max_players,
+              play_time: game.play_time,
+              average_score: game.average_score
+            }
+          end
 
-        render json: games_data
+          render json: games_data
+        rescue => e
+          Rails.logger.error "Error in GamesController#index: #{e.message}"
+          render json: { error: "ゲーム情報の取得に失敗しました" }, status: :internal_server_error
+        end
+      end
+
+      def create
+        begin
+          Rails.logger.debug "Creating game with params: #{game_params.inspect}"
+          
+          # 既存のゲームをBGG IDで検索
+          existing_game = Game.find_by(bgg_id: game_params[:bgg_id])
+          
+          if existing_game
+            Rails.logger.debug "Game with BGG ID #{game_params[:bgg_id]} already exists"
+            render json: existing_game
+            return
+          end
+          
+          # 新しいゲームを作成
+          @game = Game.new(game_params)
+          
+          if @game.save
+            Rails.logger.debug "Game created successfully: #{@game.inspect}"
+            render json: @game, status: :created
+          else
+            Rails.logger.error "Game creation failed: #{@game.errors.full_messages}"
+            render json: { error: @game.errors.full_messages }, status: :unprocessable_entity
+          end
+        rescue => e
+          Rails.logger.error "Error in GamesController#create: #{e.message}"
+          render json: { error: "ゲームの作成に失敗しました" }, status: :internal_server_error
+        end
       end
 
       def show
@@ -30,57 +61,44 @@ module Api
           Rails.logger.debug "Searching for game with BGG ID: #{params[:id]}"
           Rails.logger.debug "Found local game: #{local_game.inspect}"
           
-          unless local_game
-            # ゲームが存在しない場合、BGGから情報を取得して保存
-            Rails.logger.debug "Game not found locally, fetching from BGG"
-            bgg_game = BggService.get_game_details(params[:id]).first
+          if local_game
+            # BGGから最新のデータを取得
+            bgg_data = BggService.get_game_details(params[:id])
             
-            if bgg_game
-              Rails.logger.debug "BGG game details: #{bgg_game.inspect}"
-              local_game = Game.create!(
-                bgg_id: params[:id],
-                name: bgg_game[:name],
-                description: bgg_game[:description],
-                image_url: bgg_game[:image_url],
-                min_players: bgg_game[:min_players],
-                max_players: bgg_game[:max_players],
-                play_time: bgg_game[:play_time],
-                average_score: bgg_game[:average_score]
+            if bgg_data.present?
+              game_data = bgg_data.first
+              local_game.update(
+                name: game_data[:name],
+                description: game_data[:description],
+                image_url: game_data[:image_url],
+                min_players: game_data[:min_players],
+                max_players: game_data[:max_players],
+                play_time: game_data[:play_time],
+                average_score: game_data[:average_score]
               )
-            else
-              Rails.logger.error "BGG game not found with id: #{params[:id]}"
-              return render json: { error: 'ゲームが見つかりませんでした' }, status: :not_found
             end
+
+            # レビューを取得
+            reviews = Review.where(game_id: params[:id])
+            
+            render json: {
+              id: local_game.id,
+              bgg_id: local_game.bgg_id,
+              name: local_game.name,
+              description: local_game.description,
+              image_url: local_game.image_url,
+              min_players: local_game.min_players,
+              max_players: local_game.max_players,
+              play_time: local_game.play_time,
+              average_score: local_game.average_score,
+              reviews: reviews
+            }
+          else
+            render json: { error: "ゲームが見つかりませんでした" }, status: :not_found
           end
-
-          # BGGから最新の情報を取得
-          bgg_game = BggService.get_game_details(local_game.bgg_id).first
-          
-          if bgg_game.nil?
-            Rails.logger.error "Failed to fetch BGG details for game: #{local_game.bgg_id}"
-            return render json: { error: 'BGGからの情報取得に失敗しました' }, status: :service_unavailable
-          end
-
-          # BGGの情報とローカルの情報をマージ
-          game_data = {
-            id: local_game.id,
-            bgg_id: local_game.bgg_id,
-            name: bgg_game[:name],
-            description: bgg_game[:description],
-            image_url: bgg_game[:image_url],
-            min_players: bgg_game[:min_players],
-            max_players: bgg_game[:max_players],
-            play_time: bgg_game[:play_time],
-            bgg_average_score: bgg_game[:average_score].to_f,
-            local_average_score: local_game.average_score&.to_f,
-            reviews: local_game.reviews.includes(:user)
-          }
-
-          render json: game_data
-        rescue StandardError => e
+        rescue => e
           Rails.logger.error "Error in GamesController#show: #{e.message}"
-          Rails.logger.error e.backtrace.join("\n")
-          render json: { error: '予期せぬエラーが発生しました', details: e.message }, status: :internal_server_error
+          render json: { error: "ゲーム情報の取得に失敗しました" }, status: :internal_server_error
         end
       end
 
@@ -97,6 +115,21 @@ module Api
         # BGGから人気ゲームを取得
         popular_games = BggService.get_popular_games
         render json: popular_games
+      end
+
+      private
+
+      def game_params
+        params.require(:game).permit(
+          :bgg_id,
+          :name,
+          :description,
+          :image_url,
+          :min_players,
+          :max_players,
+          :play_time,
+          :average_score
+        )
       end
     end
   end

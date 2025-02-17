@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { login } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Container,
   Paper,
@@ -14,10 +14,11 @@ import {
   Alert,
   Divider,
 } from "@mui/material";
-import TwitterIcon from "@mui/icons-material/Twitter";
 import GoogleIcon from "@mui/icons-material/Google";
+import TwitterIcon from "@mui/icons-material/Twitter";
 
 export default function LoginPage() {
+  const { signIn } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -26,7 +27,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const message = searchParams.get("message");
   const redirect = searchParams.get("redirect") || "/";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,6 +34,7 @@ export default function LoginPage() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,38 +43,73 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await login(formData.email, formData.password);
+      await signIn(formData.email, formData.password);
       router.push(redirect);
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "ログインに失敗しました"
-      );
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("予期せぬエラーが発生しました");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
-  };
-
-  const handleTwitterLogin = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/twitter`;
+  const handleSocialLogin = (provider: "google" | "twitter") => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    window.location.href = `${apiUrl}/auth/${provider}`;
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+    <Container component="main" maxWidth="xs">
+      <Box sx={{ my: 4 }}>
+        <Paper sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
             ログイン
           </Typography>
 
-          {message && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {message}
-            </Alert>
-          )}
+          <Box sx={{ mb: 3 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={() => handleSocialLogin("google")}
+              sx={{
+                mb: 2,
+                color: "#757575",
+                borderColor: "#757575",
+                "&:hover": {
+                  borderColor: "#757575",
+                  backgroundColor: "rgba(117, 117, 117, 0.04)",
+                },
+              }}
+            >
+              Googleでログイン
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<TwitterIcon />}
+              onClick={() => handleSocialLogin("twitter")}
+              sx={{
+                color: "#1DA1F2",
+                borderColor: "#1DA1F2",
+                "&:hover": {
+                  borderColor: "#1DA1F2",
+                  backgroundColor: "rgba(29, 161, 242, 0.04)",
+                },
+              }}
+            >
+              X（Twitter）でログイン
+            </Button>
+          </Box>
+
+          <Divider sx={{ my: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              または
+            </Typography>
+          </Divider>
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -116,34 +152,6 @@ export default function LoginPage() {
               {loading ? "ログイン中..." : "ログイン"}
             </Button>
 
-            <Divider sx={{ my: 2 }}>または</Divider>
-
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<GoogleIcon />}
-              onClick={handleGoogleLogin}
-              fullWidth
-              sx={{ mt: 2 }}
-            >
-              Googleでログイン
-            </Button>
-
-            <Button
-              variant="contained"
-              fullWidth
-              startIcon={<TwitterIcon />}
-              sx={{
-                mt: 1,
-                mb: 2,
-                textTransform: "none",
-                fontSize: "1rem",
-              }}
-              onClick={handleTwitterLogin}
-            >
-              Twitterでログイン
-            </Button>
-
             <Divider sx={{ my: 3 }} />
 
             <Box sx={{ mt: 2, textAlign: "center" }}>
@@ -161,7 +169,7 @@ export default function LoginPage() {
                     fontSize: "1rem",
                   }}
                 >
-                  新規会員登録
+                  新規登録はこちら
                 </Button>
               </Link>
             </Box>

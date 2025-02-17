@@ -1,56 +1,134 @@
-'use client'
+"use client";
 
-import { AppBar, Toolbar, Typography, Button, Container, Box } from '@mui/material'
-import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Container,
+  Box,
+  Avatar,
+  Menu,
+  MenuItem,
+  IconButton,
+} from "@mui/material";
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 export default function Header() {
-  const { user, signOut } = useAuth()
+  const { user, signOut } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    handleClose();
+  };
 
   return (
-    <AppBar position="static" color="default" elevation={0}>
+    <AppBar position="static" color="default" elevation={1}>
       <Container maxWidth="lg">
-        <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <Typography variant="h6" color="inherit" noWrap>
+        <Toolbar sx={{ justifyContent: "space-between" }}>
+          <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <Typography
+              variant="h6"
+              color="inherit"
+              noWrap
+              sx={{ fontWeight: "bold" }}
+            >
               BGReviews
             </Typography>
           </Link>
-          
-          <Box sx={{ display: 'flex', gap: 2 }}>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Link href="/" passHref>
               <Button color="inherit">ホーム</Button>
             </Link>
             <Link href="/reviews" passHref>
               <Button color="inherit">最新レビュー</Button>
             </Link>
-            <nav>
-              <Link href="/games" style={{ textDecoration: 'none' }}>
-                <Button sx={{ mx: 1 }}>ゲーム一覧</Button>
-              </Link>
-              {user ? (
-                <>
-                  <Link href="/profile" style={{ textDecoration: 'none' }}>
-                    <Button sx={{ mx: 1 }}>プロフィール</Button>
-                  </Link>
-                  <Button onClick={signOut} sx={{ mx: 1 }}>
-                    ログアウト
+            <Link href="/games" passHref>
+              <Button color="inherit">ゲーム一覧</Button>
+            </Link>
+
+            {user ? (
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <IconButton
+                  onClick={handleMenu}
+                  size="large"
+                  aria-label="アカウントメニュー"
+                  aria-controls="menu-appbar"
+                  aria-haspopup="true"
+                  color="inherit"
+                >
+                  {user.avatar_url ? (
+                    <Avatar
+                      src={user.avatar_url}
+                      alt={user.name}
+                      sx={{ width: 32, height: 32 }}
+                    />
+                  ) : (
+                    <AccountCircleIcon />
+                  )}
+                </IconButton>
+                <Menu
+                  id="menu-appbar"
+                  anchorEl={anchorEl}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  keepMounted
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                  open={Boolean(anchorEl)}
+                  onClose={handleClose}
+                >
+                  <MenuItem
+                    component={Link}
+                    href="/profile"
+                    onClick={handleClose}
+                  >
+                    プロフィール
+                  </MenuItem>
+                  <MenuItem
+                    component={Link}
+                    href="/reviews/my"
+                    onClick={handleClose}
+                  >
+                    マイレビュー
+                  </MenuItem>
+                  <MenuItem onClick={handleSignOut}>ログアウト</MenuItem>
+                </Menu>
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Link href="/login" passHref>
+                  <Button variant="outlined" color="primary">
+                    ログイン
                   </Button>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" style={{ textDecoration: 'none' }}>
-                    <Button sx={{ mx: 1 }}>ログイン</Button>
-                  </Link>
-                  <Link href="/signup" style={{ textDecoration: 'none' }}>
-                    <Button sx={{ mx: 1 }}>新規登録</Button>
-                  </Link>
-                </>
-              )}
-            </nav>
+                </Link>
+                <Link href="/signup" passHref>
+                  <Button variant="contained" color="primary">
+                    新規登録
+                  </Button>
+                </Link>
+              </Box>
+            )}
           </Box>
         </Toolbar>
       </Container>
     </AppBar>
-  )
-} 
+  );
+}

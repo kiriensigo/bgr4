@@ -1,9 +1,7 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { signup } from '@/lib/api'
+import { useState } from "react";
+import Link from "next/link";
 import {
   Container,
   Paper,
@@ -13,55 +11,89 @@ import {
   Box,
   Alert,
   Divider,
-} from '@mui/material'
-import GoogleIcon from '@mui/icons-material/Google'
-import TwitterIcon from '@mui/icons-material/Twitter'
+} from "@mui/material";
+import GoogleIcon from "@mui/icons-material/Google";
+import TwitterIcon from "@mui/icons-material/Twitter";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignupPage() {
+  const { signUp } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    passwordConfirmation: '',
-  })
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+    name: "",
+    email: "",
+    password: "",
+    passwordConfirmation: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+    // エラーをクリア
+    setError(null);
+  };
+
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setError("ユーザー名を入力してください");
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError("メールアドレスを入力してください");
+      return false;
+    }
+    if (!formData.password) {
+      setError("パスワードを入力してください");
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError("パスワードは8文字以上で入力してください");
+      return false;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      setError(
+        "パスワードは英大文字・小文字・数字をそれぞれ1文字以上含める必要があります"
+      );
+      return false;
+    }
+    if (formData.password !== formData.passwordConfirmation) {
+      setError("パスワードが一致しません");
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    if (formData.password !== formData.passwordConfirmation) {
-      setError('パスワードが一致しません')
-      setLoading(false)
-      return
+    if (!validateForm()) {
+      setLoading(false);
+      return;
     }
 
     try {
-      await signup(formData)
-      router.push('/login?message=登録が完了しました。ログインしてください。')
+      await signUp(formData.name, formData.email, formData.password);
+      // 登録成功後は自動的にホームページにリダイレクトされます
     } catch (error) {
-      setError(error instanceof Error ? error.message : '登録に失敗しました')
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("予期せぬエラーが発生しました。もう一度お試しください。");
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleSocialLogin = (provider: 'google' | 'twitter') => {
-    // APIのベースURLを環境変数から取得
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    // 認証URLにリダイレクト
+  const handleSocialLogin = (provider: "google" | "twitter") => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     window.location.href = `${apiUrl}/auth/${provider}`;
-  }
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -71,20 +103,19 @@ export default function SignupPage() {
             新規会員登録
           </Typography>
 
-          {/* ソーシャルログインボタン */}
           <Box sx={{ mb: 3 }}>
             <Button
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
-              onClick={() => handleSocialLogin('google')}
+              onClick={() => handleSocialLogin("google")}
               sx={{
                 mb: 2,
-                color: '#757575',
-                borderColor: '#757575',
-                '&:hover': {
-                  borderColor: '#757575',
-                  backgroundColor: 'rgba(117, 117, 117, 0.04)',
+                color: "#757575",
+                borderColor: "#757575",
+                "&:hover": {
+                  borderColor: "#757575",
+                  backgroundColor: "rgba(117, 117, 117, 0.04)",
                 },
               }}
             >
@@ -94,13 +125,13 @@ export default function SignupPage() {
               fullWidth
               variant="outlined"
               startIcon={<TwitterIcon />}
-              onClick={() => handleSocialLogin('twitter')}
+              onClick={() => handleSocialLogin("twitter")}
               sx={{
-                color: '#1DA1F2',
-                borderColor: '#1DA1F2',
-                '&:hover': {
-                  borderColor: '#1DA1F2',
-                  backgroundColor: 'rgba(29, 161, 242, 0.04)',
+                color: "#1DA1F2",
+                borderColor: "#1DA1F2",
+                "&:hover": {
+                  borderColor: "#1DA1F2",
+                  backgroundColor: "rgba(29, 161, 242, 0.04)",
                 },
               }}
             >
@@ -202,5 +233,5 @@ export default function SignupPage() {
         </Paper>
       </Box>
     </Container>
-  )
-} 
+  );
+}

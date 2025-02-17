@@ -3,19 +3,18 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'example.com',
+        protocol: "https",
+        hostname: "example.com",
       },
       {
-        protocol: 'http',
-        hostname: 'localhost',
+        protocol: "http",
+        hostname: "localhost",
       },
       {
-        protocol: 'https',
-        hostname: 'cf.geekdo-images.com',
-      }
+        protocol: "https",
+        hostname: "cf.geekdo-images.com",
+      },
     ],
   },
-}
-
-module.exports = nextConfig 
+};
+module.exports = nextConfig;

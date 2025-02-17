@@ -1,15 +1,16 @@
 class ApplicationController < ActionController::API
   include ActionController::Cookies
-  
-  # APIモードでは protect_from_forgery は不要なので削除
-  # protect_from_forgery with: :exception を削除
-  # skip_before_action :verify_authenticity_token, if: :jwt_auth? を削除
+  include DeviseTokenAuth::Concerns::SetUserByToken
+
+  before_action :configure_permitted_parameters, if: :devise_controller?
+  before_action :log_request_details
 
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
   rescue_from StandardError, with: :internal_server_error
 
-  # ログ出力を追加
-  before_action :log_request_details
+  # APIモードでは protect_from_forgery は不要なので削除
+  # protect_from_forgery with: :exception を削除
+  # skip_before_action :verify_authenticity_token, if: :jwt_auth? を削除
 
   def authenticate_user!
     unless current_user
@@ -43,5 +44,12 @@ class ApplicationController < ActionController::API
   def log_request_details
     Rails.logger.info "Request: #{request.method} #{request.url}"
     Rails.logger.info "Parameters: #{params.inspect}"
+    Rails.logger.info "Headers: #{request.headers.to_h.select { |k, _| k.start_with?('HTTP_') }}"
+    Rails.logger.info "Auth Headers: #{request.headers.to_h.select { |k, _| k.downcase.include?('access-token') || k.downcase.include?('client') || k.downcase.include?('uid') }}"
+  end
+
+  def configure_permitted_parameters
+    devise_parameter_sanitizer.permit(:sign_up, keys: [:name])
+    devise_parameter_sanitizer.permit(:account_update, keys: [:name])
   end
 end
