@@ -28797,3 +28797,666 @@ Filter chain halted as :authenticate_user! rendered or redirected
 Completed 401 Unauthorized in 2ms (Views: 0.4ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
 
 
+[dotenv] Set [36mAPI_URL[0m, [36mDATABASE_URL[0m, [36mDEVISE_JWT_SECRET_KEY[0m, [36mFRONTEND_URL[0m, [36mGMAIL_APP_PASSWORD[0m, [36mGMAIL_USERNAME[0m, [36mGOOGLE_CLIENT_ID[0m, [36mGOOGLE_CLIENT_SECRET[0m, [36mTWITTER_CLIENT_ID[0m, and [36mTWITTER_CLIENT_SECRET[0m
+[dotenv] Loaded [33m.env[0m
+[dotenv] Loaded [33m.env[0m
+Started GET "/api/v1/games" for ::1 at 2025-02-21 22:19:30 +0900
+  [1m[36mActiveRecord::SchemaMigration Load (3.3ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+Processing by Api::V1::GamesController#index as */*
+  Parameters: {"game"=>{}}
+Request: GET http://localhost:3000/api/v1/games
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"index", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ACCEPT"=>"*/*", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (6.5ms)[0m  [1m[34mSELECT "games".* FROM "games" ORDER BY "games"."average_score" DESC[0m
+  ↳ app/controllers/api/v1/games_controller.rb:8:in `map'
+Completed 200 OK in 211ms (Views: 0.6ms | ActiveRecord: 161.5ms (1 query, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games" for ::1 at 2025-02-21 22:19:32 +0900
+Processing by Api::V1::GamesController#index as */*
+  Parameters: {"game"=>{}}
+Request: GET http://localhost:3000/api/v1/games
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"index", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ACCEPT"=>"*/*", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"d1a652694cc8c766f99ef3003f07d12b\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.5ms)[0m  [1m[34mSELECT "games".* FROM "games" ORDER BY "games"."average_score" DESC[0m
+  ↳ app/controllers/api/v1/games_controller.rb:8:in `map'
+Completed 200 OK in 5ms (Views: 0.1ms | ActiveRecord: 0.5ms (1 query, 0 cached) | GC: 0.0ms)
+
+
+Started POST "/auth" for ::1 at 2025-02-21 22:19:43 +0900
+Processing by Auth::RegistrationsController#create as */*
+  Parameters: {"name"=>"test2@test.com", "email"=>"[FILTERED]", "password"=>"[FILTERED]", "password_confirmation"=>"[FILTERED]", "confirm_success_url"=>"http://localhost:3001/login", "registration"=>{"name"=>"test2@test.com", "email"=>"[FILTERED]", "password"=>"[FILTERED]", "password_confirmation"=>"[FILTERED]", "confirm_success_url"=>"http://localhost:3001/login"}}
+Request: POST http://localhost:3000/auth
+Parameters: #<ActionController::Parameters {"name"=>"test2@test.com", "email"=>"test2@test.com", "password"=>"Pass1234", "password_confirmation"=>"Pass1234", "confirm_success_url"=>"http://localhost:3001/login", "controller"=>"auth/registrations", "action"=>"create", "registration"=>{"name"=>"test2@test.com", "email"=>"test2@test.com", "password"=>"Pass1234", "password_confirmation"=>"Pass1234", "confirm_success_url"=>"http://localhost:3001/login"}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ACCEPT"=>"*/*", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+[31mUnpermitted parameters: :confirm_success_url, :registration. Context: { controller: Auth::RegistrationsController, action: create, request: #<ActionDispatch::Request:0x000001f71daefb58>, params: {"name"=>"test2@test.com", "email"=>"[FILTERED]", "password"=>"[FILTERED]", "password_confirmation"=>"[FILTERED]", "confirm_success_url"=>"http://localhost:3001/login", "controller"=>"auth/registrations", "action"=>"create", "registration"=>{"name"=>"test2@test.com", "email"=>"[FILTERED]", "password"=>"[FILTERED]", "password_confirmation"=>"[FILTERED]", "confirm_success_url"=>"http://localhost:3001/login"}} }[0m
+[31mUnpermitted parameters: :confirm_success_url, :registration. Context: { controller: Auth::RegistrationsController, action: create, request: #<ActionDispatch::Request:0x000001f71daefb58>, params: {"name"=>"test2@test.com", "email"=>"[FILTERED]", "password"=>"[FILTERED]", "password_confirmation"=>"[FILTERED]", "confirm_success_url"=>"http://localhost:3001/login", "controller"=>"auth/registrations", "action"=>"create", "registration"=>{"name"=>"test2@test.com", "email"=>"[FILTERED]", "password"=>"[FILTERED]", "password_confirmation"=>"[FILTERED]", "confirm_success_url"=>"http://localhost:3001/login"}} }[0m
+  [1m[36mTRANSACTION (1.0ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/auth/registrations_controller.rb:6:in `create'
+  [1m[36mUser Exists? (13.0ms)[0m  [1m[34mSELECT 1 AS one FROM "users" WHERE LOWER("users"."email") = LOWER($1) AND "users"."provider" = $2 LIMIT $3[0m  [["email", "[FILTERED]"], ["provider", "email"], ["LIMIT", 1]]
+  ↳ app/controllers/auth/registrations_controller.rb:6:in `create'
+  [1m[36mUser Exists? (0.5ms)[0m  [1m[34mSELECT 1 AS one FROM "users" WHERE LOWER("users"."email") = LOWER($1) LIMIT $2[0m  [["email", "[FILTERED]"], ["LIMIT", 1]]
+  ↳ app/controllers/auth/registrations_controller.rb:6:in `create'
+  [1m[36mUser Create (10.2ms)[0m  [1m[32mINSERT INTO "users" ("name", "email", "created_at", "updated_at", "provider", "uid", "avatar_url", "encrypted_password", "reset_password_token", "reset_password_sent_at", "remember_created_at", "tokens", "sign_in_count", "current_sign_in_at", "last_sign_in_at", "current_sign_in_ip", "last_sign_in_ip", "confirmation_token", "confirmed_at", "confirmation_sent_at", "unconfirmed_email") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING "id"[0m  [["name", "test2@test.com"], ["email", "[FILTERED]"], ["created_at", "2025-02-21 13:19:44.029087"], ["updated_at", "2025-02-21 13:19:44.029087"], ["provider", "email"], ["uid", "test2@test.com"], ["avatar_url", nil], ["encrypted_password", "[FILTERED]"], ["reset_password_token", "[FILTERED]"], ["reset_password_sent_at", "[FILTERED]"], ["remember_created_at", nil], ["tokens", "[FILTERED]"], ["sign_in_count", 0], ["current_sign_in_at", nil], ["last_sign_in_at", nil], ["current_sign_in_ip", nil], ["last_sign_in_ip", nil], ["confirmation_token", "[FILTERED]"], ["confirmed_at", nil], ["confirmation_sent_at", "2025-02-21 13:19:44.029194"], ["unconfirmed_email", "[FILTERED]"]]
+  ↳ app/controllers/auth/registrations_controller.rb:6:in `create'
+  [1m[36mTRANSACTION (1.0ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/auth/registrations_controller.rb:6:in `create'
+  Rendering devise/mailer/confirmation_instructions.html.erb
+  Rendered devise/mailer/confirmation_instructions.html.erb (Duration: 16.3ms | GC: 0.0ms)
+Devise::Mailer#confirmation_instructions: processed outbound mail in 251.6ms
+Delivered mail 67b87d70bdb0b_46687350287ce@DESKTOP-N4L45RM.mail (197.8ms)
+Date: Fri, 21 Feb 2025 22:19:44 +0900
+From: please-change-me-at-config-initializers-devise@example.com
+Reply-To: please-change-me-at-config-initializers-devise@example.com
+To: test2@test.com
+Message-ID: <67b87d70bdb0b_46687350287ce@DESKTOP-N4L45RM.mail>
+Subject: Confirmation instructions
+Mime-Version: 1.0
+Content-Type: text/html;
+ charset=UTF-8
+Content-Transfer-Encoding: base64
+client-config: default
+
+PHA+dGVzdDJAdGVzdC5jb23mp5g8L3A+DQoNCjxwPuODnOODvOODieOCsuOD
+vOODoOODrOODk+ODpeODvOOCteOCpOODiOOBuOOBruOBlOeZu+mMsuOBguOC
+iuOBjOOBqOOBhuOBlOOBluOBhOOBvuOBmeOAgjwvcD4NCg0KPHA+5Lul5LiL
+44Gu44Oq44Oz44Kv44KS44Kv44Oq44OD44Kv44GX44Gm44CB44Ki44Kr44Km
+44Oz44OI44KS5pyJ5Yq55YyW44GX44Gm44GP44Gg44GV44GE77yaPC9wPg0K
+DQo8cD48YSBocmVmPSJodHRwOi8vbG9jYWxob3N0OjMwMDAvYXV0aC9jb25m
+aXJtYXRpb24/Y29uZmlybWF0aW9uX3Rva2VuPUN6c1oyNnpqRE5kM05STng4
+aVZEIj7jgqLjgqvjgqbjg7Pjg4jjgpLmnInlirnljJbjgZnjgos8L2E+PC9w
+Pg0KDQo8cD7igLvjgZPjga7jg6rjg7Pjgq/jga7mnInlirnmnJ/pmZDjga8x
+5pmC6ZaT44Gn44GZ44CCPC9wPg0KPHA+4oC744GT44Gu44Oh44O844Or44Gr
+5b+D5b2T44Gf44KK44GM44Gq44GE5aC05ZCI44Gv44CB44GT44Gu44Oh44O8
+44Or44KS56C05qOE44GX44Gm44GP44Gg44GV44GE44CCPC9wPiA=
+
+  Rendering devise/mailer/confirmation_instructions.html.erb
+  Rendered devise/mailer/confirmation_instructions.html.erb (Duration: 0.6ms | GC: 0.0ms)
+Devise::Mailer#confirmation_instructions: processed outbound mail in 2.0ms
+Delivered mail 67b87d70e7532_4668735028854@DESKTOP-N4L45RM.mail (5.6ms)
+Date: Fri, 21 Feb 2025 22:19:44 +0900
+From: please-change-me-at-config-initializers-devise@example.com
+Reply-To: please-change-me-at-config-initializers-devise@example.com
+To: test2@test.com
+Message-ID: <67b87d70e7532_4668735028854@DESKTOP-N4L45RM.mail>
+Subject: Confirmation instructions
+Mime-Version: 1.0
+Content-Type: text/html;
+ charset=UTF-8
+Content-Transfer-Encoding: base64
+redirect-url: http://localhost:3001
+client-config: default
+
+PHA+dGVzdDJAdGVzdC5jb23mp5g8L3A+DQoNCjxwPuODnOODvOODieOCsuOD
+vOODoOODrOODk+ODpeODvOOCteOCpOODiOOBuOOBruOBlOeZu+mMsuOBguOC
+iuOBjOOBqOOBhuOBlOOBluOBhOOBvuOBmeOAgjwvcD4NCg0KPHA+5Lul5LiL
+44Gu44Oq44Oz44Kv44KS44Kv44Oq44OD44Kv44GX44Gm44CB44Ki44Kr44Km
+44Oz44OI44KS5pyJ5Yq55YyW44GX44Gm44GP44Gg44GV44GE77yaPC9wPg0K
+DQo8cD48YSBocmVmPSJodHRwOi8vbG9jYWxob3N0OjMwMDAvYXV0aC9jb25m
+aXJtYXRpb24/Y29uZmlybWF0aW9uX3Rva2VuPUN6c1oyNnpqRE5kM05STng4
+aVZEIj7jgqLjgqvjgqbjg7Pjg4jjgpLmnInlirnljJbjgZnjgos8L2E+PC9w
+Pg0KDQo8cD7igLvjgZPjga7jg6rjg7Pjgq/jga7mnInlirnmnJ/pmZDjga8x
+5pmC6ZaT44Gn44GZ44CCPC9wPg0KPHA+4oC744GT44Gu44Oh44O844Or44Gr
+5b+D5b2T44Gf44KK44GM44Gq44GE5aC05ZCI44Gv44CB44GT44Gu44Oh44O8
+44Or44KS56C05qOE44GX44Gm44GP44Gg44GV44GE44CCPC9wPiA=
+
+Completed 200 OK in 1452ms (Views: 0.3ms | ActiveRecord: 36.6ms (3 queries, 0 cached) | GC: 0.2ms)
+
+
+Started POST "/auth/sign_in" for ::1 at 2025-02-21 22:19:52 +0900
+Processing by Auth::SessionsController#create as */*
+  Parameters: {"email"=>"[FILTERED]", "password"=>"[FILTERED]", "session"=>{"email"=>"[FILTERED]", "password"=>"[FILTERED]"}}
+Request: POST http://localhost:3000/auth/sign_in
+Parameters: #<ActionController::Parameters {"email"=>"test2@test.com", "password"=>"Pass1234", "controller"=>"auth/sessions", "action"=>"create", "session"=>{"email"=>"test2@test.com", "password"=>"Pass1234"}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ACCEPT"=>"*/*", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mUser Load (0.8ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."email" = $1 LIMIT $2[0m  [["email", "[FILTERED]"], ["LIMIT", 1]]
+  ↳ app/controllers/auth/sessions_controller.rb:5:in `create'
+Completed 401 Unauthorized in 5ms (Views: 0.2ms | ActiveRecord: 0.7ms (1 query, 0 cached) | GC: 0.0ms)
+
+
+Started GET "//letter_opener" for ::1 at 2025-02-21 22:20:23 +0900
+Processing by LetterOpenerWeb::LettersController#index as HTML
+  Rendering layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb
+  Rendering C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb (Duration: 4.2ms | GC: 0.0ms)
+  Rendered collection of C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb [15 times] (Duration: 55.6ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters (Duration: 115.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_icon.html.erb (Duration: 0.7ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_bootstrap.html.erb (Duration: 4.5ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_letters.html.erb (Duration: 0.6ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_styles.html.erb (Duration: 65.9ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_jquery.html.erb (Duration: 2.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_favcount.html.erb (Duration: 0.5ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_javascripts.html.erb (Duration: 155.7ms | GC: 0.0ms)
+  Rendered layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb (Duration: 400.1ms | GC: 0.0ms)
+Completed 200 OK in 488ms (Views: 425.3ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/letter_opener/1740143984_9484642_5befc1f/rich" for ::1 at 2025-02-21 22:20:25 +0900
+Processing by LetterOpenerWeb::LettersController#show as HTML
+  Parameters: {"id"=>"1740143984_9484642_5befc1f", "style"=>"rich"}
+  Rendering html template
+  Rendered html template (Duration: 0.3ms | GC: 0.0ms)
+Completed 200 OK in 23ms (Views: 22.3ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/auth/confirmation?confirmation_token=[FILTERED]" for ::1 at 2025-02-21 22:20:27 +0900
+Processing by Auth::ConfirmationsController#show as HTML
+  Parameters: {"confirmation_token"=>"[FILTERED]"}
+Request: GET http://localhost:3000/auth/confirmation?confirmation_token=CzsZ26zjDNd3NRNx8iVD
+Parameters: #<ActionController::Parameters {"confirmation_token"=>"CzsZ26zjDNd3NRNx8iVD", "controller"=>"auth/confirmations", "action"=>"show"} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UPGRADE_INSECURE_REQUESTS"=>"1", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7", "HTTP_SEC_FETCH_SITE"=>"same-origin", "HTTP_SEC_FETCH_MODE"=>"navigate", "HTTP_SEC_FETCH_USER"=>"?1", "HTTP_SEC_FETCH_DEST"=>"document", "HTTP_REFERER"=>"http://localhost:3000/letter_opener/1740143984_9484642_5befc1f/rich", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_COOKIE"=>"_boardgame_matching_session=5FJJ6r1f3Y%2FQXb0wjigmZN6ZdfCAKQ%2FfieU8Pi8K%2BT4MJm%2FCJ%2F1GP3vclW3mwPh6yAZNWARyLs96GwRObpDE0ZElUOO3a1kVnnMc1HDK0Ptebi1fzst6zwsXi%2F3lEXY%2BEA1deUCwYoOulKcafIhlU7J05A3Z%2BnX6J%2BhemRqNmEmy9QRd2FWQ1dykpwP91FcDZomYFXPQVl%2B1Fq1Ej8ngJaZsk5oGC81PmTyhJ8oQb%2FnlzSOkZCoP1E%2FX9Q1h4exyyCW2iWLPdT4kpvqNa0TanMnSYeyHMsKiGvLb93exnrXYLlQ%3D--6XjUjjYysWOgG3IO--4PgbCg2tQvtLUEhRkGWkAg%3D%3D; _boardgame_matching_api_session=7F1C5ERussX9qmAyxNt1TKM5OhoNDSAmRYu0xhPBxgQRVj1poEb2%2BilBa%2BTZGz5dnKQ%2FVaduRNWev3PdP%2BXyo8jbwp47fyuvpra8TqPU0w%2Fwjr3SC67nPpbwrC2Ump5%2FFFbhKsKhxSYzGRESvJg35edLHj%2Fuq2BUnSQ1Q03Rjabo%2BxZ6WU6J0QEpz%2FoWu2p9nJ%2BW5XmZwg%3D%3D--uxxlOSze2Y%2Bn2x6Z--Pv0G31HLeKQ%2F4Pw6RAoO6w%3D%3D; next-auth.csrf-token=c2c725feb44c1fbcbaa7b01135c3ef25bfa72797b86acc2e6e6d2e3db4e9e5e3%7Cfda0950dca9c1828fe8dba9753a43e8613520ea00d2a8c663feb95767796f7a6; next-auth.callback-url=http%3A%2F%2Flocalhost%3A3000; CSRF-TOKEN=rIWqQANVJz5BG5xhEM7YtXofNZynE0TdRsQK5hNNB8kwrphfXnXR45wLNdCD4fKpu-PnwHytg8JpO4FqDxfCWw; token=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoxMSwiZXhwIjoxNzM5ODczNTk2fQ.9SgGzQ86ZrPFxpbC_dh_GxDp2ZFhvIUBLhTYvSlbWLw; _session_id=pxWLsLxDMe4XIqRsPVC%2BwwJgYlQbs%2B%2BoWB4TrAA4DghNSQIeL5b50w2fyjtI7jYuQgU8EDDO%2B9ogVijkhS6wxDp43%2BctWmW%2Bde5ekn%2FLTCNSscLYOncQ2Vz6i0rBO2D7pPRqytEh7ZgbsAC3Mv0c%2F2EGDzZHXY2r5dtW7Wi4hlxXQ0d7MRSdZimH8sIJ%2FEKybKzcu7PAiUisMHFNxwuCvlFyr5t5ldPMdOwPEy%2Bl4UVxhj8lOzHA0YDJSpb5j0%2FDhA7eQVQyUvrMJ5EiBJVn%2FtcBGA%3D%3D--kS0L%2FxTIP4WWOQxe--jMsO4P2AgGioD6x57I2MVQ%3D%3D", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mUser Load (1.0ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."confirmation_token" = $1 ORDER BY "users"."id" ASC LIMIT $2[0m  [["confirmation_token", "[FILTERED]"], ["LIMIT", 1]]
+  ↳ app/controllers/auth/confirmations_controller.rb:4:in `show'
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/auth/confirmations_controller.rb:4:in `show'
+  [1m[36mUser Update (8.1ms)[0m  [1m[33mUPDATE "users" SET "updated_at" = $1, "confirmed_at" = $2 WHERE "users"."id" = $3[0m  [["updated_at", "2025-02-21 13:20:27.694345"], ["confirmed_at", "2025-02-21 13:20:27.693891"], ["id", 13]]
+  ↳ app/controllers/auth/confirmations_controller.rb:4:in `show'
+  [1m[36mTRANSACTION (0.4ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/auth/confirmations_controller.rb:4:in `show'
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/auth/confirmations_controller.rb:7:in `show'
+  [1m[36mUser Exists? (4.0ms)[0m  [1m[34mSELECT 1 AS one FROM "users" WHERE LOWER("users"."email") = LOWER($1) AND "users"."id" != $2 LIMIT $3[0m  [["email", "[FILTERED]"], ["id", 13], ["LIMIT", 1]]
+  ↳ app/controllers/auth/confirmations_controller.rb:7:in `show'
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/auth/confirmations_controller.rb:7:in `show'
+Redirected to http://localhost:3001?account_confirmation_success=true
+Completed 302 Found in 50ms (ActiveRecord: 14.0ms (3 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:34 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.8ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-17 14:27:25.103002000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (4.8ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 357ms (Views: 2.6ms | ActiveRecord: 7.3ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:35 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"b6dfb308efdb82b6feb9c531bae70113\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.5ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-17 14:27:25.103002000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.4ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 58ms (Views: 2.6ms | ActiveRecord: 0.9ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started POST "/auth/sign_in" for ::1 at 2025-02-21 22:20:45 +0900
+Processing by Auth::SessionsController#create as */*
+  Parameters: {"email"=>"[FILTERED]", "password"=>"[FILTERED]", "session"=>{"email"=>"[FILTERED]", "password"=>"[FILTERED]"}}
+Request: POST http://localhost:3000/auth/sign_in
+Parameters: #<ActionController::Parameters {"email"=>"test2@test.com", "password"=>"Pass1234", "controller"=>"auth/sessions", "action"=>"create", "session"=>{"email"=>"test2@test.com", "password"=>"Pass1234"}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ACCEPT"=>"*/*", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mUser Load (0.4ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."email" = $1 LIMIT $2[0m  [["email", "[FILTERED]"], ["LIMIT", 1]]
+  ↳ app/controllers/auth/sessions_controller.rb:5:in `create'
+[31mUnpermitted parameter: :session. Context: { controller: Auth::SessionsController, action: create, request: #<ActionDispatch::Request:0x000001f71a3c58d0>, params: {"email"=>"[FILTERED]", "password"=>"[FILTERED]", "controller"=>"auth/sessions", "action"=>"create", "session"=>{"email"=>"[FILTERED]", "password"=>"[FILTERED]"}} }[0m
+[31mUnpermitted parameter: :session. Context: { controller: Auth::SessionsController, action: create, request: #<ActionDispatch::Request:0x000001f71a3c58d0>, params: {"email"=>"[FILTERED]", "password"=>"[FILTERED]", "controller"=>"auth/sessions", "action"=>"create", "session"=>{"email"=>"[FILTERED]", "password"=>"[FILTERED]"}} }[0m
+  [1m[36mUser Load (1.0ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."email" = $1 AND "users"."provider" = $2 LIMIT $3[0m  [["email", "[FILTERED]"], ["provider", "email"], ["LIMIT", 1]]
+  ↳ app/controllers/auth/sessions_controller.rb:13:in `create'
+[31mUnpermitted parameter: :session. Context: { controller: Auth::SessionsController, action: create, request: #<ActionDispatch::Request:0x000001f71a3c58d0>, params: {"email"=>"[FILTERED]", "password"=>"[FILTERED]", "controller"=>"auth/sessions", "action"=>"create", "session"=>{"email"=>"[FILTERED]", "password"=>"[FILTERED]"}} }[0m
+[31mUnpermitted parameter: :session. Context: { controller: Auth::SessionsController, action: create, request: #<ActionDispatch::Request:0x000001f71a3c58d0>, params: {"email"=>"[FILTERED]", "password"=>"[FILTERED]", "controller"=>"auth/sessions", "action"=>"create", "session"=>{"email"=>"[FILTERED]", "password"=>"[FILTERED]"}} }[0m
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/auth/sessions_controller.rb:13:in `create'
+  [1m[36mUser Load (15.5ms)[0m  [1m[37mSELECT "users".* FROM "users" WHERE "users"."id" = $1 LIMIT $2 FOR UPDATE[0m  [["id", 13], ["LIMIT", 1]]
+  ↳ app/controllers/auth/sessions_controller.rb:13:in `create'
+  [1m[36mUser Exists? (0.4ms)[0m  [1m[34mSELECT 1 AS one FROM "users" WHERE LOWER("users"."email") = LOWER($1) AND "users"."id" != $2 LIMIT $3[0m  [["email", "[FILTERED]"], ["id", 13], ["LIMIT", 1]]
+  ↳ app/controllers/auth/sessions_controller.rb:13:in `create'
+  [1m[36mUser Update (2.1ms)[0m  [1m[33mUPDATE "users" SET "updated_at" = $1, "tokens" = $2 WHERE "users"."id" = $3[0m  [["updated_at", "2025-02-21 13:20:45.701993"], ["tokens", "[FILTERED]"], ["id", 13]]
+  ↳ app/controllers/auth/sessions_controller.rb:13:in `create'
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/auth/sessions_controller.rb:13:in `create'
+  [1m[36mUser Load (0.4ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."id" = $1 LIMIT $2[0m  [["id", 13], ["LIMIT", 1]]
+Completed 200 OK in 313ms (Views: 0.1ms | ActiveRecord: 20.4ms (6 queries, 0 cached) | GC: 0.2ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:46 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"b6dfb308efdb82b6feb9c531bae70113\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-17 14:27:25.103002000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.5ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 70ms (Views: 5.0ms | ActiveRecord: 1.1ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:47 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"b6dfb308efdb82b6feb9c531bae70113\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-17 14:27:25.103002000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.5ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 53ms (Views: 5.4ms | ActiveRecord: 1.1ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:48 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"b6dfb308efdb82b6feb9c531bae70113\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-17 14:27:25.103002000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.4ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 59ms (Views: 2.5ms | ActiveRecord: 1.0ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:48 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"b6dfb308efdb82b6feb9c531bae70113\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mGame Load (0.4ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-17 14:27:25.103002000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.5ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 64ms (Views: 4.8ms | ActiveRecord: 0.9ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started POST "/api/v1/games/418059/reviews" for ::1 at 2025-02-21 22:20:52 +0900
+Processing by Api::V1::ReviewsController#create as JSON
+  Parameters: {"review"=>{"overall_score"=>5, "play_time"=>3, "rule_complexity"=>3, "luck_factor"=>3, "interaction"=>3, "downtime"=>3, "recommended_players"=>[], "mechanics"=>[], "tags"=>[], "custom_tags"=>[], "short_comment"=>"rrrrtt"}, "game_id"=>"418059"}
+Request: POST http://localhost:3000/api/v1/games/418059/reviews
+Parameters: #<ActionController::Parameters {"review"=>{"overall_score"=>5, "play_time"=>3, "rule_complexity"=>3, "luck_factor"=>3, "interaction"=>3, "downtime"=>3, "recommended_players"=>[], "mechanics"=>[], "tags"=>[], "custom_tags"=>[], "short_comment"=>"rrrrtt"}, "controller"=>"api/v1/reviews", "action"=>"create", "game_id"=>"418059"} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mUser Load (0.7ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."uid" = $1 LIMIT $2[0m  [["uid", "test2@test.com"], ["LIMIT", 1]]
+  ↳ app/controllers/application_controller.rb:23:in `current_user'
+  [1m[36mGame Load (0.5ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:53:in `set_game'
+Current user: #<User id: 13, name: "test2@test.com", email: [FILTERED], created_at: "2025-02-21 13:19:44.029087000 +0000", updated_at: "2025-02-21 13:20:45.701993000 +0000", provider: "email", uid: "test2@test.com", avatar_url: nil>
+Auth headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+  [1m[36mCACHE Game Load (0.0ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mReview Create (7.3ms)[0m  [1m[32mINSERT INTO "reviews" ("user_id", "game_id", "overall_score", "play_time", "rule_complexity", "luck_factor", "interaction", "downtime", "recommended_players", "mechanics", "tags", "custom_tags", "short_comment", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING "id"[0m  [["user_id", 13], ["game_id", "418059"], ["overall_score", "5.0"], ["play_time", 3], ["rule_complexity", "3.0"], ["luck_factor", "3.0"], ["interaction", "3.0"], ["downtime", "3.0"], ["recommended_players", "{}"], ["mechanics", "{}"], ["tags", "{}"], ["custom_tags", "{}"], ["short_comment", "rrrrtt"], ["created_at", "2025-02-21 13:20:53.240355"], ["updated_at", "2025-02-21 13:20:53.240355"]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mReview Average (3.1ms)[0m  [1m[34mSELECT AVG("reviews"."overall_score") FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mGame Update (4.3ms)[0m  [1m[33mUPDATE "games" SET "average_score" = $1, "updated_at" = $2 WHERE "games"."id" = $3[0m  [["average_score", "5.0"], ["updated_at", "2025-02-21 13:20:53.259087"], ["id", 2]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mUser Load (0.5ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."id" = $1 LIMIT $2[0m  [["id", 13], ["LIMIT", 1]]
+Completed 201 Created in 262ms (Views: 0.6ms | ActiveRecord: 18.8ms (7 queries, 1 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:53 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"b6dfb308efdb82b6feb9c531bae70113\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.5e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-21 13:20:53.259087000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mTRANSACTION (0.4ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mGame Update (5.1ms)[0m  [1m[33mUPDATE "games" SET "average_score" = $1, "updated_at" = $2 WHERE "games"."id" = $3[0m  [["average_score", "8.4"], ["updated_at", "2025-02-21 13:20:53.639805"], ["id", 2]]
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mTRANSACTION (0.8ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mReview Load (0.5ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 89ms (Views: 4.7ms | ActiveRecord: 7.4ms (3 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/418059" for ::1 at 2025-02-21 22:20:53 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"418059", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/418059
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"418059", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"8c07d0772b36efd07609e6c27dedb120\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.4ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "418059"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 418059
+Found local game: #<Game id: 2, name: "SETI: Search for Extraterrestrial Intelligence", description: "In SETI: Search for Extraterrestrial Intelligence,...", image_url: "https://cf.geekdo-images.com/_BUXOVRDU9g_eRwgpR5ZZ...", min_players: 1, max_players: 4, play_time: 160, average_score: 0.84e1, bgg_id: "418059", created_at: "2025-02-17 14:27:25.103002000 +0000", updated_at: "2025-02-21 13:20:53.639805000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=418059&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.3ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "418059"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 48ms (Views: 3.5ms | ActiveRecord: 0.7ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/439586" for ::1 at 2025-02-21 22:25:12 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"439586", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/439586
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"439586", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 439586
+Found local game: nil
+Completed 404 Not Found in 5ms (Views: 0.1ms | ActiveRecord: 0.6ms (1 query, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/439586" for ::1 at 2025-02-21 22:25:12 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"439586", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/439586
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"439586", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.5ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 439586
+Found local game: nil
+Completed 404 Not Found in 6ms (Views: 0.1ms | ActiveRecord: 0.5ms (1 query, 0 cached) | GC: 0.0ms)
+
+
+Started POST "/api/v1/games" for ::1 at 2025-02-21 22:25:12 +0900
+Started POST "/api/v1/games" for ::1 at 2025-02-21 22:25:12 +0900
+Processing by Api::V1::GamesController#create as JSON
+  Parameters: {"game"=>{"bgg_id"=>"439586", "name"=>"Tiny Epic Dungeons Adventures", "description"=>"Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n", "image_url"=>"https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png", "min_players"=>1, "max_players"=>4, "play_time"=>90, "average_score"=>9.5}}
+Request: POST http://localhost:3000/api/v1/games
+Parameters: #<ActionController::Parameters {"game"=>{"bgg_id"=>"439586", "name"=>"Tiny Epic Dungeons Adventures", "description"=>"Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n", "image_url"=>"https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png", "min_players"=>1, "max_players"=>4, "play_time"=>90, "average_score"=>9.5}, "controller"=>"api/v1/games", "action"=>"create"} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+Creating game with params: #<ActionController::Parameters {"bgg_id"=>"439586", "name"=>"Tiny Epic Dungeons Adventures", "description"=>"Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n", "image_url"=>"https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png", "min_players"=>1, "max_players"=>4, "play_time"=>90, "average_score"=>9.5} permitted: true>
+  [1m[36mGame Load (0.3ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:33:in `create'
+Processing by Api::V1::GamesController#create as JSON
+  Parameters: {"game"=>{"bgg_id"=>"439586", "name"=>"Tiny Epic Dungeons Adventures", "description"=>"Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n", "image_url"=>"https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png", "min_players"=>1, "max_players"=>4, "play_time"=>90, "average_score"=>9.5}}
+Request: POST http://localhost:3000/api/v1/games
+Parameters: #<ActionController::Parameters {"game"=>{"bgg_id"=>"439586", "name"=>"Tiny Epic Dungeons Adventures", "description"=>"Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n", "image_url"=>"https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png", "min_players"=>1, "max_players"=>4, "play_time"=>90, "average_score"=>9.5}, "controller"=>"api/v1/games", "action"=>"create"} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+Creating game with params: #<ActionController::Parameters {"bgg_id"=>"439586", "name"=>"Tiny Epic Dungeons Adventures", "description"=>"Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n", "image_url"=>"https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png", "min_players"=>1, "max_players"=>4, "play_time"=>90, "average_score"=>9.5} permitted: true>
+  [1m[36mTRANSACTION (0.8ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/games_controller.rb:44:in `create'
+  [1m[36mGame Create (8.7ms)[0m  [1m[32mINSERT INTO "games" ("name", "description", "image_url", "min_players", "max_players", "play_time", "average_score", "bgg_id", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING "id"[0m  [["name", "Tiny Epic Dungeons Adventures"], ["description", "Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.\n\nExplore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!\n\nFeaturing a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.\nAnd yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.\n\n&mdash;description from the publisher\n\n"], ["image_url", "https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnTg__original/img/izzQVMdBPSFz0pnbLgP_BU5DG40=/0x0/filters:format(png)/pic8717043.png"], ["min_players", 1], ["max_players", 4], ["play_time", 90], ["average_score", "9.5"], ["bgg_id", "439586"], ["created_at", "2025-02-21 13:25:12.846760"], ["updated_at", "2025-02-21 13:25:12.846760"]]
+  ↳ app/controllers/api/v1/games_controller.rb:44:in `create'
+  [1m[36mTRANSACTION (0.6ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/games_controller.rb:44:in `create'
+Game created successfully: #<Game id: 6, name: "Tiny Epic Dungeons Adventures", description: "Tiny Epic Dungeons Adventures is a standalone dung...", image_url: "https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnT...", min_players: 1, max_players: 4, play_time: 90, average_score: 0.95e1, bgg_id: "439586", created_at: "2025-02-21 13:25:12.846760000 +0000", updated_at: "2025-02-21 13:25:12.846760000 +0000">
+Completed 201 Created in 23ms (Views: 0.7ms | ActiveRecord: 10.5ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+  [1m[36mGame Load (149.7ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:33:in `create'
+Game with BGG ID 439586 already exists
+Completed 200 OK in 155ms (Views: 0.4ms | ActiveRecord: 159.8ms (1 query, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/439586" for ::1 at 2025-02-21 22:25:14 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"439586", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/439586
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"439586", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mGame Load (0.7ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 439586
+Found local game: #<Game id: 6, name: "Tiny Epic Dungeons Adventures", description: "Tiny Epic Dungeons Adventures is a standalone dung...", image_url: "https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnT...", min_players: 1, max_players: 4, play_time: 90, average_score: 0.95e1, bgg_id: "439586", created_at: "2025-02-21 13:25:12.846760000 +0000", updated_at: "2025-02-21 13:25:12.846760000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=439586&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mGame Update (4.0ms)[0m  [1m[33mUPDATE "games" SET "description" = $1, "updated_at" = $2 WHERE "games"."id" = $3[0m  [["description", "Tiny Epic Dungeons Adventures is a standalone dungeon crawler for 1 to 4 players that builds on the beloved Tiny Epic Dungeons system. This story-driven adventure introduces new heroes, deadly enemies, and hidden secrets to uncover.&#10;&#10;Explore the dungeon like never before with an Adventure Booklet, a spiral-bound Dungeon Booklet, and secret Chapter Envelopes that unlock thrilling plot twists. Discover powerful loot, face unexpected challenges, and open mysterious packages that push your party to the limit!&#10;&#10;Featuring a chapter-based Dungeon Booklet and modular dungeon rooms, each playthrough offers new surprises. The latest gameplay addition, Exploration, changes the way you approach danger&mdash;search for keys to unlock forbidden doors, use bombs to blast through walls, and find loot to survive the journey&rsquo;s perils. Every decision matters as you navigate the depths.&#10;And yes, it&rsquo;s fully compatible with the original Tiny Epic Dungeons! Mix and match heroes, loot, spells, dungeon rooms, and enemies to create your ultimate dungeon-crawling experience.&#10;&#10;&mdash;description from the publisher&#10;&#10;"], ["updated_at", "2025-02-21 13:25:14.676597"], ["id", 6]]
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mTRANSACTION (2.4ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mReview Load (3.2ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "439586"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 75ms (Views: 3.0ms | ActiveRecord: 10.5ms (3 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/439586" for ::1 at 2025-02-21 22:25:14 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"439586", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/439586
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"439586", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"432ea5e1feaa35e667c15eafbe77902a\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 439586
+Found local game: #<Game id: 6, name: "Tiny Epic Dungeons Adventures", description: "Tiny Epic Dungeons Adventures is a standalone dung...", image_url: "https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnT...", min_players: 1, max_players: 4, play_time: 90, average_score: 0.95e1, bgg_id: "439586", created_at: "2025-02-21 13:25:12.846760000 +0000", updated_at: "2025-02-21 13:25:14.676597000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=439586&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.3ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "439586"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 62ms (Views: 2.4ms | ActiveRecord: 0.9ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started POST "/api/v1/games/439586/reviews" for ::1 at 2025-02-21 22:25:17 +0900
+Processing by Api::V1::ReviewsController#create as JSON
+  Parameters: {"review"=>{"overall_score"=>5, "play_time"=>3, "rule_complexity"=>3, "luck_factor"=>3, "interaction"=>3, "downtime"=>3, "recommended_players"=>[], "mechanics"=>[], "tags"=>[], "custom_tags"=>[], "short_comment"=>"ttte"}, "game_id"=>"439586"}
+Request: POST http://localhost:3000/api/v1/games/439586/reviews
+Parameters: #<ActionController::Parameters {"review"=>{"overall_score"=>5, "play_time"=>3, "rule_complexity"=>3, "luck_factor"=>3, "interaction"=>3, "downtime"=>3, "recommended_players"=>[], "mechanics"=>[], "tags"=>[], "custom_tags"=>[], "short_comment"=>"ttte"}, "controller"=>"api/v1/reviews", "action"=>"create", "game_id"=>"439586"} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mUser Load (3.2ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."uid" = $1 LIMIT $2[0m  [["uid", "test2@test.com"], ["LIMIT", 1]]
+  ↳ app/controllers/application_controller.rb:23:in `current_user'
+  [1m[36mGame Load (0.9ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:53:in `set_game'
+Current user: #<User id: 13, name: "test2@test.com", email: [FILTERED], created_at: "2025-02-21 13:19:44.029087000 +0000", updated_at: "2025-02-21 13:20:45.701993000 +0000", provider: "email", uid: "test2@test.com", avatar_url: nil>
+Auth headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_ACCEPT"=>"application/json", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+  [1m[36mCACHE Game Load (0.0ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mReview Create (4.0ms)[0m  [1m[32mINSERT INTO "reviews" ("user_id", "game_id", "overall_score", "play_time", "rule_complexity", "luck_factor", "interaction", "downtime", "recommended_players", "mechanics", "tags", "custom_tags", "short_comment", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING "id"[0m  [["user_id", 13], ["game_id", "439586"], ["overall_score", "5.0"], ["play_time", 3], ["rule_complexity", "3.0"], ["luck_factor", "3.0"], ["interaction", "3.0"], ["downtime", "3.0"], ["recommended_players", "{}"], ["mechanics", "{}"], ["tags", "{}"], ["custom_tags", "{}"], ["short_comment", "ttte"], ["created_at", "2025-02-21 13:25:18.137643"], ["updated_at", "2025-02-21 13:25:18.137643"]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mTRANSACTION (1.6ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:14:in `create'
+  [1m[36mReview Average (0.9ms)[0m  [1m[34mSELECT AVG("reviews"."overall_score") FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "439586"]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mGame Update (3.5ms)[0m  [1m[33mUPDATE "games" SET "average_score" = $1, "updated_at" = $2 WHERE "games"."id" = $3[0m  [["average_score", "5.0"], ["updated_at", "2025-02-21 13:25:18.152592"], ["id", 6]]
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mTRANSACTION (0.4ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/reviews_controller.rb:17:in `create'
+  [1m[36mUser Load (0.8ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."id" = $1 LIMIT $2[0m  [["id", 13], ["LIMIT", 1]]
+Completed 201 Created in 48ms (Views: 0.6ms | ActiveRecord: 16.1ms (7 queries, 1 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/439586" for ::1 at 2025-02-21 22:25:18 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"439586", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/439586
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"439586", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"432ea5e1feaa35e667c15eafbe77902a\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.6ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 439586
+Found local game: #<Game id: 6, name: "Tiny Epic Dungeons Adventures", description: "Tiny Epic Dungeons Adventures is a standalone dung...", image_url: "https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnT...", min_players: 1, max_players: 4, play_time: 90, average_score: 0.5e1, bgg_id: "439586", created_at: "2025-02-21 13:25:12.846760000 +0000", updated_at: "2025-02-21 13:25:18.152592000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=439586&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN[0m
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mGame Update (4.3ms)[0m  [1m[33mUPDATE "games" SET "average_score" = $1, "updated_at" = $2 WHERE "games"."id" = $3[0m  [["average_score", "9.5"], ["updated_at", "2025-02-21 13:25:18.499384"], ["id", 6]]
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mTRANSACTION (0.5ms)[0m  [1m[35mCOMMIT[0m
+  ↳ app/controllers/api/v1/games_controller.rb:70:in `show'
+  [1m[36mReview Load (0.5ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "439586"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 62ms (Views: 3.7ms | ActiveRecord: 6.1ms (3 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/api/v1/games/439586" for ::1 at 2025-02-21 22:25:18 +0900
+Processing by Api::V1::GamesController#show as JSON
+  Parameters: {"id"=>"439586", "game"=>{}}
+Request: GET http://localhost:3000/api/v1/games/439586
+Parameters: #<ActionController::Parameters {"controller"=>"api/v1/games", "action"=>"show", "id"=>"439586", "game"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"application/json", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_IF_NONE_MATCH"=>"W/\"24c090e6889f3c78f1adbff2c83469d3\"", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {}
+  [1m[36mGame Load (0.4ms)[0m  [1m[34mSELECT "games".* FROM "games" WHERE "games"."bgg_id" = $1 LIMIT $2[0m  [["bgg_id", "439586"], ["LIMIT", 1]]
+  ↳ app/controllers/api/v1/games_controller.rb:60:in `show'
+Searching for game with BGG ID: 439586
+Found local game: #<Game id: 6, name: "Tiny Epic Dungeons Adventures", description: "Tiny Epic Dungeons Adventures is a standalone dung...", image_url: "https://cf.geekdo-images.com/5ZNWz-1b4DLDylGkvJAnT...", min_players: 1, max_players: 4, play_time: 90, average_score: 0.95e1, bgg_id: "439586", created_at: "2025-02-21 13:25:12.846760000 +0000", updated_at: "2025-02-21 13:25:18.499384000 +0000">
+Fetching BGG details from: https://boardgamegeek.com/xmlapi2/thing?id=439586&stats=1
+BGG API response received
+Parsed XML response
+Processed 1 games
+  [1m[36mReview Load (0.4ms)[0m  [1m[34mSELECT "reviews".* FROM "reviews" WHERE "reviews"."game_id" = $1[0m  [["game_id", "439586"]]
+  ↳ app/controllers/api/v1/games_controller.rb:84:in `show'
+Completed 200 OK in 49ms (Views: 2.8ms | ActiveRecord: 0.8ms (2 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/letter_opener" for ::1 at 2025-02-21 22:26:59 +0900
+Processing by LetterOpenerWeb::LettersController#index as HTML
+  Rendering layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb
+  Rendering C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb (Duration: 1.9ms | GC: 0.0ms)
+  Rendered collection of C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb [15 times] (Duration: 26.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters (Duration: 30.1ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_icon.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_bootstrap.html.erb (Duration: 0.1ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_letters.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_styles.html.erb (Duration: 0.9ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_jquery.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_favcount.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_javascripts.html.erb (Duration: 0.5ms | GC: 0.0ms)
+  Rendered layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb (Duration: 33.1ms | GC: 0.0ms)
+Completed 200 OK in 37ms (Views: 33.5ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/letter_opener/1740143984_9484642_5befc1f/rich" for ::1 at 2025-02-21 22:26:59 +0900
+Processing by LetterOpenerWeb::LettersController#show as HTML
+  Parameters: {"id"=>"1740143984_9484642_5befc1f", "style"=>"rich"}
+  Rendering html template
+  Rendered html template (Duration: 0.3ms | GC: 0.0ms)
+Completed 200 OK in 1ms (Views: 0.7ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/letter_opener/" for ::1 at 2025-02-21 22:27:01 +0900
+Processing by LetterOpenerWeb::LettersController#index as HTML
+  Rendering layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb
+  Rendering C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb (Duration: 1.8ms | GC: 0.0ms)
+  Rendered collection of C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb [15 times] (Duration: 20.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters (Duration: 23.7ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_icon.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_bootstrap.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_letters.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_styles.html.erb (Duration: 1.1ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_jquery.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_favcount.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_javascripts.html.erb (Duration: 0.7ms | GC: 0.0ms)
+  Rendered layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb (Duration: 27.2ms | GC: 0.0ms)
+Completed 200 OK in 32ms (Views: 27.8ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/letter_opener/1740143984_9484642_5befc1f/rich" for ::1 at 2025-02-21 22:27:01 +0900
+Processing by LetterOpenerWeb::LettersController#show as HTML
+  Parameters: {"id"=>"1740143984_9484642_5befc1f", "style"=>"rich"}
+  Rendering html template
+  Rendered html template (Duration: 0.4ms | GC: 0.0ms)
+Completed 200 OK in 2ms (Views: 0.9ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started POST "/letter_opener/clear" for ::1 at 2025-02-21 22:27:06 +0900
+Processing by LetterOpenerWeb::LettersController#clear as HTML
+  Parameters: {"authenticity_token"=>"[FILTERED]"}
+Redirected to http://localhost:3000/letter_opener/
+Completed 302 Found in 18ms (ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/letter_opener/" for ::1 at 2025-02-21 22:27:06 +0900
+Processing by LetterOpenerWeb::LettersController#index as HTML
+  Rendering layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb
+  Rendering C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters
+  Rendered collection of C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/_item.html.erb [0 times] (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/letter_opener_web/letters/index.html.erb within layouts/letter_opener_web/letters (Duration: 1.7ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_icon.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_bootstrap.html.erb (Duration: 0.7ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/styles/_letters.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_styles.html.erb (Duration: 2.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_jquery.html.erb (Duration: 0.1ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/js/_favcount.html.erb (Duration: 0.0ms | GC: 0.0ms)
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/_javascripts.html.erb (Duration: 0.9ms | GC: 0.0ms)
+  Rendered layout C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/letter_opener_web-3.0.0/app/views/layouts/letter_opener_web/letters.html.erb (Duration: 6.7ms | GC: 0.0ms)
+Completed 200 OK in 8ms (Views: 7.2ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+

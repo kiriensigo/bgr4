@@ -19,15 +19,8 @@ class ApplicationController < ActionController::API
   end
 
   def current_user
-    return nil unless request.headers['Authorization']
-    
-    token = request.headers['Authorization'].split(' ').last
-    begin
-      decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base, true, algorithm: 'HS256')
-      User.find(decoded_token[0]['user_id'])
-    rescue JWT::DecodeError, ActiveRecord::RecordNotFound
-      nil
-    end
+    # DeviseTokenAuthのcurrent_userを優先的に使用
+    super || authenticate_token
   end
 
   private
@@ -51,5 +44,17 @@ class ApplicationController < ActionController::API
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:sign_up, keys: [:name])
     devise_parameter_sanitizer.permit(:account_update, keys: [:name])
+  end
+
+  def authenticate_token
+    return nil unless request.headers['Authorization']
+    
+    token = request.headers['Authorization'].split(' ').last
+    begin
+      decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base, true, algorithm: 'HS256')
+      User.find(decoded_token[0]['user_id'])
+    rescue JWT::DecodeError, ActiveRecord::RecordNotFound
+      nil
+    end
   end
 end
