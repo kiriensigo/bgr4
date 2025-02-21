@@ -45,6 +45,10 @@ module Auth
       redirect_to "#{frontend_url}/signin?error=#{CGI.escape('認証に失敗しました')}"
     end
 
+    def google_oauth2
+      callback
+    end
+    
     private
 
     def frontend_url

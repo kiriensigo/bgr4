@@ -29460,3 +29460,67 @@ Processing by LetterOpenerWeb::LettersController#index as HTML
 Completed 200 OK in 8ms (Views: 7.2ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
 
 
+Started GET "/auth/google" for ::1 at 2025-02-21 23:34:49 +0900
+Redirected to http://localhost:3000/omniauth/google?resource_class=User
+Completed 307 Temporary Redirect in 5ms
+
+
+Started GET "/omniauth/google?resource_class=User" for ::1 at 2025-02-21 23:34:49 +0900
+  
+ActionController::RoutingError (No route matches [GET] "/omniauth/google"):
+  
+Started GET "/favicon.ico" for ::1 at 2025-02-21 23:34:50 +0900
+  
+ActionController::RoutingError (No route matches [GET] "/favicon.ico"):
+  
+[dotenv] Set [36mAPI_URL[0m, [36mDATABASE_URL[0m, [36mDEVISE_JWT_SECRET_KEY[0m, [36mFRONTEND_URL[0m, [36mGMAIL_APP_PASSWORD[0m, [36mGMAIL_USERNAME[0m, [36mGOOGLE_CLIENT_ID[0m, [36mGOOGLE_CLIENT_SECRET[0m, [36mTWITTER_CLIENT_ID[0m, and [36mTWITTER_CLIENT_SECRET[0m
+[dotenv] Loaded [33m.env[0m
+[dotenv] Loaded [33m.env[0m
+Started GET "/auth/google" for ::1 at 2025-02-21 23:48:50 +0900
+  [1m[36mActiveRecord::SchemaMigration Load (2.2ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+Redirected to http://localhost:3000/omniauth/google?resource_class=User
+Completed 307 Temporary Redirect in 13ms
+
+
+Started GET "/omniauth/google?resource_class=User" for ::1 at 2025-02-21 23:48:51 +0900
+  
+ActionController::RoutingError (No route matches [GET] "/omniauth/google"):
+  
+Started GET "/" for ::1 at 2025-02-21 23:52:52 +0900
+Processing by Rails::WelcomeController#index as HTML
+  Rendering C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/railties-8.0.1/lib/rails/templates/rails/welcome/index.html.erb
+  Rendered C:/Users/iamto/.local/share/gem/ruby/3.3.0/gems/railties-8.0.1/lib/rails/templates/rails/welcome/index.html.erb (Duration: 1.6ms | GC: 0.0ms)
+Completed 200 OK in 66ms (Views: 3.4ms | ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/icon.png" for ::1 at 2025-02-21 23:52:53 +0900
+  
+ActionController::RoutingError (No route matches [GET] "/icon.png"):
+  
+Started DELETE "/auth/sign_out" for ::1 at 2025-02-21 23:53:01 +0900
+Processing by Auth::SessionsController#destroy as */*
+  Parameters: {"session"=>{}}
+Request: DELETE http://localhost:3000/auth/sign_out
+Parameters: #<ActionController::Parameters {"controller"=>"auth/sessions", "action"=>"destroy", "session"=>{}} permitted: false>
+Headers: {"HTTP_HOST"=>"localhost:3000", "HTTP_CONNECTION"=>"keep-alive", "HTTP_SEC_CH_UA_PLATFORM"=>"\"Windows\"", "HTTP_UID"=>"test2@test.com", "HTTP_SEC_CH_UA"=>"\"Not(A:Brand\";v=\"99\", \"Google Chrome\";v=\"133\", \"Chromium\";v=\"133\"", "HTTP_TOKEN_TYPE"=>"Bearer", "HTTP_SEC_CH_UA_MOBILE"=>"?0", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw", "HTTP_ACCESS_TOKEN"=>"AqafDkp8fmVNu8ss657FMA", "HTTP_EXPIRY"=>"1741353645", "HTTP_USER_AGENT"=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "HTTP_ACCEPT"=>"*/*", "HTTP_ORIGIN"=>"http://localhost:3001", "HTTP_SEC_FETCH_SITE"=>"same-site", "HTTP_SEC_FETCH_MODE"=>"cors", "HTTP_SEC_FETCH_DEST"=>"empty", "HTTP_REFERER"=>"http://localhost:3001/", "HTTP_ACCEPT_ENCODING"=>"gzip, deflate, br, zstd", "HTTP_ACCEPT_LANGUAGE"=>"ja,en-US;q=0.9,en;q=0.8,st;q=0.7,de;q=0.6", "HTTP_VERSION"=>"HTTP/1.1"}
+Auth Headers: {"HTTP_UID"=>"test2@test.com", "HTTP_CLIENT"=>"mAQ46rLsCRcR2U21JoXFWw"}
+  [1m[36mUser Load (3.4ms)[0m  [1m[34mSELECT "users".* FROM "users" WHERE "users"."uid" = $1 LIMIT $2[0m  [["uid", "test2@test.com"], ["LIMIT", 1]]
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN[0m
+  [1m[36mUser Exists? (4.8ms)[0m  [1m[34mSELECT 1 AS one FROM "users" WHERE LOWER("users"."email") = LOWER($1) AND "users"."id" != $2 LIMIT $3[0m  [["email", "[FILTERED]"], ["id", 13], ["LIMIT", 1]]
+  [1m[36mUser Update (0.9ms)[0m  [1m[33mUPDATE "users" SET "updated_at" = $1, "tokens" = $2 WHERE "users"."id" = $3[0m  [["updated_at", "2025-02-21 14:53:01.828641"], ["tokens", "[FILTERED]"], ["id", 13]]
+  [1m[36mTRANSACTION (1.4ms)[0m  [1m[35mCOMMIT[0m
+Completed 200 OK in 316ms (Views: 0.2ms | ActiveRecord: 36.8ms (3 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/auth/google" for ::1 at 2025-02-21 23:53:03 +0900
+Redirected to http://localhost:3000/omniauth/google?resource_class=User
+Completed 307 Temporary Redirect in 0ms
+
+
+Started GET "/omniauth/google?resource_class=User" for ::1 at 2025-02-21 23:53:03 +0900
+  
+ActionController::RoutingError (No route matches [GET] "/omniauth/google"):
+  
+[dotenv] Set [36mAPI_URL[0m, [36mDATABASE_URL[0m, [36mDEVISE_JWT_SECRET_KEY[0m, [36mFRONTEND_URL[0m, [36mGMAIL_APP_PASSWORD[0m, [36mGMAIL_USERNAME[0m, [36mGOOGLE_CLIENT_ID[0m, [36mGOOGLE_CLIENT_SECRET[0m, [36mTWITTER_CLIENT_ID[0m, and [36mTWITTER_CLIENT_SECRET[0m
+[dotenv] Loaded [33m.env[0m
+[dotenv] Loaded [33m.env[0m
