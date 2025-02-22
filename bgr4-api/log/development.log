@@ -29524,3 +29524,13 @@ ActionController::RoutingError (No route matches [GET] "/omniauth/google"):
 [dotenv] Set [36mAPI_URL[0m, [36mDATABASE_URL[0m, [36mDEVISE_JWT_SECRET_KEY[0m, [36mFRONTEND_URL[0m, [36mGMAIL_APP_PASSWORD[0m, [36mGMAIL_USERNAME[0m, [36mGOOGLE_CLIENT_ID[0m, [36mGOOGLE_CLIENT_SECRET[0m, [36mTWITTER_CLIENT_ID[0m, and [36mTWITTER_CLIENT_SECRET[0m
 [dotenv] Loaded [33m.env[0m
 [dotenv] Loaded [33m.env[0m
+Started GET "/auth/google" for ::1 at 2025-02-21 23:53:59 +0900
+  [1m[36mActiveRecord::SchemaMigration Load (1.9ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+Redirected to http://localhost:3000/omniauth/google?resource_class=User
+Completed 307 Temporary Redirect in 4ms
+
+
+Started GET "/omniauth/google?resource_class=User" for ::1 at 2025-02-21 23:54:00 +0900
+  
+ActionController::RoutingError (No route matches [GET] "/omniauth/google"):
+  
