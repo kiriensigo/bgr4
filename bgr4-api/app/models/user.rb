@@ -17,10 +17,15 @@ class User < ApplicationRecord
                       length: { minimum: 8 },
                       format: { with: /\A(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])/,
                                message: 'は英大文字・小文字・数字をそれぞれ1文字以上含む必要があります' },
-                      if: -> { new_record? || changes[:encrypted_password] }
+                      if: :password_required?
 
   before_save :downcase_email
   after_initialize :set_default_tokens
+
+  def password_required?
+    return false if provider.present?
+    new_record? || changes[:encrypted_password].present?
+  end
 
   def self.from_omniauth(auth)
     where(provider: auth.provider, uid: auth.uid).first_or_create do |user|

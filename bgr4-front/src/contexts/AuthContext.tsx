@@ -36,134 +36,112 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Cookieからトークン情報を取得
-        const accessToken = Cookies.get("access-token");
-        const client = Cookies.get("client");
-        const uid = Cookies.get("uid");
+  const cookieOptions = {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    expires: 7,
+    path: "/",
+    domain:
+      typeof window !== "undefined" && window.location.hostname === "localhost"
+        ? "localhost"
+        : window.location.hostname,
+  };
 
-        console.log("Checking auth with tokens:", { accessToken, client, uid });
-
-        if (accessToken && client && uid) {
-          const headers = {
-            "access-token": accessToken,
-            client,
-            uid,
-          };
-
-          console.log("Validating token with headers:", headers);
-
-          const response = await fetch(`${API_URL}/auth/validate_token`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              ...headers,
-            },
-            credentials: "include",
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log("Token validation successful:", data);
-
-            // レスポンスヘッダーから新しいトークンを取得
-            const newAccessToken = response.headers.get("access-token");
-            const newClient = response.headers.get("client");
-            const newUid = response.headers.get("uid");
-            const newExpiry = response.headers.get("expiry");
-
-            // 新しいトークンが存在する場合は更新
-            if (newAccessToken) {
-              console.log("Updating tokens with new values");
-              Cookies.set("access-token", newAccessToken, {
-                secure: true,
-                sameSite: "lax",
-              });
-              if (newClient)
-                Cookies.set("client", newClient, {
-                  secure: true,
-                  sameSite: "lax",
-                });
-              if (newUid)
-                Cookies.set("uid", newUid, { secure: true, sameSite: "lax" });
-              if (newExpiry)
-                Cookies.set("expiry", newExpiry, {
-                  secure: true,
-                  sameSite: "lax",
-                });
-
-              headers["access-token"] = newAccessToken;
-              if (newClient) headers.client = newClient;
-              if (newUid) headers.uid = newUid;
-            }
-
-            setUser(data.data);
-            localStorage.setItem(
-              "auth",
-              JSON.stringify({
-                user: data.data,
-                headers,
-              })
-            );
-          } else {
-            console.log("Token validation failed, clearing auth data");
-            // トークンが無効な場合、認証データをクリア
-            Cookies.remove("access-token");
-            Cookies.remove("client");
-            Cookies.remove("uid");
-            Cookies.remove("expiry");
-            localStorage.removeItem("auth");
-            setUser(null);
-          }
-        } else {
-          console.log("No tokens found in cookies");
-          const storedAuth = localStorage.getItem("auth");
-          if (storedAuth) {
-            const { user: storedUser, headers } = JSON.parse(storedAuth);
-            // ローカルストレージのトークンで再検証
-            if (headers && headers["access-token"]) {
-              console.log("Attempting to validate stored tokens");
-              const response = await fetch(`${API_URL}/auth/validate_token`, {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json",
-                  ...headers,
-                },
-                credentials: "include",
-              });
-
-              if (response.ok) {
-                const data = await response.json();
-                console.log("Stored token validation successful");
-                setUser(data.data);
-              } else {
-                console.log(
-                  "Stored token validation failed, clearing auth data"
-                );
-                localStorage.removeItem("auth");
-                setUser(null);
-              }
-            } else {
-              setUser(storedUser);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-        // エラー時は認証データをクリア
-        Cookies.remove("access-token");
-        Cookies.remove("client");
-        Cookies.remove("uid");
-        Cookies.remove("expiry");
-        localStorage.removeItem("auth");
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
+  const clearAllAuthCookies = () => {
+    const cookieOptions = {
+      path: "/",
+      domain:
+        typeof window !== "undefined" &&
+        window.location.hostname === "localhost"
+          ? "localhost"
+          : window.location.hostname,
     };
 
+    Cookies.remove("access-token", cookieOptions);
+    Cookies.remove("client", cookieOptions);
+    Cookies.remove("uid", cookieOptions);
+    Cookies.remove("expiry", cookieOptions);
+    localStorage.removeItem("auth");
+
+    console.log("Cleared all auth cookies:", {
+      accessToken: Cookies.get("access-token"),
+      client: Cookies.get("client"),
+      uid: Cookies.get("uid"),
+      expiry: Cookies.get("expiry"),
+    });
+  };
+
+  const checkAuth = async () => {
+    try {
+      const accessToken = Cookies.get("access-token");
+      const client = Cookies.get("client");
+      const uid = Cookies.get("uid");
+      const expiry = Cookies.get("expiry");
+
+      if (!accessToken || !client || !uid) {
+        clearAllAuthCookies();
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/auth/validate_token`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "access-token": accessToken,
+          client: client,
+          uid: uid,
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        clearAllAuthCookies();
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUser(data.data);
+
+        // 新しいトークンがレスポンスヘッダーにある場合のみ更新
+        const newAccessToken = response.headers.get("access-token");
+        const newClient = response.headers.get("client");
+        const newUid = response.headers.get("uid");
+        const newExpiry = response.headers.get("expiry");
+
+        if (newAccessToken && newClient && newUid && newExpiry) {
+          const tokens = {
+            "access-token": newAccessToken,
+            client: newClient,
+            uid: newUid,
+            expiry: newExpiry,
+          };
+
+          Object.entries(tokens).forEach(([key, value]) => {
+            if (value) {
+              Cookies.set(key, value, cookieOptions);
+            }
+          });
+        }
+      } else {
+        clearAllAuthCookies();
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      clearAllAuthCookies();
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     checkAuth();
   }, []);
 
@@ -172,20 +150,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const accessToken = Cookies.get("access-token");
     const client = Cookies.get("client");
     const uid = Cookies.get("uid");
+    const expiry = Cookies.get("expiry");
+
+    console.log("Getting auth headers from cookies:", {
+      accessToken,
+      client,
+      uid,
+      expiry,
+    });
 
     if (accessToken && client && uid) {
       headers["access-token"] = accessToken;
       headers.client = client;
       headers.uid = uid;
-      const expiry = Cookies.get("expiry");
       if (expiry) headers.expiry = expiry;
       return headers;
-    }
-
-    const storedAuth = localStorage.getItem("auth");
-    if (storedAuth) {
-      const { headers: storedHeaders } = JSON.parse(storedAuth);
-      return storedHeaders || {};
     }
 
     return headers;
@@ -205,47 +184,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       client: response.headers.get("client"),
       uid: response.headers.get("uid"),
       expiry: response.headers.get("expiry"),
-      "token-type": response.headers.get("token-type"),
     };
 
     // 全てのヘッダーが存在することを確認
-    const requiredHeaders = ["access-token", "client", "uid", "expiry"];
+    const requiredHeaders = ["access-token", "client", "uid"];
     const hasAllHeaders = requiredHeaders.every(
       (header) => authHeaders[header as keyof typeof authHeaders]
     );
 
     if (hasAllHeaders) {
-      // トークン情報をCookieとローカルストレージの両方に保存
-      Cookies.set("access-token", authHeaders["access-token"] || "", {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        expires: 7,
-      });
-      Cookies.set("client", authHeaders.client || "", {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        expires: 7,
-      });
-      Cookies.set("uid", authHeaders.uid || "", {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        expires: 7,
-      });
-      if (authHeaders.expiry) {
-        Cookies.set("expiry", authHeaders.expiry, {
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          expires: 7,
-        });
-      }
+      clearAllAuthCookies();
 
-      localStorage.setItem(
-        "auth",
-        JSON.stringify({
-          user: data.data,
-          headers: authHeaders,
-        })
-      );
+      // 新しいトークンを保存
+      Object.entries(authHeaders).forEach(([key, value]) => {
+        if (value) {
+          Cookies.set(key, value, cookieOptions);
+        }
+      });
+
+      console.log("Cookies after setting in handleAuthResponse:", {
+        accessToken: Cookies.get("access-token"),
+        client: Cookies.get("client"),
+        uid: Cookies.get("uid"),
+        expiry: Cookies.get("expiry"),
+      });
+
       setUser(data.data);
       return data;
     }
@@ -320,12 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("ログアウトエラー:", error);
     } finally {
       setUser(null);
-      // Cookieとローカルストレージをクリア
-      Cookies.remove("access-token");
-      Cookies.remove("client");
-      Cookies.remove("uid");
-      Cookies.remove("expiry");
-      localStorage.removeItem("auth");
+      clearAllAuthCookies();
       router.push("/login");
     }
   };

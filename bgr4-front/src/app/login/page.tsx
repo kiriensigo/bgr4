@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 import TwitterIcon from "@mui/icons-material/Twitter";
+import Cookies from "js-cookie";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -67,7 +68,16 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     console.log("Initiating Google login...");
-    window.location.href = `${API_URL}/auth/google_oauth2`;
+    // ログイン前にキャッシュをクリア
+    Cookies.remove("access-token");
+    Cookies.remove("client");
+    Cookies.remove("uid");
+    Cookies.remove("expiry");
+    localStorage.removeItem("auth");
+
+    // 現在のタイムスタンプをクエリパラメータとして追加して、キャッシュを防ぐ
+    const timestamp = new Date().getTime();
+    window.location.href = `${API_URL}/auth/google_oauth2?t=${timestamp}`;
   };
 
   const handleSocialLogin = (provider: "google_oauth2" | "twitter") => {

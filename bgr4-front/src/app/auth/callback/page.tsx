@@ -11,118 +11,149 @@ export default function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
+
+  const clearAllAuthCookies = () => {
+    const cookieOptions = {
+      path: "/",
+      domain:
+        window.location.hostname === "localhost"
+          ? "localhost"
+          : window.location.hostname,
+    };
+
+    // 既存のトークンを確実にクリア
+    ["access-token", "client", "uid", "expiry"].forEach((key) => {
+      Cookies.remove(key, cookieOptions);
+    });
+
+    localStorage.removeItem("auth");
+
+    console.log("Cleared all auth cookies:", {
+      accessToken: Cookies.get("access-token"),
+      client: Cookies.get("client"),
+      uid: Cookies.get("uid"),
+      expiry: Cookies.get("expiry"),
+    });
+  };
+
+  const saveAuthData = (tokens: Record<string, string>, userData: any) => {
+    const cookieOptions = {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      expires: 7,
+      path: "/",
+      domain:
+        window.location.hostname === "localhost"
+          ? "localhost"
+          : window.location.hostname,
+    };
+
+    // トークンを保存
+    Object.entries(tokens).forEach(([key, value]) => {
+      if (value) {
+        try {
+          Cookies.set(key, value, cookieOptions);
+        } catch (e) {
+          console.error(`Error setting cookie ${key}:`, e);
+        }
+      }
+    });
+
+    // ユーザー情報を保存
+    try {
+      localStorage.setItem(
+        "auth",
+        JSON.stringify({
+          user: userData,
+          headers: tokens,
+        })
+      );
+    } catch (e) {
+      console.error("Error saving to localStorage:", e);
+    }
+
+    console.log("Auth data saved. Current cookies:", {
+      accessToken: Cookies.get("access-token"),
+      client: Cookies.get("client"),
+      uid: Cookies.get("uid"),
+      expiry: Cookies.get("expiry"),
+    });
+  };
 
   useEffect(() => {
     const validateAndSaveAuth = async () => {
-      const accessToken = searchParams.get("access-token");
-      const uid = searchParams.get("uid");
-      const client = searchParams.get("client");
-      const expiry = searchParams.get("expiry");
-      const error = searchParams.get("error");
-      const provider = searchParams.get("provider");
+      try {
+        // 既存のトークンをクリア
+        clearAllAuthCookies();
 
-      console.log("Received auth params:", {
-        accessToken: accessToken ? "exists" : "missing",
-        uid: uid ? "exists" : "missing",
-        client: client ? "exists" : "missing",
-        expiry: expiry ? "exists" : "missing",
-        error,
-        provider,
-      });
+        // URLパラメータからトークン情報を取得
+        const accessToken = searchParams.get("access-token");
+        const uid = searchParams.get("uid");
+        const client = searchParams.get("client");
+        const expiry = searchParams.get("expiry");
 
-      if (error) {
-        const decodedError = decodeURIComponent(error);
-        const errorMessage = provider
-          ? `${
-              provider === "google" ? "Google" : "Twitter"
-            }での認証に失敗しました: ${decodedError}`
-          : decodedError;
-        setError(errorMessage);
-        console.error("Auth error:", errorMessage);
-        setTimeout(() => {
-          router.push(`/login?error=${encodeURIComponent(errorMessage)}`);
-        }, 2000);
-        return;
-      }
+        console.log("Received auth params:", {
+          accessToken: accessToken ? "exists" : "missing",
+          uid: uid ? "exists" : "missing",
+          client: client ? "exists" : "missing",
+          expiry: expiry ? "exists" : "missing",
+        });
 
-      if (accessToken && uid && client) {
-        try {
-          console.log("Validating token with backend...");
-
-          // トークンの検証とユーザー情報の取得
-          const response = await fetch(`${API_URL}/auth/validate_token`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "access-token": accessToken,
-              client: client,
-              uid: uid,
-            },
-          });
-
-          if (!response.ok) {
-            throw new Error("トークンの検証に失敗しました");
-          }
-
-          const data = await response.json();
-          console.log("Token validation successful:", data);
-
-          // トークン情報を保存
-          Cookies.set("access-token", accessToken, {
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            expires: 7,
-          });
-          Cookies.set("uid", uid, {
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            expires: 7,
-          });
-          Cookies.set("client", client, {
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            expires: 7,
-          });
-          if (expiry) {
-            Cookies.set("expiry", expiry, {
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-              expires: 7,
-            });
-          }
-
-          // ユーザー情報とトークンをローカルストレージに保存
-          localStorage.setItem(
-            "auth",
-            JSON.stringify({
-              user: data.data,
-              headers: {
-                "access-token": accessToken,
-                client,
-                uid,
-                expiry,
-              },
-            })
-          );
-
-          console.log("Auth data saved, redirecting to home...");
-          router.push("/");
-        } catch (err) {
-          console.error("Token validation error:", err);
-          const errorMessage =
-            "認証情報の検証に失敗しました。もう一度お試しください。";
-          setError(errorMessage);
-          setTimeout(() => {
-            router.push(`/login?error=${encodeURIComponent(errorMessage)}`);
-          }, 2000);
+        if (!accessToken || !uid || !client || !expiry) {
+          throw new Error("必要な認証情報が不足しています");
         }
-      } else {
-        const errorMessage =
-          "認証に失敗しました。必要な認証情報が不足しています。";
-        console.error("Missing required auth params");
-        setError(errorMessage);
+
+        const tokens = {
+          "access-token": accessToken,
+          client,
+          uid,
+          expiry,
+        };
+
+        // トークンを一時的に保存
+        saveAuthData(tokens, null);
+
+        // トークンの検証
+        const response = await fetch(`${API_URL}/auth/validate_token`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...tokens,
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("トークンの検証に失敗しました");
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          // 検証成功後、最終的なトークンとユーザー情報を保存
+          saveAuthData(tokens, data.data);
+          
+          // 少し待ってからリダイレクト
+          setTimeout(() => {
+            setIsProcessing(false);
+            router.push("/");
+          }, 1000);
+        } else {
+          throw new Error("認証に失敗しました");
+        }
+      } catch (error) {
+        console.error("Authentication error:", error);
+        clearAllAuthCookies();
+        setError(error instanceof Error ? error.message : "認証に失敗しました");
+        setIsProcessing(false);
+
         setTimeout(() => {
-          router.push(`/login?error=${encodeURIComponent(errorMessage)}`);
+          router.push(
+            `/login?error=${encodeURIComponent(
+              error instanceof Error ? error.message : "認証に失敗しました"
+            )}`
+          );
         }, 2000);
       }
     };
@@ -150,10 +181,12 @@ export default function AuthCallback() {
           <>
             <CircularProgress />
             <Typography variant="h6" align="center">
-              認証中...
+              {isProcessing ? "認証中..." : "認証が完了しました"}
             </Typography>
             <Typography variant="body2" color="text.secondary" align="center">
-              自動的にホームページに移動します
+              {isProcessing
+                ? "しばらくお待ちください"
+                : "自動的にホームページに移動します"}
             </Typography>
           </>
         )}
