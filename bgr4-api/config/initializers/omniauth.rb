@@ -18,12 +18,18 @@ Rails.application.config.middleware.use OmniAuth::Builder do
     {
       callback_url: "#{ENV['API_URL']}/auth/twitter2/callback",
       client_options: {
+        site: 'https://api.twitter.com',
         authorize_url: 'https://twitter.com/i/oauth2/authorize',
         token_url: 'https://api.twitter.com/2/oauth2/token'
       },
+      authorize_params: {
+        redirect_uri: "#{ENV['API_URL']}/auth/twitter2/callback",
+        scope: 'tweet.read users.read offline.access'
+      },
       provider_ignores_state: true,
-      scope: 'users.read tweet.read offline.access',
-      path_prefix: '/auth'
+      path_prefix: '/auth',
+      pkce: true,
+      name: 'twitter2'
     }
 end
 
