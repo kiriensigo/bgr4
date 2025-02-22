@@ -38,8 +38,45 @@ module Api
       end
 
       def all
-        @reviews = Review.includes(:user, :game).order(created_at: :desc)
-        render json: @reviews
+        @reviews = Review.includes(:user, :game)
+                        .order(created_at: :desc)
+                        .limit(20)
+
+        reviews_with_game = @reviews.map do |review|
+          {
+            id: review.id,
+            overall_score: review.overall_score,
+            play_time: review.play_time,
+            rule_complexity: review.rule_complexity,
+            luck_factor: review.luck_factor,
+            interaction: review.interaction,
+            downtime: review.downtime,
+            short_comment: review.short_comment,
+            recommended_players: review.recommended_players,
+            mechanics: review.mechanics,
+            tags: review.tags,
+            custom_tags: review.custom_tags,
+            created_at: review.created_at,
+            user: {
+              id: review.user.id,
+              name: review.user.name,
+              image: review.user.image
+            },
+            game: {
+              id: review.game.id,
+              bgg_id: review.game.bgg_id,
+              name: review.game.name,
+              japanese_name: review.game.japanese_name,
+              image_url: review.game.image_url,
+              min_players: review.game.min_players,
+              max_players: review.game.max_players,
+              play_time: review.game.play_time,
+              average_score: review.game.average_score
+            }
+          }
+        end
+
+        render json: reviews_with_game
       end
 
       def my

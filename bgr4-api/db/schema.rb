@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_22_080542) do
+ActiveRecord::Schema[8.0].define(version: 2025_02_22_153124) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -25,6 +25,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_22_080542) do
     t.string "bgg_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "japanese_name"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
   end
 

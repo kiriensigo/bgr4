@@ -10,6 +10,7 @@ module Api
               id: game.id,
               bgg_id: game.bgg_id,
               name: game.name,
+              japanese_name: game.japanese_name,
               image_url: game.image_url,
               min_players: game.min_players,
               max_players: game.max_players,
@@ -40,6 +41,7 @@ module Api
           
           # 新しいゲームを作成
           @game = Game.new(game_params)
+          @game.japanese_name = AmazonService.search_game_japanese_name(@game.name)
           
           if @game.save
             Rails.logger.debug "Game created successfully: #{@game.inspect}"
@@ -69,6 +71,7 @@ module Api
               game_data = bgg_data.first
               local_game.update(
                 name: game_data[:name],
+                japanese_name: game_data[:japanese_name],
                 description: game_data[:description],
                 image_url: game_data[:image_url],
                 min_players: game_data[:min_players],
@@ -85,6 +88,7 @@ module Api
               id: local_game.id,
               bgg_id: local_game.bgg_id,
               name: local_game.name,
+              japanese_name: local_game.japanese_name,
               description: local_game.description,
               image_url: local_game.image_url,
               min_players: local_game.min_players,
@@ -123,6 +127,7 @@ module Api
         params.require(:game).permit(
           :bgg_id,
           :name,
+          :japanese_name,
           :description,
           :image_url,
           :min_players,

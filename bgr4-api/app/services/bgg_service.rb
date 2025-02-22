@@ -13,10 +13,12 @@ class BggService
     games = get_game_details(game_ids)
     
     games.map do |game|
+      japanese_name = AmazonService.search_game_japanese_name(game[:name])
       {
         id: game[:bgg_id],  # BGG IDをIDとして使用
         bgg_id: game[:bgg_id],
         name: game[:name],
+        japanese_name: japanese_name,
         image_url: game[:image_url],
         min_players: game[:min_players],
         max_players: game[:max_players],
@@ -44,9 +46,13 @@ class BggService
     Rails.logger.debug "Parsed XML response"
     
     results = doc.xpath('//item').map do |item|
+      name = item.at_xpath('.//name[@type="primary"]/@value')&.value
+      japanese_name = AmazonService.search_game_japanese_name(name)
+      
       {
         bgg_id: item['id'],
-        name: item.at_xpath('.//name[@type="primary"]/@value')&.value,
+        name: name,
+        japanese_name: japanese_name,
         description: item.at_xpath('.//description')&.text,
         image_url: item.at_xpath('.//image')&.text,
         min_players: item.at_xpath('.//minplayers/@value')&.value.to_i,
@@ -91,9 +97,12 @@ class BggService
   def self.parse_hot_games(response)
     doc = Nokogiri::XML(response)
     doc.xpath('//item').map do |item|
+      name = item.at_xpath('.//name[@type="primary"]/@value')&.value
+      japanese_name = AmazonService.search_game_japanese_name(name)
       {
         id: item['id'],
-        name: item.at_xpath('.//name[@type="primary"]/@value')&.value,
+        name: name,
+        japanese_name: japanese_name,
         image_url: item.at_xpath('.//image')&.text
       }
     end
