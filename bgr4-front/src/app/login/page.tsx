@@ -184,7 +184,13 @@ export default function LoginPage() {
               variant="contained"
               size="large"
               disabled={loading}
-              sx={{ mt: 3 }}
+              sx={{
+                mt: 3,
+                backgroundColor: "#1976d2", // MUIのデフォルトの青色
+                "&:hover": {
+                  backgroundColor: "#115293", // ホバー時の色も調整
+                },
+              }}
             >
               {loading ? "ログイン中..." : "ログイン"}
             </Button>
@@ -193,7 +199,7 @@ export default function LoginPage() {
 
             <Box sx={{ mt: 2, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
-                アカウントをお持ちでない方は
+                メールアドレスで新規登録はこちら
               </Typography>
               <Link href="/signup" style={{ textDecoration: "none" }}>
                 <Button
@@ -206,7 +212,7 @@ export default function LoginPage() {
                     fontSize: "1rem",
                   }}
                 >
-                  新規登録はこちら
+                  新規登録
                 </Button>
               </Link>
             </Box>

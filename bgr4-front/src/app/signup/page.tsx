@@ -15,6 +15,9 @@ import {
 import GoogleIcon from "@mui/icons-material/Google";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import { useAuth } from "@/contexts/AuthContext";
+import Cookies from "js-cookie";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function SignupPage() {
   const { signUp } = useAuth();
@@ -90,9 +93,18 @@ export default function SignupPage() {
     }
   };
 
-  const handleSocialLogin = (provider: "google" | "twitter") => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    window.location.href = `${apiUrl}/auth/${provider}`;
+  const handleSocialLogin = (provider: "google_oauth2" | "twitter2") => {
+    console.log(`Initiating ${provider} login...`);
+    // ログイン前にキャッシュをクリア
+    Cookies.remove("access-token");
+    Cookies.remove("client");
+    Cookies.remove("uid");
+    Cookies.remove("expiry");
+    localStorage.removeItem("auth");
+
+    // 現在のタイムスタンプをクエリパラメータとして追加して、キャッシュを防ぐ
+    const timestamp = new Date().getTime();
+    window.location.href = `${API_URL}/auth/${provider}?t=${timestamp}`;
   };
 
   return (
@@ -108,7 +120,7 @@ export default function SignupPage() {
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
-              onClick={() => handleSocialLogin("google")}
+              onClick={() => handleSocialLogin("google_oauth2")}
               sx={{
                 mb: 2,
                 color: "#757575",
@@ -125,7 +137,7 @@ export default function SignupPage() {
               fullWidth
               variant="outlined"
               startIcon={<TwitterIcon />}
-              onClick={() => handleSocialLogin("twitter")}
+              onClick={() => handleSocialLogin("twitter2")}
               sx={{
                 color: "#1DA1F2",
                 borderColor: "#1DA1F2",
@@ -212,7 +224,7 @@ export default function SignupPage() {
 
             <Box sx={{ mt: 2, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary">
-                すでにアカウントをお持ちの方は
+                すでにアカウントをお持ちの方はこちら
               </Typography>
               <Link href="/login" style={{ textDecoration: "none" }}>
                 <Button
@@ -225,7 +237,7 @@ export default function SignupPage() {
                     fontSize: "1rem",
                   }}
                 >
-                  ログインはこちら
+                  ログイン
                 </Button>
               </Link>
             </Box>

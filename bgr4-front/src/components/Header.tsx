@@ -115,13 +115,8 @@ export default function Header() {
             ) : (
               <Box sx={{ display: "flex", gap: 1 }}>
                 <Link href="/login" passHref>
-                  <Button variant="outlined" color="primary">
-                    ログイン
-                  </Button>
-                </Link>
-                <Link href="/signup" passHref>
                   <Button variant="contained" color="primary">
-                    新規登録
+                    ログイン
                   </Button>
                 </Link>
               </Box>
