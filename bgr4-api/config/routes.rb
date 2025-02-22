@@ -14,6 +14,10 @@ Rails.application.routes.draw do
     get '/auth/:provider/callback', to: 'auth/omniauth_callbacks#omniauth_success'
     post '/auth/:provider/callback', to: 'auth/omniauth_callbacks#omniauth_success'
     get '/auth/failure', to: 'auth/omniauth_callbacks#omniauth_failure'
+    
+    # Twitter2用の追加ルート
+    get '/omniauth/twitter2', to: 'auth/omniauth_callbacks#passthru'
+    get '/auth/twitter2/callback', to: 'auth/omniauth_callbacks#omniauth_success'
   end
 
   # API routes

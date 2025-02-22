@@ -280,6 +280,15 @@ Devise.setup do |config|
       provider_ignores_state: true
     }
 
+  config.omniauth :twitter2,
+    ENV['TWITTER_CLIENT_ID'],
+    ENV['TWITTER_CLIENT_SECRET'],
+    {
+      callback_url: ENV['TWITTER_CALLBACK_URL'],
+      scope: 'tweet.read users.read offline.access',
+      provider_ignores_state: true
+    }
+
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or
   # change the failure app, you can configure them inside the config.warden block.

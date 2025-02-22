@@ -36,32 +36,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  const getHostname = () => {
+    if (typeof window === "undefined") return "";
+    return window.location.hostname === "localhost"
+      ? "localhost"
+      : window.location.hostname;
+  };
+
   const cookieOptions = {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     expires: 7,
     path: "/",
-    domain:
-      typeof window !== "undefined" && window.location.hostname === "localhost"
-        ? "localhost"
-        : window.location.hostname,
+    domain: getHostname(),
   };
 
   const clearAllAuthCookies = () => {
     const cookieOptions = {
       path: "/",
-      domain:
-        typeof window !== "undefined" &&
-        window.location.hostname === "localhost"
-          ? "localhost"
-          : window.location.hostname,
+      domain: getHostname(),
     };
 
-    Cookies.remove("access-token", cookieOptions);
-    Cookies.remove("client", cookieOptions);
-    Cookies.remove("uid", cookieOptions);
-    Cookies.remove("expiry", cookieOptions);
-    localStorage.removeItem("auth");
+    ["access-token", "client", "uid", "expiry"].forEach((key) => {
+      Cookies.remove(key, cookieOptions);
+    });
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth");
+    }
 
     console.log("Cleared all auth cookies:", {
       accessToken: Cookies.get("access-token"),

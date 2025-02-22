@@ -6,13 +6,14 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
-         :confirmable, :omniauthable, omniauth_providers: [:google_oauth2]
+         :confirmable, :omniauthable, omniauth_providers: [:google_oauth2, :twitter2]
   has_many :reviews
 
   validates :name, presence: true
   validates :email, presence: true, 
                    uniqueness: { case_sensitive: false },
-                   format: { with: URI::MailTo::EMAIL_REGEXP }
+                   format: { with: URI::MailTo::EMAIL_REGEXP },
+                   unless: :oauth_login?
   validates :password, presence: true, 
                       length: { minimum: 8 },
                       format: { with: /\A(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[0-9])/,
@@ -27,11 +28,20 @@ class User < ApplicationRecord
     new_record? || changes[:encrypted_password].present?
   end
 
+  def oauth_login?
+    provider.present? && uid.present?
+  end
+
   def self.from_omniauth(auth)
     where(provider: auth.provider, uid: auth.uid).first_or_create do |user|
-      user.email = auth.info.email
+      user.email = if auth.info.email.present?
+                    auth.info.email
+                  else
+                    "#{auth.uid}@#{auth.provider}.boardgamereview.com"
+                  end
       user.password = Devise.friendly_token[0, 20]
       user.name = auth.info.name
+      user.image = auth.info.image if auth.info.image.present?
       user.skip_confirmation!
     end
   end
@@ -39,7 +49,7 @@ class User < ApplicationRecord
   private
 
   def downcase_email
-    self.email = email.downcase
+    self.email = email.downcase if email.present?
   end
 
   def set_default_tokens

@@ -80,9 +80,18 @@ export default function LoginPage() {
     window.location.href = `${API_URL}/auth/google_oauth2?t=${timestamp}`;
   };
 
-  const handleSocialLogin = (provider: "google_oauth2" | "twitter") => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    window.location.href = `${apiUrl}/auth/${provider}`;
+  const handleSocialLogin = (provider: "google_oauth2" | "twitter2") => {
+    console.log(`Initiating ${provider} login...`);
+    // ログイン前にキャッシュをクリア
+    Cookies.remove("access-token");
+    Cookies.remove("client");
+    Cookies.remove("uid");
+    Cookies.remove("expiry");
+    localStorage.removeItem("auth");
+
+    // 現在のタイムスタンプをクエリパラメータとして追加して、キャッシュを防ぐ
+    const timestamp = new Date().getTime();
+    window.location.href = `${API_URL}/auth/${provider}?t=${timestamp}`;
   };
 
   return (
@@ -98,7 +107,7 @@ export default function LoginPage() {
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
-              onClick={handleGoogleLogin}
+              onClick={() => handleSocialLogin("google_oauth2")}
               sx={{
                 mb: 2,
                 color: "#757575",
@@ -115,7 +124,7 @@ export default function LoginPage() {
               fullWidth
               variant="outlined"
               startIcon={<TwitterIcon />}
-              onClick={() => handleSocialLogin("twitter")}
+              onClick={() => handleSocialLogin("twitter2")}
               sx={{
                 color: "#1DA1F2",
                 borderColor: "#1DA1F2",
