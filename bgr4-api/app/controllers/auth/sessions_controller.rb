@@ -1,5 +1,15 @@
 module Auth
   class SessionsController < DeviseTokenAuth::SessionsController
+    include ActionController::RequestForgeryProtection
+    protect_from_forgery with: :null_session
+    skip_before_action :verify_authenticity_token, raise: false
+
+    def new
+      # GETリクエストの場合は、フロントエンドのログインページにリダイレクト
+      frontend_url = ENV['FRONTEND_URL'] || 'http://localhost:3001'
+      redirect_to "#{frontend_url}/login"
+    end
+
     def create
       # アカウントが有効化されているかチェック
       resource = User.find_by(email: params[:email])
@@ -30,6 +40,12 @@ module Auth
       render json: {
         message: 'ログアウトしました'
       }
+    end
+
+    private
+
+    def resource_params
+      params.permit(:email, :password)
     end
   end
 end 

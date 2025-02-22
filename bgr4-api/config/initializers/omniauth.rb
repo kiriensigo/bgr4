@@ -3,31 +3,29 @@ Rails.application.config.middleware.use OmniAuth::Builder do
     ENV['GOOGLE_CLIENT_ID'],
     ENV['GOOGLE_CLIENT_SECRET'],
     {
-      scope: 'email,profile',
+      callback_url: "#{ENV['API_URL']}/auth/google_oauth2/callback",
+      provider_ignores_state: true,
+      skip_jwt: true,
+      access_type: 'offline',
       prompt: 'select_account',
-      callback_url: "http://localhost:3000/auth/google_oauth2/callback",
-      provider_ignores_state: true
+      scope: 'email,profile',
+      path_prefix: '/auth'
     }
-
-  provider :twitter, ENV['TWITTER_API_KEY'], ENV['TWITTER_API_SECRET']
 end
 
-# CSRFトークンチェックを無効化（APIモードの場合）
+# CSRFトークンチェックの設定
 OmniAuth.config.allowed_request_methods = [:get, :post]
 OmniAuth.config.silence_get_warning = true
+OmniAuth.config.full_host = ENV['API_URL']
 
-# コールバックフェーズの前の処理を修正
-OmniAuth.config.before_callback_phase do |env|
-  request = Rack::Request.new(env)
+# デバッグログを有効化
+OmniAuth.config.logger = Rails.logger
+
+# エラーハンドリングの設定
+OmniAuth.config.on_failure = Proc.new do |env|
+  Rails.logger.error "OmniAuth Failure: #{env['omniauth.error'].inspect}"
+  Rails.logger.error "Error Strategy: #{env['omniauth.error.strategy'].inspect}"
+  Rails.logger.error "Error Message: #{env['omniauth.error.message']}"
   
-  # GoogleとTwitterのコールバックをスキップ
-  next if request.params['provider'] == 'google_oauth2' || 
-          request.path.include?('google_oauth2') ||
-          request.params['provider'] == 'twitter' ||
-          request.path.include?('twitter')
-  
-  allowed_hosts = ['http://localhost:3000', 'http://localhost:3001']
-  unless allowed_hosts.include?(request.referer&.split('?')&.first)
-    raise OmniAuth::Error, "Callback URL not allowed"
-  end
+  OmniAuth::FailureEndpoint.new(env).redirect_to_failure
 end 

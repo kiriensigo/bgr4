@@ -7,8 +7,14 @@ Rails.application.routes.draw do
     confirmations: 'auth/confirmations'
   }
 
-  # letter_opener_web
-  mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+  # 追加のOmniAuthルート
+  devise_scope :user do
+    # OmniAuthのコールバック
+    get '/auth/:provider', to: 'auth/omniauth_callbacks#passthru'
+    get '/auth/:provider/callback', to: 'auth/omniauth_callbacks#omniauth_success'
+    post '/auth/:provider/callback', to: 'auth/omniauth_callbacks#omniauth_success'
+    get '/auth/failure', to: 'auth/omniauth_callbacks#omniauth_failure'
+  end
 
   # API routes
   namespace :api do
@@ -28,4 +34,7 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  # letter_opener_web
+  mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
 end

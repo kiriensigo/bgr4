@@ -8,10 +8,6 @@ class ApplicationController < ActionController::API
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
   rescue_from StandardError, with: :internal_server_error
 
-  # APIモードでは protect_from_forgery は不要なので削除
-  # protect_from_forgery with: :exception を削除
-  # skip_before_action :verify_authenticity_token, if: :jwt_auth? を削除
-
   def authenticate_user!
     unless current_user
       render json: { error: '認証が必要です' }, status: :unauthorized

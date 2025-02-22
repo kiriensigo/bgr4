@@ -6,7 +6,7 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable,
-         :confirmable, :omniauthable, omniauth_providers: [:google_oauth2, :twitter]
+         :confirmable, :omniauthable, omniauth_providers: [:google_oauth2]
   has_many :reviews
 
   validates :name, presence: true
@@ -20,27 +20,24 @@ class User < ApplicationRecord
                       if: -> { new_record? || changes[:encrypted_password] }
 
   before_save :downcase_email
+  after_initialize :set_default_tokens
 
   def self.from_omniauth(auth)
-    user = find_or_initialize_by(provider: auth.provider, uid: auth.uid)
-    
-    # パスワードがない場合は生成
-    user.password = SecureRandom.urlsafe_base64 if user.new_record?
-    
-    user.assign_attributes({
-      name: auth.info.name,
-      email: auth.info.email || "#{auth.uid}@twitter.example.com",
-      avatar_url: auth.info.image
-    })
-
-    # バリデーションをスキップしてセーブ
-    user.save(validate: false)
-    user
+    where(provider: auth.provider, uid: auth.uid).first_or_create do |user|
+      user.email = auth.info.email
+      user.password = Devise.friendly_token[0, 20]
+      user.name = auth.info.name
+      user.skip_confirmation!
+    end
   end
 
   private
 
   def downcase_email
     self.email = email.downcase
+  end
+
+  def set_default_tokens
+    self.tokens ||= {}
   end
 end

@@ -44,7 +44,6 @@ gem 'omniauth'
 gem 'omniauth-google-oauth2'
 gem 'omniauth-twitter' # Twitter API用のgemを使用
 gem 'omniauth-rails_csrf_protection'
-gem 'dotenv-rails'
 gem 'devise'
 gem 'devise_token_auth'
 
@@ -61,6 +60,9 @@ group :development, :test do
   # メールのプレビュー用
   gem 'letter_opener'
   gem 'letter_opener_web'
+
+  # 環境変数の管理
+  gem 'dotenv-rails'
 end
 
 

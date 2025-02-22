@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +17,8 @@ import {
 import GoogleIcon from "@mui/icons-material/Google";
 import TwitterIcon from "@mui/icons-material/Twitter";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 export default function LoginPage() {
   const { signIn } = useAuth();
   const [formData, setFormData] = useState({
@@ -28,6 +30,13 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -56,7 +65,12 @@ export default function LoginPage() {
     }
   };
 
-  const handleSocialLogin = (provider: "google" | "twitter") => {
+  const handleGoogleLogin = () => {
+    console.log("Initiating Google login...");
+    window.location.href = `${API_URL}/auth/google_oauth2`;
+  };
+
+  const handleSocialLogin = (provider: "google_oauth2" | "twitter") => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     window.location.href = `${apiUrl}/auth/${provider}`;
   };
@@ -74,7 +88,7 @@ export default function LoginPage() {
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
-              onClick={() => handleSocialLogin("google")}
+              onClick={handleGoogleLogin}
               sx={{
                 mb: 2,
                 color: "#757575",
@@ -117,17 +131,19 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} id="login-form" name="login-form">
             <TextField
               fullWidth
               label="メールアドレス"
               type="email"
               name="email"
+              id="email"
               value={formData.email}
               onChange={handleChange}
               margin="normal"
               required
               autoFocus
+              autoComplete="email"
             />
 
             <TextField
@@ -135,10 +151,12 @@ export default function LoginPage() {
               label="パスワード"
               type="password"
               name="password"
+              id="password"
               value={formData.password}
               onChange={handleChange}
               margin="normal"
               required
+              autoComplete="current-password"
             />
 
             <Button
