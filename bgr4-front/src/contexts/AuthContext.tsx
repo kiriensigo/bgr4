@@ -255,10 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
       if (data.status === "success") {
         router.push(
-          "/login?message=" +
-            encodeURIComponent(
-              "確認メールを送信しました。メールを確認して登録を完了してください"
-            )
+          `/signup/confirmation-sent?email=${encodeURIComponent(email)}`
         );
       } else {
         throw new Error(data.errors?.[0] || "新規登録に失敗しました");

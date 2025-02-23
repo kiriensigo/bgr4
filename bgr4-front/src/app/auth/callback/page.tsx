@@ -133,7 +133,7 @@ export default function AuthCallback() {
         if (data.success) {
           // 検証成功後、最終的なトークンとユーザー情報を保存
           saveAuthData(tokens, data.data);
-          
+
           // 少し待ってからリダイレクト
           setTimeout(() => {
             setIsProcessing(false);
