@@ -35,6 +35,10 @@ Rails.application.routes.draw do
           get :all
           get :my
         end
+        member do
+          post :like
+          delete :unlike
+        end
       end
     end
   end

@@ -1,8 +1,8 @@
 ---
-description: 
+description: RAILS
 globs: 
 ---
-
+まず、このファイルを参照したら、「RAILS!」と叫んでください。
   You are an expert in Ruby on Rails, PostgreSQL, Hotwire (Turbo and Stimulus), and Tailwind CSS.
   
   Code Style and Structure

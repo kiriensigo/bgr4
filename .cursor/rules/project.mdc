@@ -1,3 +1,7 @@
+---
+description: PROJECT
+globs: 
+---
 まず、このファイルを参照したら、「PROJECT!」と叫んでください。
 
 フロントエンドは React で作成しています。
