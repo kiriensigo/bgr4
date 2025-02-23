@@ -70,12 +70,17 @@ async function createGame(bggGame: BGGGameDetails): Promise<Game> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("Game creation error details:", errorData);
       throw new Error(
-        errorData.error || errorData.message || "ゲーム情報の作成に失敗しました"
+        errorData.error ||
+          errorData.message ||
+          `ゲームの作成中にエラーが発生しました（${response.status}）。しばらく待ってから再度お試しください。`
       );
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log("Game created successfully:", data);
+    return data;
   } catch (error) {
     console.error("Game creation error:", error);
     throw error;
@@ -86,41 +91,64 @@ export async function getGame(
   id: string,
   authHeaders?: Record<string, string>
 ): Promise<Game> {
-  try {
-    // まずAPIからゲーム情報の取得を試みる
-    const response = await fetch(`${API_BASE_URL}/games/${id}`, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...(authHeaders || {}),
-      },
-    });
+  const maxRetries = 3;
+  let retryCount = 0;
 
-    // ゲームが見つかった場合はそのまま返す
-    if (response.ok) {
-      return response.json();
-    }
+  while (retryCount < maxRetries) {
+    try {
+      // まずAPIからゲーム情報の取得を試みる
+      const response = await fetch(`${API_BASE_URL}/games/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...(authHeaders || {}),
+        },
+      });
 
-    // ゲームが見つからない場合（404）は、BGGから情報を取得して新規作成
-    if (response.status === 404) {
-      try {
-        const bggGame = await getBGGGameDetails(id);
-        return await createGame(bggGame);
-      } catch (error) {
-        console.error("BGG game fetch error:", error);
-        throw new Error("ゲーム情報の取得に失敗しました");
+      // ゲームが見つかった場合はそのまま返す
+      if (response.ok) {
+        return response.json();
+      }
+
+      // ゲームが見つからない場合（404）は、BGGから情報を取得して新規作成
+      if (response.status === 404) {
+        try {
+          const bggGame = await getBGGGameDetails(id);
+          // 少し待機してからリトライ
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * (retryCount + 1))
+          );
+          const game = await createGame(bggGame);
+          return game;
+        } catch (error) {
+          console.error("BGG game fetch error:", error);
+          if (retryCount === maxRetries - 1) {
+            throw new Error(
+              "ゲーム情報の取得に失敗しました。しばらく待ってから再度お試しください。"
+            );
+          }
+        }
+      } else {
+        // その他のエラーの場合
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error ||
+            errorData.message ||
+            "ゲーム情報の取得に失敗しました"
+        );
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      if (retryCount === maxRetries - 1) {
+        throw error;
       }
     }
-
-    // その他のエラーの場合
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || errorData.message || "ゲーム情報の取得に失敗しました"
-    );
-  } catch (error) {
-    console.error("API Error:", error);
-    throw error;
+    retryCount++;
   }
+
+  throw new Error(
+    "ゲーム情報の取得に失敗しました。しばらく待ってから再度お試しください。"
+  );
 }
 
 export const postReview = async (

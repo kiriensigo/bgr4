@@ -23,6 +23,9 @@ import {
   Divider,
   CircularProgress,
   Chip,
+  Rating,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 
 interface Game {
@@ -44,6 +47,12 @@ interface GameDetails {
   bggLink: string;
   amazonLink: string;
   rakutenLink: string;
+}
+
+interface Review {
+  id: number;
+  overall_score: number;
+  short_comment: string;
 }
 
 const MECHANICS = [
@@ -86,6 +95,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
   const router = useRouter();
 
   const [review, setReview] = useState({
@@ -143,6 +154,43 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             gameData.name
           )}+ボードゲーム/`,
         });
+
+        // 既存のレビューを取得
+        const reviewsResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/${params.id}/reviews`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              ...headers,
+            },
+            credentials: "include",
+          }
+        );
+
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          const userReview = reviewsData.find(
+            (review: any) => review.user.id === user?.id
+          );
+          if (userReview) {
+            setExistingReview(userReview);
+            // 既存のレビューデータでフォームを初期化
+            setReview({
+              ...review,
+              overall_score: userReview.overall_score,
+              play_time: userReview.play_time || 3,
+              rule_complexity: userReview.rule_complexity || 3,
+              luck_factor: userReview.luck_factor || 3,
+              interaction: userReview.interaction || 3,
+              downtime: userReview.downtime || 3,
+              recommended_players: userReview.recommended_players || [],
+              mechanics: userReview.mechanics || [],
+              tags: userReview.tags || [],
+              custom_tags: (userReview.custom_tags || []).join(" "),
+              short_comment: userReview.short_comment || "",
+            });
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         console.error("Game fetch error:", err);
@@ -204,11 +252,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       };
 
       await postReview(params.id, reviewData, headers);
-      router.push(
-        `/games/${params.id}?message=${encodeURIComponent(
-          "レビューを投稿しました"
-        )}`
+      setSuccessMessage(
+        existingReview ? "レビューを修正しました" : "レビューを投稿しました"
       );
+      setTimeout(() => {
+        router.push("/reviews/my");
+      }, 2000);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === "ログインが必要です") {
@@ -271,7 +320,9 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </Grid>
             <Grid item xs={12} md={8}>
               <Typography variant="h4" component="h1" gutterBottom>
-                {game.name}のレビュー
+                {existingReview
+                  ? `${game.name}のレビューを修正`
+                  : `${game.name}のレビュー`}
               </Typography>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 <Link href={game.bggLink} target="_blank">
@@ -538,7 +589,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 disabled={submitting}
                 sx={{ minWidth: 200 }}
               >
-                {submitting ? "レビューを投稿中..." : "レビューを投稿"}
+                {submitting
+                  ? "送信中..."
+                  : existingReview
+                  ? "レビューを修正"
+                  : "レビューを投稿"}
               </Button>
             </Box>
           </form>
@@ -551,6 +606,13 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           onClose={() => setFlashMessage(null)}
         />
       )}
+
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={2000}
+        message={successMessage}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Container>
   );
 }

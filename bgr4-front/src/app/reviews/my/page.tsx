@@ -45,44 +45,48 @@ export default function MyReviewsPage() {
     0
   );
 
+  const fetchMyReviews = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews/my`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            ...getAuthHeaders(),
+          },
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("レビューの取得に失敗しました");
+      }
+
+      const data = await response.json();
+      setReviews(data);
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+      setError("レビューの取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
       return;
     }
 
-    const fetchMyReviews = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews/my`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              ...getAuthHeaders(),
-            },
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("レビューの取得に失敗しました");
-        }
-
-        const data = await response.json();
-        setReviews(data);
-      } catch (err) {
-        console.error("Error fetching reviews:", err);
-        setError("レビューの取得に失敗しました");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (user) {
       fetchMyReviews();
     }
   }, [user, authLoading, router, getAuthHeaders]);
+
+  const handleReviewUpdated = () => {
+    fetchMyReviews();
+  };
 
   if (authLoading || loading) {
     return (
@@ -127,7 +131,12 @@ export default function MyReviewsPage() {
         <Grid container spacing={3}>
           {reviews.map((review) => (
             <Grid item xs={12} sm={6} md={4} key={review.id}>
-              <GameCard game={review.game} review={review} type="review" />
+              <GameCard
+                game={review.game}
+                review={review}
+                type="review"
+                onReviewUpdated={handleReviewUpdated}
+              />
             </Grid>
           ))}
         </Grid>

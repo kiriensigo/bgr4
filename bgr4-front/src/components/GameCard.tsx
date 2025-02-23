@@ -50,6 +50,7 @@ export default function GameCard({ game, review, type }: GameCardProps) {
   }人`;
   const playTime = `${game.playingTime || game.play_time || "?"}分`;
   const linkHref = `/games/${game.bgg_id || game.id}`;
+  const reviewHref = `/games/${game.bgg_id || game.id}/review`;
 
   return (
     <Paper
@@ -99,10 +100,7 @@ export default function GameCard({ game, review, type }: GameCardProps) {
                   いいね: {review.likes_count}
                 </Typography>
               )}
-              <Link
-                href={`/reviews/edit/${review.id}`}
-                style={{ textDecoration: "none" }}
-              >
+              <Link href={reviewHref} style={{ textDecoration: "none" }}>
                 <Button
                   variant="outlined"
                   size="small"
