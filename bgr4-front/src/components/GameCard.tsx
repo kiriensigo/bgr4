@@ -1,9 +1,10 @@
-'use client'
+"use client";
 
-import { Box, Paper, Typography, Rating } from '@mui/material'
-import Image from 'next/image'
-import Link from 'next/link'
-import { formatDate } from '@/lib/utils'
+import { Box, Paper, Typography, Rating, Button } from "@mui/material";
+import Image from "next/image";
+import Link from "next/link";
+import { formatDate } from "@/lib/utils";
+import EditIcon from "@mui/icons-material/Edit";
 
 interface Game {
   id?: string;
@@ -28,33 +29,42 @@ interface Review {
   overall_score?: number;
   short_comment?: string;
   created_at?: string;
+  likes_count?: number;
+  id?: number;
 }
 
 interface GameCardProps {
   game: Game;
   review?: Review;
-  type: 'game' | 'review';
+  type: "game" | "review";
 }
 
 export default function GameCard({ game, review, type }: GameCardProps) {
-  const imageUrl = game.image_url || game.thumbnail || '/images/no-image.png'
-  const rating = type === 'review' ? review?.overall_score : (game.averageRating || game.average_score)
-  const players = `${game.minPlayers || game.min_players || '?'}〜${game.maxPlayers || game.max_players || '?'}人`
-  const playTime = `${game.playingTime || game.play_time || '?'}分`
-  const linkHref = `/games/${game.bgg_id || game.id}`
+  const imageUrl = game.image_url || game.thumbnail || "/images/no-image.png";
+  const rating =
+    type === "review"
+      ? review?.overall_score
+      : game.averageRating || game.average_score;
+  const players = `${game.minPlayers || game.min_players || "?"}〜${
+    game.maxPlayers || game.max_players || "?"
+  }人`;
+  const playTime = `${game.playingTime || game.play_time || "?"}分`;
+  const linkHref = `/games/${game.bgg_id || game.id}`;
 
   return (
-    <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Paper
+      sx={{ p: 2, height: "100%", display: "flex", flexDirection: "column" }}
+    >
       <Box>
         <Link href={linkHref}>
-          <Box 
-            sx={{ 
-              position: 'relative',
-              width: '100%',
-              paddingTop: '100%',
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              paddingTop: "100%",
               mb: 2,
-              overflow: 'hidden',
-              borderRadius: 1
+              overflow: "hidden",
+              borderRadius: 1,
             }}
           >
             {imageUrl && (
@@ -63,10 +73,10 @@ export default function GameCard({ game, review, type }: GameCardProps) {
                 alt={game.name}
                 fill
                 sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
-                priority={type === 'game'}
-                style={{ 
-                  objectFit: 'cover',
-                  objectPosition: 'center'
+                priority={type === "game"}
+                style={{
+                  objectFit: "cover",
+                  objectPosition: "center",
                 }}
               />
             )}
@@ -79,24 +89,39 @@ export default function GameCard({ game, review, type }: GameCardProps) {
             </Typography>
           </Link>
 
-          {type === 'review' && review && (
+          {type === "review" && review && (
             <>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                レビュアー: {review.user?.name}
-              </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 投稿日: {review.created_at && formatDate(review.created_at)}
               </Typography>
+              {typeof review.likes_count === "number" && (
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  いいね: {review.likes_count}
+                </Typography>
+              )}
+              <Link
+                href={`/reviews/edit/${review.id}`}
+                style={{ textDecoration: "none" }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<EditIcon />}
+                  sx={{ mt: 1, mb: 2 }}
+                >
+                  レビューを修正
+                </Button>
+              </Link>
             </>
           )}
 
-          {typeof rating === 'number' && (
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <Rating 
-                value={rating / 2} 
-                precision={0.5} 
-                readOnly 
-                size="small" 
+          {typeof rating === "number" && (
+            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+              <Rating
+                value={rating / 2}
+                precision={0.5}
+                readOnly
+                size="small"
               />
               <Typography variant="body2" sx={{ ml: 1 }}>
                 {rating.toFixed(1)}
@@ -104,7 +129,7 @@ export default function GameCard({ game, review, type }: GameCardProps) {
             </Box>
           )}
 
-          {type === 'game' && (
+          {type === "game" && (
             <>
               <Typography variant="body2" color="text.secondary">
                 プレイ人数: {players}
@@ -115,15 +140,15 @@ export default function GameCard({ game, review, type }: GameCardProps) {
             </>
           )}
 
-          {type === 'review' && review?.short_comment && (
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
+          {type === "review" && review?.short_comment && (
+            <Typography
+              variant="body2"
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
                 WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
+                WebkitBoxOrient: "vertical",
               }}
             >
               {review.short_comment}
@@ -132,5 +157,5 @@ export default function GameCard({ game, review, type }: GameCardProps) {
         </Box>
       </Box>
     </Paper>
-  )
-} 
+  );
+}

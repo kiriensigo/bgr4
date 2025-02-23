@@ -29,14 +29,21 @@ interface Review {
   overall_score: number;
   short_comment: string;
   created_at: string;
+  likes_count: number;
 }
 
 export default function MyReviewsPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, getAuthHeaders } = useAuth();
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 総いいね数を計算
+  const totalLikes = reviews.reduce(
+    (sum, review) => sum + review.likes_count,
+    0
+  );
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -52,6 +59,7 @@ export default function MyReviewsPage() {
             headers: {
               "Content-Type": "application/json",
               Accept: "application/json",
+              ...getAuthHeaders(),
             },
             credentials: "include",
           }
@@ -74,7 +82,7 @@ export default function MyReviewsPage() {
     if (user) {
       fetchMyReviews();
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, getAuthHeaders]);
 
   if (authLoading || loading) {
     return (
@@ -98,9 +106,18 @@ export default function MyReviewsPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 2 }}>
         マイレビュー
       </Typography>
+
+      <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography variant="h6" component="p" color="primary">
+          総いいね数: {totalLikes}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          ({reviews.length} 件のレビュー)
+        </Typography>
+      </Box>
 
       {reviews.length === 0 ? (
         <Alert severity="info" sx={{ my: 4 }}>
