@@ -5,6 +5,7 @@ const BGG_API_BASE = "https://boardgamegeek.com/xmlapi2";
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
+  textNodeName: "#text",
 });
 
 export interface BGGGameDetails {
@@ -19,6 +20,9 @@ export interface BGGGameDetails {
   averageRating?: number;
   mechanics?: string[];
   categories?: string[];
+  weight: number;
+  bestPlayers: string[];
+  recommendedPlayers: string[];
 }
 
 async function sleep(ms: number) {
@@ -28,12 +32,15 @@ async function sleep(ms: number) {
 async function fetchWithRetry(url: string, maxRetries = 3): Promise<string> {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const { data } = await axios.get(url);
-      if (typeof data === "string" && data.includes("Please try again later")) {
+      const response = await fetch(url);
+      const text = await response.text();
+
+      // BGGが処理中の場合は待機
+      if (text.includes("Please try again later")) {
         await sleep(2000);
         continue;
       }
-      return data;
+      return text;
     } catch (error) {
       if (i === maxRetries - 1) throw error;
       await sleep(2000);
@@ -48,13 +55,57 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
     const result = parser.parse(xml);
 
     if (!result.items?.item) {
-      throw new Error("BGGでゲームが見つかりませんでした");
+      throw new Error("ゲーム情報が見つかりませんでした");
     }
 
     const item = Array.isArray(result.items.item)
       ? result.items.item[0]
       : result.items.item;
 
+    // プレイ人数の投票データを解析
+    const numplayersPoll = item.poll?.find(
+      (p: any) => p["@_name"] === "suggested_numplayers"
+    );
+    const bestPlayers: string[] = [];
+    const recommendedPlayers: string[] = [];
+
+    if (numplayersPoll?.results) {
+      const results = Array.isArray(numplayersPoll.results)
+        ? numplayersPoll.results
+        : [numplayersPoll.results];
+
+      results.forEach((result: any) => {
+        const numPlayers = result["@_numplayers"];
+        const votes = Array.isArray(result.result)
+          ? result.result
+          : [result.result];
+
+        const bestVotes = parseInt(votes[0]?.["@_numvotes"]) || 0;
+        const recommendedVotes = parseInt(votes[1]?.["@_numvotes"]) || 0;
+        const notRecommendedVotes = parseInt(votes[2]?.["@_numvotes"]) || 0;
+        const totalVotes = bestVotes + recommendedVotes + notRecommendedVotes;
+
+        if (totalVotes > 0) {
+          // ベストプレイ人数の判定（最も多い投票を獲得）
+          if (bestVotes > recommendedVotes && bestVotes > notRecommendedVotes) {
+            bestPlayers.push(numPlayers);
+          }
+          // 推奨プレイ人数の判定（Best + Recommendedの投票がNotRecommendedより多い）
+          if (bestVotes + recommendedVotes > notRecommendedVotes) {
+            recommendedPlayers.push(numPlayers);
+          }
+        }
+      });
+    }
+
+    // weightの取得を確実に行う
+    const weight =
+      parseFloat(item.statistics?.ratings?.averageweight?.["@_value"]) || 0;
+    console.log("BGG Weight:", weight);
+    console.log("Best Players:", bestPlayers);
+    console.log("Recommended Players:", recommendedPlayers);
+
+    // 名前を取得（プライマリー名を優先）
     const name = Array.isArray(item.name)
       ? item.name.find((n: any) => n["@_type"] === "primary")["@_value"]
       : item.name["@_value"];
@@ -63,13 +114,16 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       id: item["@_id"],
       name: name,
       description: item.description?.replace(/&#10;/g, "\n") || "",
-      image: item.image || "",
+      image: item.image || item.thumbnail || "",
       minPlayers: parseInt(item.minplayers?.["@_value"]) || 0,
       maxPlayers: parseInt(item.maxplayers?.["@_value"]) || 0,
       playTime: parseInt(item.playingtime?.["@_value"]) || 0,
       yearPublished: parseInt(item.yearpublished?.["@_value"]) || 0,
       averageRating:
         parseFloat(item.statistics?.ratings?.average?.["@_value"]) || 0,
+      weight: weight,
+      bestPlayers,
+      recommendedPlayers,
       mechanics: (item.link || [])
         .filter((link: any) => link["@_type"] === "boardgamemechanic")
         .map((link: any) => link["@_value"]),
@@ -78,7 +132,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
         .map((link: any) => link["@_value"]),
     };
   } catch (error) {
-    console.error("BGG API Error:", error);
+    console.error("Error fetching BGG game details:", error);
     throw new Error("BGGからのゲーム情報の取得に失敗しました");
   }
 }

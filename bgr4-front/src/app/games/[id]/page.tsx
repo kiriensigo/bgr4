@@ -22,8 +22,9 @@ import StarIcon from "@mui/icons-material/Star";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import GameCard from "@/components/GameCard";
+import ReviewList from "@/components/ReviewList";
 
-interface Game {
+interface APIGame {
   id: number;
   bgg_id: string;
   name: string;
@@ -31,15 +32,25 @@ interface Game {
   min_players: number;
   max_players: number;
   play_time: number;
-  bgg_average_score: number | null | undefined;
-  local_average_score: number | null | undefined;
   description: string;
   reviews: Review[];
+  reviews_count: number;
+  average_score: number | null | undefined;
+  average_rule_complexity: number | null;
+  average_luck_factor: number | null;
+  average_interaction: number | null;
+  average_downtime: number | null;
+  recommended_players: string[];
 }
+
+type Game = APIGame;
 
 interface Review {
   id: number;
-  user_id: number;
+  user: {
+    id: number;
+    name: string;
+  };
   game_id: string;
   overall_score: number;
   play_time: number;
@@ -53,20 +64,49 @@ interface Review {
   custom_tags: string[];
   short_comment: string;
   created_at: string;
+  likes_count: number;
+  liked_by_current_user: boolean;
 }
 
 // レビューの平均点を計算する関数
 const calculateAverageScores = (reviews: Review[]) => {
   if (!reviews || reviews.length === 0) return null;
 
+  const validReviews = reviews.filter(
+    (review) =>
+      review.rule_complexity &&
+      review.luck_factor &&
+      review.interaction &&
+      review.downtime
+  );
+
+  if (validReviews.length === 0) return null;
+
   return {
-    rule_complexity:
-      reviews.reduce((sum, r) => sum + r.rule_complexity, 0) / reviews.length,
-    luck_factor:
-      reviews.reduce((sum, r) => sum + r.luck_factor, 0) / reviews.length,
-    interaction:
-      reviews.reduce((sum, r) => sum + r.interaction, 0) / reviews.length,
-    downtime: reviews.reduce((sum, r) => sum + r.downtime, 0) / reviews.length,
+    rule_complexity: Number(
+      (
+        validReviews.reduce((sum, r) => sum + r.rule_complexity, 0) /
+        validReviews.length
+      ).toFixed(1)
+    ),
+    luck_factor: Number(
+      (
+        validReviews.reduce((sum, r) => sum + r.luck_factor, 0) /
+        validReviews.length
+      ).toFixed(1)
+    ),
+    interaction: Number(
+      (
+        validReviews.reduce((sum, r) => sum + r.interaction, 0) /
+        validReviews.length
+      ).toFixed(1)
+    ),
+    downtime: Number(
+      (
+        validReviews.reduce((sum, r) => sum + r.downtime, 0) /
+        validReviews.length
+      ).toFixed(1)
+    ),
   };
 };
 
@@ -88,9 +128,16 @@ const getPopularTags = (reviews: Review[]) => {
 };
 
 // スコアを表示するためのヘルパー関数を修正
-const formatScore = (score: number | null | undefined): string => {
+const formatScore = (score: number | string | null | undefined): string => {
   if (score === null || score === undefined) return "未評価";
-  return score.toFixed(1);
+  const numScore = typeof score === "string" ? parseFloat(score) : score;
+  return Number.isNaN(numScore) ? "未評価" : numScore.toFixed(1);
+};
+
+const getNumericScore = (score: number | string | null | undefined): number => {
+  if (score === null || score === undefined) return 0;
+  const numScore = typeof score === "string" ? parseFloat(score) : score;
+  return Number.isNaN(numScore) ? 0 : numScore;
 };
 
 export default function GamePage({ params }: { params: { id: string } }) {
@@ -103,12 +150,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
       try {
         setLoading(true);
         setError(null);
-        const data = await getGame(params.id);
+        const data: APIGame = await getGame(params.id);
         console.log("Fetched game data:", data);
-        console.log(
-          "local_average_score type:",
-          typeof data.local_average_score
-        );
         setGame(data);
       } catch (err) {
         console.error("Error fetching game:", err);
@@ -184,30 +227,10 @@ export default function GamePage({ params }: { params: { id: string } }) {
               Board Game Geekで詳細を見る
             </Button>
 
-            {/* 評価スコア */}
-            <Box sx={{ display: "flex", gap: 4, mb: 3 }}>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  BGGでの評価
-                </Typography>
-                <Typography variant="h6">
-                  {formatScore(game.bgg_average_score)} / 10
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  当サイトでの評価
-                </Typography>
-                <Typography variant="h6">
-                  {formatScore(game.local_average_score)} / 10
-                </Typography>
-              </Box>
-            </Box>
-
             {/* スコアと基本情報 */}
             <Paper sx={{ p: 3, mb: 3, bgcolor: "grey.50" }}>
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={6}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <GroupIcon color="primary" />
                     <Typography>
@@ -215,30 +238,104 @@ export default function GamePage({ params }: { params: { id: string } }) {
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={6}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <AccessTimeIcon color="primary" />
                     <Typography>{game.play_time}分</Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <StarIcon color="primary" />
-                    <Box>
-                      <Typography>
-                        平均スコア: {formatScore(game.local_average_score)}
-                      </Typography>
-                      <Rating
-                        value={game.local_average_score ?? 0}
-                        precision={0.5}
-                        readOnly
-                        size="small"
-                      />
-                    </Box>
-                  </Box>
-                </Grid>
               </Grid>
             </Paper>
+
+            {/* 評価スコア */}
+            <Box sx={{ display: "flex", gap: 4, mb: 3 }}>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  評価
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Rating
+                    value={
+                      game.average_score
+                        ? getNumericScore(game.average_score) / 2
+                        : 0
+                    }
+                    precision={0.5}
+                    readOnly
+                  />
+                  <Typography variant="h6">
+                    {formatScore(game.average_score)}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  {game.reviews_count}件のレビュー
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* おすすめプレイ人数 */}
+            {game.recommended_players &&
+              game.recommended_players.length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    おすすめプレイ人数
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {game.recommended_players.map((count) => (
+                      <Chip
+                        key={count}
+                        label={`${count}人`}
+                        color="primary"
+                        sx={{ m: 0.5 }}
+                      />
+                    ))}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    ※ レビュー投稿者の50%以上が推奨したプレイ人数です
+                  </Typography>
+                </Box>
+              )}
+
+            {/* レビュー評価の平均 */}
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                レビュー評価の平均
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    ルールの複雑さ
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_rule_complexity)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    運要素
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_luck_factor)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    相互作用
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_interaction)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    ダウンタイム
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_downtime)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
 
             {/* 人気のタグを追加 */}
             {game.reviews && game.reviews.length > 0 && (
@@ -259,78 +356,49 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </Box>
             )}
 
-            {/* レビューの平均点を追加 */}
-            {game.reviews && game.reviews.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  レビュー評価の平均
-                </Typography>
-                <Grid container spacing={2}>
-                  {Object.entries(
-                    calculateAverageScores(game.reviews) || {}
-                  ).map(([key, value]) => (
-                    <Grid item xs={6} sm={3} key={key}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        {key === "rule_complexity"
-                          ? "ルールの複雑さ"
-                          : key === "luck_factor"
-                          ? "運要素"
-                          : key === "interaction"
-                          ? "相互作用"
-                          : "ダウンタイム"}
-                      </Typography>
-                      <Typography variant="body1">
-                        {value?.toFixed(1) ?? "未評価"}
-                      </Typography>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-
             <Divider sx={{ my: 4 }} />
 
             {/* レビューセクション */}
-            <Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6">レビュー</Typography>
+              <Link
+                href={`/games/${game.bgg_id}/review`}
+                style={{ textDecoration: "none" }}
               >
-                <Typography variant="h6">レビュー</Typography>
-                <Link
-                  href={`/games/${game.bgg_id}/review`}
-                  style={{ textDecoration: "none" }}
+                <Button
+                  variant="outlined"
+                  startIcon={<RateReviewIcon />}
+                  size="small"
                 >
-                  <Button
-                    variant="outlined"
-                    startIcon={<RateReviewIcon />}
-                    size="small"
-                  >
-                    レビューを書く
-                  </Button>
-                </Link>
-              </Box>
+                  レビューを書く
+                </Button>
+              </Link>
+            </Box>
 
-              {game.reviews && game.reviews.length > 0 ? (
-                <Grid container spacing={3}>
-                  {game.reviews.map((review) => (
-                    <Grid item xs={12} sm={6} md={4} key={review.id}>
-                      <GameCard game={game} review={review} type="review" />
-                    </Grid>
-                  ))}
-                </Grid>
+            {Array.isArray(game.reviews) ? (
+              game.reviews.length > 0 ? (
+                <ReviewList reviews={game.reviews} />
               ) : (
                 <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
                   <Typography variant="body1" color="text.secondary">
                     まだレビューがありません。最初のレビューを書いてみませんか？
                   </Typography>
                 </Paper>
-              )}
-            </Box>
+              )
+            ) : (
+              <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
+                <Typography variant="body1" color="text.secondary">
+                  レビューを読み込み中...
+                </Typography>
+              </Paper>
+            )}
           </Grid>
         </Grid>
       </Paper>

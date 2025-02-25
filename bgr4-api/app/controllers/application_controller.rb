@@ -9,14 +9,30 @@ class ApplicationController < ActionController::API
   rescue_from StandardError, with: :internal_server_error
 
   def authenticate_user!
+    auth_headers = request.headers.to_h.select { |k, _| k.downcase.include?('access-token') || k.downcase.include?('client') || k.downcase.include?('uid') }
+    Rails.logger.info "Authenticating with headers: #{auth_headers}"
+    
     unless current_user
+      Rails.logger.error "Authentication failed: No current user"
       render json: { error: '認証が必要です' }, status: :unauthorized
+      return
     end
+    
+    Rails.logger.info "Authentication successful for user: #{current_user.email}"
+    true
   end
 
   def current_user
-    # DeviseTokenAuthのcurrent_userを優先的に使用
-    super || authenticate_token
+    @current_user ||= begin
+      auth_headers = request.headers.to_h.select { |k, _| k.downcase.include?('access-token') || k.downcase.include?('client') || k.downcase.include?('uid') }
+      user = User.find_by(uid: auth_headers['HTTP_UID'])
+      
+      if user && valid_token?(auth_headers['HTTP_ACCESS_TOKEN'], user)
+        user
+      else
+        nil
+      end
+    end
   end
 
   private
@@ -42,15 +58,14 @@ class ApplicationController < ActionController::API
     devise_parameter_sanitizer.permit(:account_update, keys: [:name])
   end
 
-  def authenticate_token
-    return nil unless request.headers['Authorization']
+  def valid_token?(token, user)
+    return false unless token && user
     
-    token = request.headers['Authorization'].split(' ').last
     begin
       decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base, true, algorithm: 'HS256')
-      User.find(decoded_token[0]['user_id'])
-    rescue JWT::DecodeError, ActiveRecord::RecordNotFound
-      nil
+      decoded_token[0]['user_id'] == user.id
+    rescue JWT::DecodeError
+      false
     end
   end
 end

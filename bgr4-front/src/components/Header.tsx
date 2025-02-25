@@ -11,11 +11,13 @@ import {
   Menu,
   MenuItem,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 export default function Header() {
   const { user, signOut } = useAuth();
@@ -59,6 +61,21 @@ export default function Header() {
             <Link href="/games" passHref>
               <Button color="inherit">ゲーム一覧</Button>
             </Link>
+
+            {user && (
+              <Link href="/games/register" passHref>
+                <Tooltip title="ゲームを登録">
+                  <Button
+                    color="primary"
+                    startIcon={<AddCircleOutlineIcon />}
+                    variant="outlined"
+                    size="small"
+                  >
+                    登録
+                  </Button>
+                </Tooltip>
+              </Link>
+            )}
 
             {user ? (
               <Box sx={{ display: "flex", alignItems: "center" }}>

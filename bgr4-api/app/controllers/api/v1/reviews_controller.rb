@@ -46,10 +46,9 @@ module Api
       end
 
       def index
-        @reviews = @game.reviews
-                       .includes(:user, :likes)
-                       .order(created_at: :desc)
-        render json: @reviews.map { |review| review_with_details(review) }
+        system_user = User.find_by(email: 'system@boardgamereview.com')
+        @reviews = @game.reviews.includes(:user).where.not(user: system_user)
+        render json: @reviews.as_json(include: { user: { only: [:id, :name] } })
       end
 
       def update
@@ -63,20 +62,12 @@ module Api
       end
 
       def all
-        begin
-          @reviews = Review.includes(:user, :game, :likes)
-                          .order(created_at: :desc)
-                          .limit(20)
-
-          Rails.logger.info "Fetching reviews with associations..."
-          Rails.logger.info "Reviews count: #{@reviews.size}"
-          
-          render json: @reviews.map { |review| review_with_details(review) }
-        rescue => e
-          Rails.logger.error "Error in all action: #{e.message}"
-          Rails.logger.error e.backtrace.join("\n")
-          render json: { error: "レビューの取得中にエラーが発生しました" }, status: :internal_server_error
-        end
+        system_user = User.find_by(email: 'system@boardgamereview.com')
+        @reviews = Review.includes(:user, :game).where.not(user: system_user).order(created_at: :desc)
+        render json: @reviews.as_json(include: { 
+          user: { only: [:id, :name] },
+          game: { only: [:bgg_id, :name, :image_url] }
+        })
       end
 
       def my

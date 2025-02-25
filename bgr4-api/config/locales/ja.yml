@@ -1,0 +1,38 @@
+ja:
+  activerecord:
+    errors:
+      messages:
+        record_invalid: "バリデーションに失敗しました: %{errors}"
+        restrict_dependent_destroy:
+          has_one: "%{record}が存在しているので削除できません"
+          has_many: "%{record}が存在しているので削除できません"
+    models:
+      user: "ユーザー"
+      game: "ゲーム"
+      review: "レビュー"
+    attributes:
+      user:
+        name: "名前"
+        email: "メールアドレス"
+        password: "パスワード"
+        password_confirmation: "パスワード（確認）"
+      game:
+        name: "ゲーム名"
+        description: "説明"
+        image_url: "画像URL"
+        min_players: "最小プレイ人数"
+        max_players: "最大プレイ人数"
+        play_time: "プレイ時間"
+        average_score: "平均スコア"
+      review:
+        overall_score: "総合評価"
+        play_time: "プレイ時間"
+        rule_complexity: "ルールの複雑さ"
+        luck_factor: "運要素"
+        interaction: "相互作用"
+        downtime: "ダウンタイム"
+        short_comment: "コメント"
+        recommended_players: "推奨プレイ人数"
+        mechanics: "メカニクス"
+        tags: "タグ"
+        custom_tags: "カスタムタグ"

@@ -26,6 +26,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_23_092804) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "japanese_name"
+    t.decimal "weight", precision: 5, scale: 4
+    t.string "best_num_players", default: [], array: true
+    t.string "recommended_num_players", default: [], array: true
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
   end
 
@@ -42,11 +45,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_23_092804) do
     t.bigint "user_id", null: false
     t.string "game_id", null: false
     t.decimal "overall_score", precision: 3, scale: 1, null: false
-    t.integer "play_time", null: false
-    t.decimal "rule_complexity", precision: 2, scale: 1, null: false
-    t.decimal "luck_factor", precision: 2, scale: 1, null: false
-    t.decimal "interaction", precision: 2, scale: 1, null: false
-    t.decimal "downtime", precision: 2, scale: 1, null: false
+    t.integer "play_time"
+    t.decimal "rule_complexity", precision: 2, scale: 1
+    t.decimal "luck_factor", precision: 2, scale: 1
+    t.decimal "interaction", precision: 2, scale: 1
+    t.decimal "downtime", precision: 2, scale: 1
     t.string "recommended_players", default: [], array: true
     t.string "mechanics", default: [], array: true
     t.string "tags", default: [], array: true
@@ -55,7 +58,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_23_092804) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["game_id"], name: "index_reviews_on_game_id"
-    t.index ["user_id", "game_id"], name: "index_reviews_on_user_id_and_game_id", unique: true
+    t.index ["user_id", "game_id"], name: "index_reviews_on_user_id_and_game_id"
     t.index ["user_id"], name: "index_reviews_on_user_id"
   end
 

@@ -13,6 +13,7 @@ interface Game {
   min_players: number;
   max_players: number;
   play_time: number;
+  reviews: any[];
 }
 
 export async function getGames(): Promise<Game[]> {
@@ -64,6 +65,9 @@ async function createGame(bggGame: BGGGameDetails): Promise<Game> {
           max_players: bggGame.maxPlayers,
           play_time: bggGame.playTime,
           average_score: bggGame.averageRating || 0,
+          weight: bggGame.weight || 1,
+          best_num_players: bggGame.bestPlayers || [],
+          recommended_num_players: bggGame.recommendedPlayers || [],
         },
       }),
     });
@@ -105,9 +109,34 @@ export async function getGame(
         },
       });
 
-      // ゲームが見つかった場合はそのまま返す
+      // ゲームが見つかった場合はレビューも取得
       if (response.ok) {
-        return response.json();
+        const gameData = await response.json();
+
+        // レビューを取得
+        const reviewsResponse = await fetch(
+          `${API_BASE_URL}/games/${id}/reviews`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              ...(authHeaders || {}),
+            },
+          }
+        );
+
+        if (reviewsResponse.ok) {
+          const reviewsData = await reviewsResponse.json();
+          return {
+            ...gameData,
+            reviews: reviewsData,
+          };
+        }
+
+        return {
+          ...gameData,
+          reviews: [],
+        };
       }
 
       // ゲームが見つからない場合（404）は、BGGから情報を取得して新規作成
@@ -119,7 +148,10 @@ export async function getGame(
             setTimeout(resolve, 1000 * (retryCount + 1))
           );
           const game = await createGame(bggGame);
-          return game;
+          return {
+            ...game,
+            reviews: [],
+          };
         } catch (error) {
           console.error("BGG game fetch error:", error);
           if (retryCount === maxRetries - 1) {
@@ -168,40 +200,45 @@ export const postReview = async (
   console.log("Sending review with headers:", authHeaders);
   console.log("Review data:", reviewData);
 
-  const response = await fetch(`${API_BASE_URL}/games/${gameId}/reviews`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "access-token": authHeaders["access-token"],
-      client: authHeaders["client"],
-      uid: authHeaders["uid"],
-      expiry: authHeaders["expiry"],
-      "token-type": authHeaders["token-type"],
-    },
-    body: JSON.stringify(reviewData),
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/games/${gameId}/reviews`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({ review: reviewData }),
+      credentials: "include",
+    });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      const errorText = await response.text();
-      console.error("Unauthorized response:", errorText);
-      throw new Error("ログインが必要です");
+    if (!response.ok) {
+      if (response.status === 401) {
+        const errorText = await response.text();
+        console.error("Unauthorized response:", errorText);
+        throw new Error("ログインが必要です");
+      }
+      const data = await response.json();
+      throw new Error(data.errors?.[0] || "レビューの投稿に失敗しました");
     }
-    const data = await response.json();
-    throw new Error(data.errors?.[0] || "レビューの投稿に失敗しました");
-  }
 
-  return response.json();
+    return response.json();
+  } catch (error) {
+    console.error("Review post error:", error);
+    throw error;
+  }
 };
 
 export async function getReviews(gameId: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/games/${gameId}/reviews`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/games/${gameId}/reviews?exclude_system=true`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error("レビューの取得に失敗しました");
@@ -216,11 +253,14 @@ export async function getReviews(gameId: string) {
 
 export async function getAllReviews() {
   try {
-    const response = await fetch(`${API_BASE_URL}/reviews/all`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/reviews/all?exclude_system=true`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error("レビューの取得に失敗しました");

@@ -100,7 +100,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const router = useRouter();
 
   const [review, setReview] = useState({
-    overall_score: 5,
+    overall_score: 7,
     play_time: 3,
     rule_complexity: 3,
     luck_factor: 3,
@@ -235,6 +235,12 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       return;
     }
 
+    // おすすめプレイ人数のバリデーション
+    if (review.recommended_players.length === 0) {
+      setFlashMessage("おすすめのプレイ人数を1つ以上選択してください");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const headers = getAuthHeaders();
@@ -299,7 +305,19 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
+      <Box
+        sx={{
+          py: 4,
+          width: "100%",
+          maxWidth: "900px",
+          mx: "auto",
+          px: {
+            xs: 2,
+            sm: 3,
+            md: 4,
+          },
+        }}
+      >
         <Link href={`/games/${params.id}`} style={{ textDecoration: "none" }}>
           <Button variant="outlined" sx={{ mb: 2 }}>
             ← 戻る
@@ -466,8 +484,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             </Box>
 
             <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                おすすめプレイ人数
+              <Typography variant="h6" gutterBottom required>
+                おすすめプレイ人数（必須）
               </Typography>
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                 {[1, 2, 3, 4, 5, "6人以上"].map((num) => (
@@ -495,6 +513,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   />
                 ))}
               </Box>
+              {review.recommended_players.length === 0 && (
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ display: "block", mt: 1 }}
+                >
+                  おすすめのプレイ人数を1つ以上選択してください
+                </Typography>
+              )}
             </Box>
 
             <Divider sx={{ my: 4 }} />
@@ -586,7 +613,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                 type="submit"
                 variant="contained"
                 size="large"
-                disabled={submitting}
+                disabled={
+                  submitting ||
+                  review.recommended_players.length === 0 ||
+                  !review.short_comment
+                }
                 sx={{ minWidth: 200 }}
               >
                 {submitting

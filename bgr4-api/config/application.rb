@@ -26,6 +26,7 @@ module Bgr4Api
 
     # デフォルトのロケールを日本語に設定
     config.i18n.default_locale = :ja
+    config.i18n.load_path += Dir[Rails.root.join('config', 'locales', '**', '*.{rb,yml}').to_s]
     # 利用可能なロケールを設定
     config.i18n.available_locales = [:ja, :en]
     # タイムゾーンを日本に設定
