@@ -2,7 +2,46 @@ module Api
   module V1
     class GamesController < ApplicationController
       def index
-        @games = Game.all.order(created_at: :desc)
+        @games = Game.all
+        @games = @games.joins(:reviews)
+
+        # 総合得点でのフィルタリング
+        if params[:total_score_min].present?
+          @games = @games.where("games.average_score >= ?", params[:total_score_min])
+        end
+
+        if params[:total_score_max].present?
+          @games = @games.where("games.average_score <= ?", params[:total_score_max])
+        end
+
+        # 相互作用でのフィルタリング
+        if params[:interaction_min].present?
+          @games = @games.where("reviews.interaction >= ?", params[:interaction_min])
+        end
+
+        if params[:interaction_max].present?
+          @games = @games.where("reviews.interaction <= ?", params[:interaction_max])
+        end
+
+        # 運要素でのフィルタリング
+        if params[:luck_factor_min].present?
+          @games = @games.where("reviews.luck_factor >= ?", params[:luck_factor_min])
+        end
+
+        if params[:luck_factor_max].present?
+          @games = @games.where("reviews.luck_factor <= ?", params[:luck_factor_max])
+        end
+
+        # おすすめのプレイ人数でのフィルタリング
+        if params[:recommended_players].present?
+          players = params[:recommended_players].split(',')
+          @games = @games.where("reviews.recommended_players && ARRAY[?]::varchar[]", players)
+        end
+
+        # 重複を除去
+        @games = @games.distinct
+
+        @games = @games.order(created_at: :desc)
         render json: @games
       end
 
@@ -20,6 +59,36 @@ module Api
 
       def create
         Rails.logger.info "Creating game with params: #{params.inspect}"
+
+        # リクエストの発信元をチェック
+        Rails.logger.info "Original referer: #{request.referer}"
+        begin
+          referer_uri = URI.parse(request.referer.to_s)
+          referer_host = referer_uri.host
+          referer_port = referer_uri.port
+          referer_path = referer_uri.path
+          Rails.logger.info "Parsed referer - Host: #{referer_host}, Port: #{referer_port}, Path: #{referer_path}"
+
+          # フロントエンドのオリジンをチェック
+          frontend_origin = "localhost:3001"
+          is_from_frontend = "#{referer_host}:#{referer_port}" == frontend_origin
+
+          # 許可されたパスをチェック
+          allowed_paths = ['/search', '/popular', '/games/register', '/']
+          is_allowed_path = allowed_paths.any? { |path| referer_path == path }
+
+          Rails.logger.info "Validation - From Frontend: #{is_from_frontend}, Allowed Path: #{is_allowed_path}, Current Path: #{referer_path}"
+
+          unless is_from_frontend && is_allowed_path
+            render json: { error: 'ゲームの登録は検索画面、人気ゲーム画面、またはゲーム登録画面からのみ可能です' }, status: :forbidden
+            return
+          end
+        rescue => e
+          Rails.logger.error "Error parsing referer: #{e.message}"
+          render json: { error: 'リファラーの検証に失敗しました' }, status: :forbidden
+          return
+        end
+
         game_params = params.require(:game).permit(
           :bgg_id, :name, :description, :image_url,
           :min_players, :max_players, :play_time,
@@ -107,12 +176,115 @@ module Api
       end
 
       def search
-        if params[:query].present?
-          games = BggService.search_games(params[:query])
-          render json: games
-        else
-          render json: { error: '検索クエリを入力してください' }, status: :unprocessable_entity
+        Rails.logger.info "Search params: #{params.inspect}"
+        
+        @games = Game.all
+
+        # キーワード検索
+        if params[:keyword].present?
+          keyword = "%#{params[:keyword]}%"
+          @games = @games.where("name ILIKE ? OR description ILIKE ?", keyword, keyword)
         end
+
+        # プレイ人数での絞り込み
+        if params[:min_players].present?
+          min_players = params[:min_players].to_i
+          @games = @games.where("min_players <= ?", min_players)
+        end
+
+        if params[:max_players].present?
+          max_players = params[:max_players].to_i
+          @games = @games.where("max_players >= ?", max_players)
+        end
+
+        # 複雑さでの絞り込み
+        if params[:complexity_min].present? || params[:complexity_max].present?
+          @games = @games.joins(:reviews)
+                         .group('games.id')
+          
+          if params[:complexity_min].present?
+            @games = @games.having("AVG(reviews.rule_complexity) >= ?", params[:complexity_min])
+          end
+          
+          if params[:complexity_max].present?
+            @games = @games.having("AVG(reviews.rule_complexity) <= ?", params[:complexity_max])
+          end
+        end
+
+        # 運要素での絞り込み
+        if params[:luck_factor_min].present? || params[:luck_factor_max].present?
+          @games = @games.joins(:reviews)
+                         .group('games.id')
+          
+          if params[:luck_factor_min].present?
+            @games = @games.having("AVG(reviews.luck_factor) >= ?", params[:luck_factor_min])
+          end
+          
+          if params[:luck_factor_max].present?
+            @games = @games.having("AVG(reviews.luck_factor) <= ?", params[:luck_factor_max])
+          end
+        end
+
+        # インタラクションでの絞り込み
+        if params[:interaction_min].present? || params[:interaction_max].present?
+          @games = @games.joins(:reviews)
+                         .group('games.id')
+          
+          if params[:interaction_min].present?
+            @games = @games.having("AVG(reviews.interaction) >= ?", params[:interaction_min])
+          end
+          
+          if params[:interaction_max].present?
+            @games = @games.having("AVG(reviews.interaction) <= ?", params[:interaction_max])
+          end
+        end
+
+        # ダウンタイムでの絞り込み
+        if params[:downtime_min].present? || params[:downtime_max].present?
+          @games = @games.joins(:reviews)
+                         .group('games.id')
+          
+          if params[:downtime_min].present?
+            @games = @games.having("AVG(reviews.downtime) >= ?", params[:downtime_min])
+          end
+          
+          if params[:downtime_max].present?
+            @games = @games.having("AVG(reviews.downtime) <= ?", params[:downtime_max])
+          end
+        end
+
+        # プレイ時間での絞り込み
+        if params[:play_time_min].present? || params[:play_time_max].present?
+          @games = @games.joins(:reviews)
+                         .group('games.id')
+          
+          if params[:play_time_min].present?
+            @games = @games.having("AVG(reviews.play_time) >= ?", params[:play_time_min])
+          end
+          
+          if params[:play_time_max].present?
+            @games = @games.having("AVG(reviews.play_time) <= ?", params[:play_time_max])
+          end
+        end
+
+        # メカニクスでの絞り込み
+        if params[:mechanics].present?
+          mechanics = params[:mechanics].split(',')
+          @games = @games.joins(:reviews)
+                         .where("reviews.mechanics && ARRAY[?]::varchar[]", mechanics)
+                         .distinct
+        end
+
+        # タグでの絞り込み
+        if params[:tags].present?
+          tags = params[:tags].split(',')
+          @games = @games.joins(:reviews)
+                         .where("reviews.tags && ARRAY[?]::varchar[]", tags)
+                         .distinct
+        end
+
+        Rails.logger.info "Found #{@games.count} games matching the criteria"
+        render json: @games.map { |game| prepare_game_data(game) }
       end
 
       def popular

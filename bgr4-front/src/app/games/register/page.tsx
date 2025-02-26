@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getBGGGameDetails } from "@/lib/bggApi";
 import { getGame } from "@/lib/api";
 import { getAuthHeaders } from "@/lib/auth";
+import { registerGame } from "@/lib/api";
 
 export default function RegisterGamePage() {
   const [bggUrl, setBggUrl] = useState("");
@@ -92,41 +93,8 @@ export default function RegisterGamePage() {
         gameDetails.recommendedPlayers
       );
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/games`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(user ? await getAuthHeaders() : {}),
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            game: {
-              bgg_id: gameDetails.id,
-              name: gameDetails.name,
-              description: gameDetails.description,
-              image_url: gameDetails.image,
-              min_players: gameDetails.minPlayers,
-              max_players: gameDetails.maxPlayers,
-              play_time: gameDetails.playTime,
-              average_score: gameDetails.averageRating,
-              weight: gameDetails.weight,
-              best_num_players: gameDetails.bestPlayers,
-              recommended_num_players: gameDetails.recommendedPlayers,
-            },
-          }),
-        }
-      );
-
-      console.log("API Response:", response);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "ゲームの登録に失敗しました");
-      }
-
-      const data = await response.json();
+      const authHeaders = user ? await getAuthHeaders() : {};
+      const data = await registerGame(gameDetails, authHeaders);
       console.log("Registered game data:", data);
 
       router.push(`/games/${gameDetails.id}`);

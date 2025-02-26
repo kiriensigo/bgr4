@@ -30,9 +30,71 @@ export async function getGames(): Promise<Game[]> {
   return response.json();
 }
 
-export async function searchGames(query: string): Promise<Game[]> {
+export interface SearchParams {
+  keyword?: string;
+  min_players?: number | null;
+  max_players?: number | null;
+  play_time_min?: number;
+  play_time_max?: number;
+  complexity_min?: number;
+  complexity_max?: number;
+  total_score_min?: number;
+  total_score_max?: number;
+  interaction_min?: number;
+  interaction_max?: number;
+  luck_factor_min?: number;
+  luck_factor_max?: number;
+  downtime_min?: number;
+  downtime_max?: number;
+  mechanics?: string[];
+  tags?: string[];
+  recommended_players?: string[];
+}
+
+export async function searchGames(params: SearchParams): Promise<Game[]> {
+  const queryParams = new URLSearchParams();
+
+  // パラメータを追加
+  if (params.keyword) queryParams.append("keyword", params.keyword);
+  if (params.min_players !== null && params.min_players !== undefined)
+    queryParams.append("min_players", params.min_players.toString());
+  if (params.max_players !== null && params.max_players !== undefined)
+    queryParams.append("max_players", params.max_players.toString());
+  if (params.play_time_min)
+    queryParams.append("play_time_min", params.play_time_min.toString());
+  if (params.play_time_max)
+    queryParams.append("play_time_max", params.play_time_max.toString());
+  if (params.complexity_min)
+    queryParams.append("complexity_min", params.complexity_min.toString());
+  if (params.complexity_max)
+    queryParams.append("complexity_max", params.complexity_max.toString());
+  if (params.total_score_min)
+    queryParams.append("total_score_min", params.total_score_min.toString());
+  if (params.total_score_max)
+    queryParams.append("total_score_max", params.total_score_max.toString());
+  if (params.interaction_min)
+    queryParams.append("interaction_min", params.interaction_min.toString());
+  if (params.interaction_max)
+    queryParams.append("interaction_max", params.interaction_max.toString());
+  if (params.luck_factor_min)
+    queryParams.append("luck_factor_min", params.luck_factor_min.toString());
+  if (params.luck_factor_max)
+    queryParams.append("luck_factor_max", params.luck_factor_max.toString());
+  if (params.downtime_min)
+    queryParams.append("downtime_min", params.downtime_min.toString());
+  if (params.downtime_max)
+    queryParams.append("downtime_max", params.downtime_max.toString());
+  if (params.mechanics?.length)
+    queryParams.append("mechanics", params.mechanics.join(","));
+  if (params.tags?.length) queryParams.append("tags", params.tags.join(","));
+  if (params.recommended_players?.length)
+    queryParams.append(
+      "recommended_players",
+      params.recommended_players.join(",")
+    );
+
   const response = await fetch(
-    `${API_BASE_URL}/games/search?q=${encodeURIComponent(query)}`,
+    `${API_BASE_URL}/games/search?${queryParams.toString()}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -41,7 +103,8 @@ export async function searchGames(query: string): Promise<Game[]> {
   );
 
   if (!response.ok) {
-    throw new Error("ゲームの検索に失敗しました");
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "ゲームの検索に失敗しました");
   }
 
   return response.json();
@@ -95,92 +158,36 @@ export async function getGame(
   id: string,
   authHeaders?: Record<string, string>
 ): Promise<Game> {
-  const maxRetries = 3;
-  let retryCount = 0;
+  try {
+    // まずAPIからゲーム情報の取得を試みる
+    const response = await fetch(`${API_BASE_URL}/games/${id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(authHeaders || {}),
+      },
+    });
 
-  while (retryCount < maxRetries) {
-    try {
-      // まずAPIからゲーム情報の取得を試みる
-      const response = await fetch(`${API_BASE_URL}/games/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(authHeaders || {}),
-        },
-      });
-
-      // ゲームが見つかった場合はレビューも取得
-      if (response.ok) {
-        const gameData = await response.json();
-
-        // レビューを取得
-        const reviewsResponse = await fetch(
-          `${API_BASE_URL}/games/${id}/reviews`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              ...(authHeaders || {}),
-            },
-          }
-        );
-
-        if (reviewsResponse.ok) {
-          const reviewsData = await reviewsResponse.json();
-          return {
-            ...gameData,
-            reviews: reviewsData,
-          };
-        }
-
-        return {
-          ...gameData,
-          reviews: [],
-        };
-      }
-
-      // ゲームが見つからない場合（404）は、BGGから情報を取得して新規作成
-      if (response.status === 404) {
-        try {
-          const bggGame = await getBGGGameDetails(id);
-          // 少し待機してからリトライ
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 * (retryCount + 1))
-          );
-          const game = await createGame(bggGame);
-          return {
-            ...game,
-            reviews: [],
-          };
-        } catch (error) {
-          console.error("BGG game fetch error:", error);
-          if (retryCount === maxRetries - 1) {
-            throw new Error(
-              "ゲーム情報の取得に失敗しました。しばらく待ってから再度お試しください。"
-            );
-          }
-        }
-      } else {
-        // その他のエラーの場合
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error ||
-            errorData.message ||
-            "ゲーム情報の取得に失敗しました"
-        );
-      }
-    } catch (error) {
-      console.error("API Error:", error);
-      if (retryCount === maxRetries - 1) {
-        throw error;
-      }
+    // ゲームが見つかった場合はそのデータを返す
+    if (response.ok) {
+      const gameData = await response.json();
+      return gameData;
     }
-    retryCount++;
-  }
 
-  throw new Error(
-    "ゲーム情報の取得に失敗しました。しばらく待ってから再度お試しください。"
-  );
+    // ゲームが見つからない場合（404）はエラーメッセージを表示
+    if (response.status === 404) {
+      throw new Error("ゲームが見つかりません。検索画面から登録してください。");
+    }
+
+    // その他のエラーの場合
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.error || errorData.message || "ゲーム情報の取得に失敗しました"
+    );
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
+  }
 }
 
 export const postReview = async (
@@ -285,3 +292,45 @@ export const socialLogin = async (provider: "google" | "twitter") => {
 
   return response.json();
 };
+
+export async function registerGame(
+  gameDetails: any,
+  authHeaders?: Record<string, string>
+) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/games`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Referer: `${window.location.origin}/games/register`,
+        ...(authHeaders || {}),
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        game: {
+          bgg_id: gameDetails.id,
+          name: gameDetails.name,
+          description: gameDetails.description,
+          image_url: gameDetails.image,
+          min_players: gameDetails.minPlayers,
+          max_players: gameDetails.maxPlayers,
+          play_time: gameDetails.playTime,
+          average_score: gameDetails.averageRating,
+          weight: gameDetails.weight,
+          best_num_players: gameDetails.bestPlayers,
+          recommended_num_players: gameDetails.recommendedPlayers,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "ゲームの登録に失敗しました");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error registering game:", error);
+    throw error;
+  }
+}

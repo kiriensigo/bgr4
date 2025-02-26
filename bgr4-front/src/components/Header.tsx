@@ -12,15 +12,22 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import { Menu as MenuIcon } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
+  const router = useRouter();
   const { user, signOut } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -31,10 +38,65 @@ export default function Header() {
     setAnchorEl(null);
   };
 
-  const handleSignOut = () => {
-    signOut();
+  const handleMenuItemClick = (path: string) => {
+    router.push(path);
     handleClose();
   };
+
+  const handleSignOut = async () => {
+    await signOut();
+    handleClose();
+    router.push("/");
+  };
+
+  const menuItems = [
+    { label: "ホーム", path: "/" },
+    { label: "検索", path: "/search" },
+    { label: "レビュー一覧", path: "/reviews" },
+    ...(user ? [{ label: "ゲーム登録", path: "/games/register" }] : []),
+  ];
+
+  if (isMobile) {
+    return (
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            BGR4
+          </Typography>
+          <IconButton
+            size="large"
+            edge="end"
+            color="inherit"
+            aria-label="menu"
+            onClick={handleMenu}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+          >
+            {menuItems.map((item) => (
+              <MenuItem
+                key={item.path}
+                onClick={() => handleMenuItemClick(item.path)}
+              >
+                {item.label}
+              </MenuItem>
+            ))}
+            {user ? (
+              <MenuItem onClick={handleSignOut}>ログアウト</MenuItem>
+            ) : (
+              <MenuItem onClick={() => handleMenuItemClick("/auth/signin")}>
+                ログイン
+              </MenuItem>
+            )}
+          </Menu>
+        </Toolbar>
+      </AppBar>
+    );
+  }
 
   return (
     <AppBar position="static" color="default" elevation={1}>
@@ -52,15 +114,15 @@ export default function Header() {
           </Link>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Link href="/" passHref>
-              <Button color="inherit">ホーム</Button>
-            </Link>
-            <Link href="/reviews" passHref>
-              <Button color="inherit">最新レビュー</Button>
-            </Link>
-            <Link href="/games" passHref>
-              <Button color="inherit">ゲーム一覧</Button>
-            </Link>
+            {menuItems.map((item) => (
+              <Button
+                key={item.path}
+                color="inherit"
+                onClick={() => router.push(item.path)}
+              >
+                {item.label}
+              </Button>
+            ))}
 
             {user && (
               <Link href="/games/register" passHref>
