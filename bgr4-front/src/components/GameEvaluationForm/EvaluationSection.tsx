@@ -13,8 +13,8 @@ import {
 
 interface EvaluationSectionProps {
   values: {
-    totalScoreMin?: number;
-    totalScoreMax?: number;
+    totalScoreMin: number;
+    totalScoreMax: number;
     playTimeMin: number;
     playTimeMax: number;
     complexityMin: number;

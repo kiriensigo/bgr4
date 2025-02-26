@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getGame } from "@/lib/api";
+import { getGame, updateJapaneseName } from "@/lib/api";
 import {
   Container,
   Typography,
@@ -13,6 +13,13 @@ import {
   Divider,
   CircularProgress,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,13 +28,17 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import StarIcon from "@mui/icons-material/Star";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import TranslateIcon from "@mui/icons-material/Translate";
 import GameCard from "@/components/GameCard";
 import ReviewList from "@/components/ReviewList";
+import GameRating from "@/components/GameRating";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface APIGame {
   id: number;
   bgg_id: string;
   name: string;
+  japanese_name?: string;
   image_url: string;
   min_players: number;
   max_players: number;
@@ -141,9 +152,18 @@ const getNumericScore = (score: number | string | null | undefined): number => {
 };
 
 export default function GamePage({ params }: { params: { id: string } }) {
+  const { user, getAuthHeaders } = useAuth();
   const [game, setGame] = useState<Game | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [japaneseName, setJapaneseName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
+    "success"
+  );
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -153,6 +173,9 @@ export default function GamePage({ params }: { params: { id: string } }) {
         const data: APIGame = await getGame(params.id);
         console.log("Fetched game data:", data);
         setGame(data);
+        if (data.japanese_name) {
+          setJapaneseName(data.japanese_name);
+        }
       } catch (err) {
         console.error("Error fetching game:", err);
         setError(
@@ -165,6 +188,42 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
     fetchGameData();
   }, [params.id]);
+
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleSubmitJapaneseName = async () => {
+    if (!game) return;
+
+    setSubmitting(true);
+    try {
+      const authHeaders = getAuthHeaders();
+      const updatedGame = await updateJapaneseName(
+        game.bgg_id,
+        japaneseName,
+        authHeaders
+      );
+      setGame(updatedGame);
+      setOpenDialog(false);
+      setSnackbarMessage("日本語名を登録しました");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error("Error updating Japanese name:", error);
+      setSnackbarMessage(
+        error instanceof Error ? error.message : "日本語名の登録に失敗しました"
+      );
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -211,8 +270,30 @@ export default function GamePage({ params }: { params: { id: string } }) {
           </Grid>
           <Grid item xs={12} md={8}>
             <Typography variant="h4" component="h1" gutterBottom>
-              {game.name}
+              {game.japanese_name || game.name}
             </Typography>
+            {game.japanese_name && game.japanese_name !== game.name && (
+              <Typography
+                variant="subtitle1"
+                color="text.secondary"
+                gutterBottom
+              >
+                原題: {game.name}
+              </Typography>
+            )}
+
+            {/* 日本語名登録ボタン */}
+            {user && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<TranslateIcon />}
+                onClick={handleOpenDialog}
+                sx={{ mb: 2, mr: 2 }}
+              >
+                {game.japanese_name ? "日本語名を編集" : "日本語名を登録"}
+              </Button>
+            )}
 
             {/* BGGリンク */}
             <Button
@@ -253,23 +334,11 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 <Typography variant="subtitle2" color="text.secondary">
                   評価
                 </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Rating
-                    value={
-                      game.average_score
-                        ? getNumericScore(game.average_score) / 2
-                        : 0
-                    }
-                    precision={0.5}
-                    readOnly
-                  />
-                  <Typography variant="h6">
-                    {formatScore(game.average_score)}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  {game.reviews_count}件のレビュー
-                </Typography>
+                <GameRating
+                  score={game.average_score}
+                  reviewsCount={game.reviews_count}
+                  size="medium"
+                />
               </Box>
             </Box>
 
@@ -402,6 +471,53 @@ export default function GamePage({ params }: { params: { id: string } }) {
           </Grid>
         </Grid>
       </Paper>
+
+      {/* 日本語名登録ダイアログ */}
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>
+          {game?.japanese_name ? "日本語名を編集" : "日本語名を登録"}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="日本語名"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={japaneseName}
+            onChange={(e) => setJapaneseName(e.target.value)}
+            disabled={submitting}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={submitting}>
+            キャンセル
+          </Button>
+          <Button
+            onClick={handleSubmitJapaneseName}
+            color="primary"
+            disabled={submitting || !japaneseName.trim()}
+          >
+            {submitting ? "送信中..." : "保存"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* スナックバー */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert
+          onClose={() => setSnackbarOpen(false)}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

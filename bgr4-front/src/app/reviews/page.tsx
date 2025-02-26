@@ -16,6 +16,7 @@ import {
   Stack,
   Divider,
   Button,
+  CircularProgress,
 } from "@mui/material";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,36 +64,74 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const { getAuthHeaders } = useAuth();
+  const PER_PAGE = 12;
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/v1/reviews/all`, {
+  const fetchReviews = async (pageNum: number, append: boolean = false) => {
+    try {
+      setLoadingMore(append);
+      if (!append) setLoading(true);
+
+      const response = await fetch(
+        `${API_URL}/api/v1/reviews/all?page=${pageNum}&per_page=${PER_PAGE}`,
+        {
           headers: {
             ...getAuthHeaders(),
             "Content-Type": "application/json",
           },
-        });
-
-        if (!response.ok) {
-          throw new Error("レビューの取得に失敗しました");
         }
+      );
 
-        const data = await response.json();
+      if (!response.ok) {
+        throw new Error("レビューの取得に失敗しました");
+      }
+
+      const data = await response.json();
+
+      if (append) {
+        setReviews((prev) => [...prev, ...data]);
+      } else {
         setReviews(data);
-      } catch (error) {
-        setError(
-          error instanceof Error ? error.message : "エラーが発生しました"
-        );
-      } finally {
-        setLoading(false);
+      }
+
+      // レビューが1ページ分未満なら、これ以上データがないと判断
+      setHasMore(data.length === PER_PAGE);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "エラーが発生しました");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews(1);
+  }, []);
+
+  // 無限スクロールの実装
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loading || loadingMore || !hasMore) return;
+
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const threshold = document.documentElement.scrollHeight - 1000; // 下から1000pxの位置で次を読み込む
+
+      if (scrollPosition > threshold) {
+        setPage((prev) => {
+          const nextPage = prev + 1;
+          fetchReviews(nextPage, true);
+          return nextPage;
+        });
       }
     };
 
-    fetchReviews();
-  }, [getAuthHeaders]);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loading, loadingMore, hasMore]);
 
   if (loading) {
     return (
@@ -176,7 +215,7 @@ export default function ReviewsPage() {
         最近のレビュー
       </Typography>
 
-      {reviews.length === 0 ? (
+      {reviews.length === 0 && !loading ? (
         <Box
           sx={{
             textAlign: "center",
@@ -204,120 +243,162 @@ export default function ReviewsPage() {
           </Button>
         </Box>
       ) : (
-        <Grid container spacing={3}>
-          {reviews.map((review) => (
-            <Grid item xs={12} sm={6} md={4} key={review.id}>
-              <Card
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  transition:
-                    "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: 4,
-                  },
-                }}
-              >
-                <CardActionArea
-                  component={Link}
-                  href={`/games/${review.game.bgg_id}`}
-                  sx={{ flexGrow: 1 }}
+        <>
+          <Grid container spacing={3}>
+            {reviews.map((review) => (
+              <Grid item xs={12} sm={6} md={4} key={review.id}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    transition:
+                      "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 4,
+                    },
+                  }}
                 >
-                  <CardMedia
-                    component="img"
-                    image={review.game.image_url || "/images/no-image.png"}
-                    alt={review.game.name}
-                    sx={{
-                      aspectRatio: "1",
-                      objectFit: "contain",
-                      bgcolor: "grey.100",
-                    }}
-                  />
-                  <CardContent>
+                  <CardActionArea
+                    component={Link}
+                    href={`/games/${review.game.bgg_id}`}
+                    sx={{ flexGrow: 1 }}
+                  >
+                    <CardMedia
+                      component="img"
+                      image={review.game.image_url || "/images/no-image.png"}
+                      alt={review.game.name}
+                      sx={{
+                        aspectRatio: "1",
+                        objectFit: "contain",
+                        bgcolor: "grey.100",
+                      }}
+                    />
+                    <CardContent>
+                      <Typography
+                        gutterBottom
+                        variant="h6"
+                        component="h2"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          minHeight: "3.6em",
+                        }}
+                      >
+                        {review.game.japanese_name || review.game.name}
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 2,
+                          color: "text.secondary",
+                          "& .MuiSvgIcon-root": { fontSize: 16 },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <GroupIcon />
+                          <Typography variant="body2">
+                            {review.game.min_players}-{review.game.max_players}
+                            人
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <AccessTimeIcon />
+                          <Typography variant="body2">
+                            {review.game.play_time}分
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 0.5,
+                          flexWrap: "wrap",
+                          mt: 1,
+                        }}
+                      >
+                        {review.tags.slice(0, 3).map((tag) => (
+                          <Chip
+                            key={tag}
+                            label={tag}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </CardActionArea>
+
+                  <CardContent sx={{ pt: 0 }}>
+                    <Divider sx={{ my: 1 }} />
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Rating
+                          value={Number(review.overall_score)}
+                          precision={0.5}
+                          size="small"
+                          readOnly
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {Number(review.overall_score).toFixed(1)}
+                        </Typography>
+                      </Box>
+                      <LikeButton
+                        reviewId={review.id}
+                        initialLikesCount={review.likes_count}
+                        initialLikedByUser={review.liked_by_current_user}
+                      />
+                    </Box>
+
                     <Typography
-                      gutterBottom
-                      variant="h6"
-                      component="h2"
+                      variant="body2"
+                      color="text.secondary"
                       sx={{
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical",
-                        minHeight: "3.6em",
+                        minHeight: "3em",
+                        mb: 1,
                       }}
                     >
-                      {review.game.japanese_name || review.game.name}
+                      {review.short_comment}
                     </Typography>
 
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        color: "text.secondary",
-                        "& .MuiSvgIcon-root": { fontSize: 16 },
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                        }}
-                      >
-                        <GroupIcon />
-                        <Typography variant="body2">
-                          {review.game.min_players}-{review.game.max_players}人
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                        }}
-                      >
-                        <AccessTimeIcon />
-                        <Typography variant="body2">
-                          {review.game.play_time}分
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 0.5,
-                        flexWrap: "wrap",
-                        mt: 1,
-                      }}
-                    >
-                      {review.tags.slice(0, 3).map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </CardActionArea>
-
-                <CardContent sx={{ pt: 0 }}>
-                  <Divider sx={{ my: 1 }} />
-
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      mb: 1,
-                    }}
-                  >
                     <Box
                       sx={{
                         display: "flex",
@@ -325,61 +406,28 @@ export default function ReviewsPage() {
                         gap: 1,
                       }}
                     >
-                      <Rating
-                        value={Number(review.overall_score)}
-                        precision={0.5}
-                        size="small"
-                        readOnly
+                      <Avatar
+                        src={review.user.image}
+                        alt={review.user.name}
+                        sx={{ width: 24, height: 24 }}
                       />
                       <Typography variant="body2" color="text.secondary">
-                        {Number(review.overall_score).toFixed(1)}
+                        {review.user.name} ・{" "}
+                        {new Date(review.created_at).toLocaleDateString()}
                       </Typography>
                     </Box>
-                    <LikeButton
-                      reviewId={review.id}
-                      initialLikesCount={review.likes_count}
-                      initialLikedByUser={review.liked_by_current_user}
-                    />
-                  </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      minHeight: "3em",
-                      mb: 1,
-                    }}
-                  >
-                    {review.short_comment}
-                  </Typography>
-
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                    }}
-                  >
-                    <Avatar
-                      src={review.user.image}
-                      alt={review.user.name}
-                      sx={{ width: 24, height: 24 }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      {review.user.name} ・{" "}
-                      {new Date(review.created_at).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+          {loadingMore && (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+        </>
       )}
     </Container>
   );

@@ -25,7 +25,7 @@ import { EvaluationSection } from "@/components/GameEvaluationForm/EvaluationSec
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import { PLAYER_COUNT_OPTIONS } from "@/components/GameEvaluationForm/constants";
 
-interface SearchParams {
+interface LocalSearchParams {
   keyword: string;
   min_players: number | null;
   max_players: number | null;
@@ -53,7 +53,7 @@ export default function SearchPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // 検索条件の状態
-  const [searchParams, setSearchParams] = useState<SearchParams>({
+  const [searchParams, setSearchParams] = useState<LocalSearchParams>({
     keyword: "",
     min_players: null,
     max_players: null,
@@ -74,6 +74,15 @@ export default function SearchPage() {
     recommendedPlayers: [],
   });
 
+  const isDefaultRange = (
+    min: number,
+    max: number,
+    defaultMin: number,
+    defaultMax: number
+  ) => {
+    return min === defaultMin && max === defaultMax;
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -82,29 +91,124 @@ export default function SearchPage() {
     try {
       // APIパラメータの変換
       const apiParams = {
-        keyword: searchParams.keyword,
-        min_players: searchParams.min_players,
-        max_players: searchParams.max_players,
-        play_time_min: searchParams.playTimeMin,
-        play_time_max: searchParams.playTimeMax,
-        complexity_min: searchParams.complexityMin,
-        complexity_max: searchParams.complexityMax,
-        total_score_min: searchParams.totalScoreMin,
-        total_score_max: searchParams.totalScoreMax,
-        interaction_min: searchParams.interactionMin,
-        interaction_max: searchParams.interactionMax,
-        luck_factor_min: searchParams.luckFactorMin,
-        luck_factor_max: searchParams.luckFactorMax,
-        downtime_min: searchParams.downtimeMin,
-        downtime_max: searchParams.downtimeMax,
-        mechanics: searchParams.mechanics,
-        tags: searchParams.tags,
-        recommended_players: searchParams.recommendedPlayers,
+        keyword: searchParams.keyword || undefined,
+        min_players: searchParams.min_players || undefined,
+        max_players: searchParams.max_players || undefined,
+        play_time_min: isDefaultRange(
+          searchParams.playTimeMin,
+          searchParams.playTimeMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.playTimeMin,
+        play_time_max: isDefaultRange(
+          searchParams.playTimeMin,
+          searchParams.playTimeMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.playTimeMax,
+        complexity_min: isDefaultRange(
+          searchParams.complexityMin,
+          searchParams.complexityMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.complexityMin,
+        complexity_max: isDefaultRange(
+          searchParams.complexityMin,
+          searchParams.complexityMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.complexityMax,
+        total_score_min: isDefaultRange(
+          searchParams.totalScoreMin,
+          searchParams.totalScoreMax,
+          0,
+          10
+        )
+          ? undefined
+          : searchParams.totalScoreMin,
+        total_score_max: isDefaultRange(
+          searchParams.totalScoreMin,
+          searchParams.totalScoreMax,
+          0,
+          10
+        )
+          ? undefined
+          : searchParams.totalScoreMax,
+        interaction_min: isDefaultRange(
+          searchParams.interactionMin,
+          searchParams.interactionMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.interactionMin,
+        interaction_max: isDefaultRange(
+          searchParams.interactionMin,
+          searchParams.interactionMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.interactionMax,
+        luck_factor_min: isDefaultRange(
+          searchParams.luckFactorMin,
+          searchParams.luckFactorMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.luckFactorMin,
+        luck_factor_max: isDefaultRange(
+          searchParams.luckFactorMin,
+          searchParams.luckFactorMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.luckFactorMax,
+        downtime_min: isDefaultRange(
+          searchParams.downtimeMin,
+          searchParams.downtimeMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.downtimeMin,
+        downtime_max: isDefaultRange(
+          searchParams.downtimeMin,
+          searchParams.downtimeMax,
+          1,
+          5
+        )
+          ? undefined
+          : searchParams.downtimeMax,
+        mechanics:
+          searchParams.mechanics.length > 0
+            ? searchParams.mechanics
+            : undefined,
+        tags: searchParams.tags.length > 0 ? searchParams.tags : undefined,
+        recommended_players:
+          searchParams.recommendedPlayers.length > 0
+            ? searchParams.recommendedPlayers
+            : undefined,
       };
 
-      const results = await searchGames(apiParams);
+      // 値がundefinedのパラメータを除外
+      const filteredParams = Object.fromEntries(
+        Object.entries(apiParams).filter(([_, value]) => value !== undefined)
+      );
+
+      console.log("Filtered search params:", filteredParams);
+      const results = await searchGames(filteredParams);
       setSearchResults(results);
-      console.log("Search results:", results);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "検索中にエラーが発生しました"

@@ -4,7 +4,7 @@ import { getBGGGameDetails, type BGGGameDetails } from "./bggApi";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const API_BASE_URL = `${API_URL}/api/v1`;
 
-interface Game {
+export interface Game {
   id: string;
   bgg_id: string;
   name: string;
@@ -13,6 +13,12 @@ interface Game {
   min_players: number;
   max_players: number;
   play_time: number;
+  average_score: number;
+  reviews_count: number;
+  average_rule_complexity: number;
+  average_luck_factor: number;
+  average_interaction: number;
+  average_downtime: number;
   reviews: any[];
 }
 
@@ -176,7 +182,9 @@ export async function getGame(
 
     // ゲームが見つからない場合（404）はエラーメッセージを表示
     if (response.status === 404) {
-      throw new Error("ゲームが見つかりません。検索画面から登録してください。");
+      throw new Error(
+        `ゲームID: ${id}はまだデータベースに登録されていません。検索画面から登録できます。`
+      );
     }
 
     // その他のエラーの場合
@@ -195,6 +203,7 @@ export const postReview = async (
   reviewData: any,
   authHeaders: Record<string, string>
 ) => {
+  // 認証ヘッダーの存在確認
   if (
     !authHeaders["access-token"] ||
     !authHeaders["client"] ||
@@ -204,29 +213,45 @@ export const postReview = async (
     throw new Error("ログインが必要です");
   }
 
-  console.log("Sending review with headers:", authHeaders);
-  console.log("Review data:", reviewData);
-
   try {
+    console.log("Sending review with headers:", {
+      "access-token": authHeaders["access-token"],
+      client: authHeaders.client,
+      uid: authHeaders.uid,
+    });
+    console.log("Review data:", reviewData);
+
+    // ヘッダーを単純化して送信
     const response = await fetch(`${API_BASE_URL}/games/${gameId}/reviews`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        ...authHeaders,
+        "access-token": authHeaders["access-token"],
+        client: authHeaders.client,
+        uid: authHeaders.uid,
+        expiry: authHeaders.expiry || "",
+        "token-type": "Bearer",
       },
-      body: JSON.stringify({ review: reviewData }),
+      body: JSON.stringify(reviewData),
       credentials: "include",
     });
 
     if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: "レスポンスの解析に失敗しました" }));
+      console.error("Unauthorized response:", errorData);
       if (response.status === 401) {
-        const errorText = await response.text();
-        console.error("Unauthorized response:", errorText);
-        throw new Error("ログインが必要です");
+        throw new Error(
+          errorData.error || "認証に失敗しました。再度ログインしてください。"
+        );
       }
-      const data = await response.json();
-      throw new Error(data.errors?.[0] || "レビューの投稿に失敗しました");
+      throw new Error(
+        errorData.errors?.[0] ||
+          errorData.error ||
+          "レビューの投稿に失敗しました"
+      );
     }
 
     return response.json();
@@ -295,7 +320,8 @@ export const socialLogin = async (provider: "google" | "twitter") => {
 
 export async function registerGame(
   gameDetails: any,
-  authHeaders?: Record<string, string>
+  authHeaders?: Record<string, string>,
+  autoRegister: boolean = false
 ) {
   try {
     const response = await fetch(`${API_BASE_URL}/games`, {
@@ -320,6 +346,7 @@ export async function registerGame(
           best_num_players: gameDetails.bestPlayers,
           recommended_num_players: gameDetails.recommendedPlayers,
         },
+        auto_register: autoRegister,
       }),
     });
 
@@ -331,6 +358,89 @@ export async function registerGame(
     return response.json();
   } catch (error) {
     console.error("Error registering game:", error);
+    throw error;
+  }
+}
+
+export async function updateJapaneseName(
+  gameId: string,
+  japaneseName: string,
+  authHeaders?: Record<string, string>
+): Promise<Game> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games/${gameId}/update_japanese_name`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...(authHeaders || {}),
+        },
+        body: JSON.stringify({ japanese_name: japaneseName }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "日本語名の更新に失敗しました");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error updating Japanese name:", error);
+    throw error;
+  }
+}
+
+export interface GameEditHistory {
+  id: number;
+  game_id: string;
+  game_name: string;
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  action: string;
+  details: any;
+  created_at: string;
+}
+
+export interface GameEditHistoriesResponse {
+  histories: GameEditHistory[];
+  total_count: number;
+  current_page: number;
+  total_pages: number;
+}
+
+export async function getGameEditHistories(
+  authHeaders: Record<string, string>,
+  gameId?: string,
+  page: number = 1
+): Promise<GameEditHistoriesResponse> {
+  try {
+    const url = gameId
+      ? `${API_BASE_URL}/games/${gameId}/edit_histories?page=${page}`
+      : `${API_BASE_URL}/games/edit_histories?page=${page}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(authHeaders || {}),
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error("この操作を行う権限がありません");
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "編集履歴の取得に失敗しました");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching edit histories:", error);
     throw error;
   }
 }

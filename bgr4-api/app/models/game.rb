@@ -1,6 +1,7 @@
 class Game < ApplicationRecord
   has_many :reviews, primary_key: :bgg_id, foreign_key: :game_id
   has_many :users, through: :reviews
+  has_many :game_edit_histories
 
   validates :name, presence: true
   validates :min_players, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true

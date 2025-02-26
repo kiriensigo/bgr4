@@ -22,19 +22,6 @@ class ApplicationController < ActionController::API
     true
   end
 
-  def current_user
-    @current_user ||= begin
-      auth_headers = request.headers.to_h.select { |k, _| k.downcase.include?('access-token') || k.downcase.include?('client') || k.downcase.include?('uid') }
-      user = User.find_by(uid: auth_headers['HTTP_UID'])
-      
-      if user && valid_token?(auth_headers['HTTP_ACCESS_TOKEN'], user)
-        user
-      else
-        nil
-      end
-    end
-  end
-
   private
 
   def not_found
@@ -56,16 +43,5 @@ class ApplicationController < ActionController::API
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:sign_up, keys: [:name])
     devise_parameter_sanitizer.permit(:account_update, keys: [:name])
-  end
-
-  def valid_token?(token, user)
-    return false unless token && user
-    
-    begin
-      decoded_token = JWT.decode(token, Rails.application.credentials.secret_key_base, true, algorithm: 'HS256')
-      decoded_token[0]['user_id'] == user.id
-    rescue JWT::DecodeError
-      false
-    end
   end
 end

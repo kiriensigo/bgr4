@@ -26,6 +26,12 @@ Rails.application.routes.draw do
       resources :games, only: [:index, :show, :create] do
         collection do
           get 'search'
+          get 'popular'
+          get 'edit_histories'
+        end
+        member do
+          patch 'update_japanese_name'
+          get 'edit_histories'
         end
         resources :reviews, only: [:index, :create, :update]
       end

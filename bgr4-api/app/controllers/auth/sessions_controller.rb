@@ -12,12 +12,19 @@ module Auth
 
     def create
       # アカウントが有効化されているかチェック
-      resource = User.find_by(email: params[:email])
+      resource = User.find_by(email: params[:email] || params.dig(:session, :email))
       if resource && !resource.confirmed?
         render json: {
           errors: ['アカウントが有効化されていません。メールを確認して登録を完了してください']
         }, status: :unauthorized
         return
+      end
+
+      # sessionパラメータがある場合は、paramsに展開する
+      if params[:session].present?
+        params[:email] = params[:session][:email]
+        params[:password] = params[:session][:password]
+        Rails.logger.info "Session params expanded: email=#{params[:email]}, password=[FILTERED]"
       end
 
       super
@@ -45,7 +52,12 @@ module Auth
     private
 
     def resource_params
-      params.permit(:email, :password)
+      # sessionパラメータがある場合はそちらを優先
+      if params[:session].present?
+        params.require(:session).permit(:email, :password)
+      else
+        params.permit(:email, :password)
+      end
     end
   end
 end 

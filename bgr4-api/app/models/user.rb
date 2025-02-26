@@ -8,6 +8,7 @@ class User < ApplicationRecord
          :recoverable, :rememberable, :validatable,
          :confirmable, :omniauthable, omniauth_providers: [:google_oauth2, :twitter2]
   has_many :reviews
+  has_many :game_edit_histories
 
   validates :name, presence: true
   validates :email, presence: true, 
@@ -30,6 +31,17 @@ class User < ApplicationRecord
 
   def oauth_login?
     provider.present? && uid.present?
+  end
+
+  def admin?
+    # 管理者フラグがある場合はそれを使用
+    return is_admin if respond_to?(:is_admin)
+    
+    # 特定のメールアドレスを持つユーザーを管理者とする
+    email.present? && (
+      email.end_with?('@boardgamereview.com') || 
+      email == 'admin@example.com'
+    )
   end
 
   def self.from_omniauth(auth)

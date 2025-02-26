@@ -30,6 +30,7 @@ import {
 } from "@mui/material";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import { CustomSlider } from "@/components/GameEvaluationForm/CustomSlider";
+import Cookies from "js-cookie";
 
 interface Game {
   id: string;
@@ -135,6 +136,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     { value: 4, label: "120分" },
     { value: 5, label: "120分以上" },
   ];
+
+  // ページロード時の認証チェック
+  useEffect(() => {
+    if (!user && !loading) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(`/games/${params.id}/review`)}`
+      );
+    }
+  }, [user, loading, router, params.id]);
 
   useEffect(() => {
     const headers = getAuthHeaders();
@@ -274,20 +284,50 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     setSubmitting(true);
     try {
       const headers = getAuthHeaders();
+      console.log("Auth headers for review submission:", headers);
+
       if (!headers["access-token"] || !headers["client"] || !headers["uid"]) {
+        console.error("Missing auth headers in handleSubmit:", headers);
         throw new Error("ログインが必要です");
       }
 
-      const reviewData = {
-        review: {
-          ...review,
-          custom_tags: review.custom_tags
-            .split(/\s+/)
-            .filter((tag) => tag.length > 0),
-        },
+      // Cookieの値を直接確認
+      console.log("Cookies in handleSubmit:", {
+        accessToken: Cookies.get("access-token"),
+        client: Cookies.get("client"),
+        uid: Cookies.get("uid"),
+      });
+
+      // 認証ヘッダーを手動で構築（バックアップとして）
+      const manualHeaders = {
+        "access-token": Cookies.get("access-token") || "",
+        client: Cookies.get("client") || "",
+        uid: Cookies.get("uid") || "",
+        expiry: Cookies.get("expiry") || "",
       };
 
-      await postReview(params.id, reviewData, headers);
+      // getAuthHeadersの結果とCookieから直接取得した値を比較
+      const finalHeaders = headers["access-token"] ? headers : manualHeaders;
+
+      const reviewData = {
+        overall_score: review.overall_score,
+        play_time: review.play_time,
+        rule_complexity: review.rule_complexity,
+        luck_factor: review.luck_factor,
+        interaction: review.interaction,
+        downtime: review.downtime,
+        recommended_players: review.recommended_players,
+        mechanics: review.mechanics,
+        tags: review.tags,
+        custom_tags: review.custom_tags
+          .split(/\s+/)
+          .filter((tag) => tag.length > 0),
+        short_comment: review.short_comment,
+      };
+
+      console.log("Sending review data:", { review: reviewData });
+
+      await postReview(params.id, { review: reviewData }, finalHeaders);
       setSuccessMessage(
         existingReview ? "レビューを修正しました" : "レビューを投稿しました"
       );
@@ -296,7 +336,17 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       }, 2000);
     } catch (error) {
       if (error instanceof Error) {
-        if (error.message === "ログインが必要です") {
+        if (
+          error.message === "ログインが必要です" ||
+          error.message.includes("認証")
+        ) {
+          console.error("Authentication error:", error);
+          // 認証エラーの場合、Cookieをクリアして再ログインを促す
+          Object.keys(Cookies.get()).forEach((key) => {
+            if (["access-token", "client", "uid", "expiry"].includes(key)) {
+              Cookies.remove(key);
+            }
+          });
           router.push(
             `/login?redirect=${encodeURIComponent(
               `/games/${params.id}/review`

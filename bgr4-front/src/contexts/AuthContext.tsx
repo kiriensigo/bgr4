@@ -81,11 +81,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const expiry = Cookies.get("expiry");
 
       if (!accessToken || !client || !uid) {
+        console.warn("Missing auth cookies:", { accessToken, client, uid });
         clearAllAuthCookies();
         setUser(null);
         setIsLoading(false);
         return;
       }
+
+      console.log("Validating token with headers:", {
+        "access-token": accessToken,
+        client,
+        uid,
+      });
 
       const response = await fetch(`${API_URL}/auth/validate_token`, {
         method: "GET",
@@ -94,11 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           "access-token": accessToken,
           client: client,
           uid: uid,
+          expiry: expiry || "",
+          "token-type": "Bearer",
         },
         credentials: "include",
       });
 
       if (!response.ok) {
+        console.error(
+          "Token validation failed:",
+          response.status,
+          response.statusText
+        );
         clearAllAuthCookies();
         setUser(null);
         setIsLoading(false);
@@ -111,12 +125,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.data);
 
         // 新しいトークンがレスポンスヘッダーにある場合のみ更新
-        const newAccessToken = response.headers.get("access-token");
-        const newClient = response.headers.get("client");
-        const newUid = response.headers.get("uid");
-        const newExpiry = response.headers.get("expiry");
+        const newAccessToken =
+          response.headers.get("access-token") ||
+          response.headers.get("Access-Token");
+        const newClient =
+          response.headers.get("client") || response.headers.get("Client");
+        const newUid =
+          response.headers.get("uid") || response.headers.get("Uid");
+        const newExpiry =
+          response.headers.get("expiry") || response.headers.get("Expiry");
 
         if (newAccessToken && newClient && newUid && newExpiry) {
+          console.log("Updating auth tokens:", {
+            "access-token": newAccessToken,
+            client: newClient,
+            uid: newUid,
+          });
+
           const tokens = {
             "access-token": newAccessToken,
             client: newClient,
@@ -131,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } else {
+        console.error("Token validation returned success: false");
         clearAllAuthCookies();
         setUser(null);
       }
@@ -148,25 +174,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getAuthHeaders = () => {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
     const accessToken = Cookies.get("access-token");
     const client = Cookies.get("client");
     const uid = Cookies.get("uid");
     const expiry = Cookies.get("expiry");
 
-    console.log("Getting auth headers from cookies:", {
-      accessToken,
-      client,
-      uid,
-      expiry,
-    });
-
     if (accessToken && client && uid) {
       headers["access-token"] = accessToken;
+      headers["token-type"] = "Bearer";
       headers.client = client;
       headers.uid = uid;
       if (expiry) headers.expiry = expiry;
-      return headers;
+
+      // デバッグ用にヘッダーの内容をログ出力
+      console.log("Auth headers being sent:", headers);
+    } else {
+      console.warn("Missing auth headers:", { accessToken, client, uid });
     }
 
     return headers;
@@ -225,10 +251,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ session: { email, password } }),
       });
 
       const data = await handleAuthResponse(response);
+
+      // ログイン後のリダイレクト処理
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectPath = urlParams.get("redirect");
+      if (redirectPath) {
+        router.push(decodeURIComponent(redirectPath));
+      } else {
+        router.push("/");
+      }
+
       return data;
     } catch (error) {
       console.error("ログインエラー:", error);

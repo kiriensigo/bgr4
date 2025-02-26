@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_23_092804) do
+ActiveRecord::Schema[8.0].define(version: 2025_02_26_154117) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "game_edit_histories", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "game_id", null: false
+    t.string "action"
+    t.text "details"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["game_id"], name: "index_game_edit_histories_on_game_id"
+    t.index ["user_id"], name: "index_game_edit_histories_on_user_id"
+  end
 
   create_table "games", force: :cascade do |t|
     t.string "name", null: false
@@ -85,12 +96,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_23_092804) do
     t.datetime "confirmation_sent_at"
     t.string "unconfirmed_email"
     t.string "image"
+    t.boolean "is_admin", default: false, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["uid", "provider"], name: "index_users_on_uid_and_provider", unique: true
   end
 
+  add_foreign_key "game_edit_histories", "games"
+  add_foreign_key "game_edit_histories", "users"
   add_foreign_key "likes", "reviews"
   add_foreign_key "likes", "users"
   add_foreign_key "reviews", "users"

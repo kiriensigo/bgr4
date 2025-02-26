@@ -54,6 +54,10 @@ export default function Header() {
     { label: "検索", path: "/search" },
     { label: "レビュー一覧", path: "/reviews" },
     ...(user ? [{ label: "ゲーム登録", path: "/games/register" }] : []),
+    ...(user?.email?.endsWith("@boardgamereview.com") ||
+    user?.email === "admin@example.com"
+      ? [{ label: "編集履歴", path: "/admin/edit-histories" }]
+      : []),
   ];
 
   if (isMobile) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { Box, Paper, Typography, Rating, Button } from "@mui/material";
+import { Box, Paper, Typography, Button } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import EditIcon from "@mui/icons-material/Edit";
+import GameRating from "./GameRating";
 
 interface Game {
   id?: string;
@@ -13,13 +14,14 @@ interface Game {
   image_url?: string;
   thumbnail?: string;
   averageRating?: number;
-  average_score?: number;
+  average_score?: number | null;
   minPlayers?: number;
   maxPlayers?: number;
   min_players?: number;
   max_players?: number;
   playingTime?: number;
   play_time?: number;
+  reviews_count?: number;
 }
 
 interface Review {
@@ -44,7 +46,7 @@ export default function GameCard({ game, review, type }: GameCardProps) {
   const rating =
     type === "review"
       ? review?.overall_score
-      : game.averageRating || game.average_score;
+      : game.average_score || game.averageRating;
   const players = `${game.minPlayers || game.min_players || "?"}〜${
     game.maxPlayers || game.max_players || "?"
   }人`;
@@ -114,16 +116,12 @@ export default function GameCard({ game, review, type }: GameCardProps) {
           )}
 
           {typeof rating === "number" && (
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-              <Rating
-                value={rating / 2}
-                precision={0.5}
-                readOnly
+            <Box sx={{ mb: 1 }}>
+              <GameRating
+                score={rating}
+                reviewsCount={game.reviews_count}
                 size="small"
               />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                {rating.toFixed(1)}
-              </Typography>
             </Box>
           )}
 

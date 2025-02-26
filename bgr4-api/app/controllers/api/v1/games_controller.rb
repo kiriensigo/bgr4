@@ -60,33 +60,40 @@ module Api
       def create
         Rails.logger.info "Creating game with params: #{params.inspect}"
 
+        # 自動登録フラグがある場合はリファラーチェックをスキップ
+        skip_referer_check = params[:auto_register].present?
+        Rails.logger.info "Auto register flag: #{skip_referer_check}"
+
         # リクエストの発信元をチェック
         Rails.logger.info "Original referer: #{request.referer}"
-        begin
-          referer_uri = URI.parse(request.referer.to_s)
-          referer_host = referer_uri.host
-          referer_port = referer_uri.port
-          referer_path = referer_uri.path
-          Rails.logger.info "Parsed referer - Host: #{referer_host}, Port: #{referer_port}, Path: #{referer_path}"
+        
+        unless skip_referer_check
+          begin
+            referer_uri = URI.parse(request.referer.to_s)
+            referer_host = referer_uri.host
+            referer_port = referer_uri.port
+            referer_path = referer_uri.path
+            Rails.logger.info "Parsed referer - Host: #{referer_host}, Port: #{referer_port}, Path: #{referer_path}"
 
-          # フロントエンドのオリジンをチェック
-          frontend_origin = "localhost:3001"
-          is_from_frontend = "#{referer_host}:#{referer_port}" == frontend_origin
+            # フロントエンドのオリジンをチェック
+            frontend_origin = "localhost:3001"
+            is_from_frontend = "#{referer_host}:#{referer_port}" == frontend_origin
 
-          # 許可されたパスをチェック
-          allowed_paths = ['/search', '/popular', '/games/register', '/']
-          is_allowed_path = allowed_paths.any? { |path| referer_path == path }
+            # 許可されたパスをチェック
+            allowed_paths = ['/search', '/popular', '/games/register', '/', '/games']
+            is_allowed_path = allowed_paths.any? { |path| referer_path == path || referer_path.start_with?("#{path}/") }
 
-          Rails.logger.info "Validation - From Frontend: #{is_from_frontend}, Allowed Path: #{is_allowed_path}, Current Path: #{referer_path}"
+            Rails.logger.info "Validation - From Frontend: #{is_from_frontend}, Allowed Path: #{is_allowed_path}, Current Path: #{referer_path}"
 
-          unless is_from_frontend && is_allowed_path
-            render json: { error: 'ゲームの登録は検索画面、人気ゲーム画面、またはゲーム登録画面からのみ可能です' }, status: :forbidden
+            unless is_from_frontend && is_allowed_path
+              render json: { error: 'ゲームの登録は検索画面、人気ゲーム画面、またはゲーム登録画面からのみ可能です' }, status: :forbidden
+              return
+            end
+          rescue => e
+            Rails.logger.error "Error parsing referer: #{e.message}"
+            render json: { error: 'リファラーの検証に失敗しました' }, status: :forbidden
             return
           end
-        rescue => e
-          Rails.logger.error "Error parsing referer: #{e.message}"
-          render json: { error: 'リファラーの検証に失敗しました' }, status: :forbidden
-          return
         end
 
         game_params = params.require(:game).permit(
@@ -105,6 +112,21 @@ module Api
             @game = Game.new(game_params)
             @game.save!
             Rails.logger.info "Game saved with ID: #{@game.id}, BGG ID: #{@game.bgg_id}"
+
+            # 編集履歴を記録
+            if current_user
+              GameEditHistory.create(
+                user: current_user,
+                game: @game,
+                action: 'register_game',
+                details: {
+                  bgg_id: @game.bgg_id,
+                  name: @game.name,
+                  source: skip_referer_check ? 'auto_register' : 'manual_register'
+                }.to_json
+              )
+              Rails.logger.info "Recorded edit history for user #{current_user.id} registering game #{@game.id}"
+            end
 
             # システムユーザーを取得
             system_user = User.find_by(email: 'system@boardgamereview.com')
@@ -197,73 +219,63 @@ module Api
           @games = @games.where("max_players >= ?", max_players)
         end
 
-        # 複雑さでの絞り込み
-        if params[:complexity_min].present? || params[:complexity_max].present?
+        # レビューに基づく絞り込み
+        if review_filters_present? || total_score_filters_present?
           @games = @games.joins(:reviews)
                          .group('games.id')
-          
+
+          # 総合評価での絞り込み
+          if params[:total_score_min].present?
+            @games = @games.having("AVG(NULLIF(reviews.overall_score, 0)) >= ?", params[:total_score_min])
+          end
+
+          if params[:total_score_max].present?
+            @games = @games.having("AVG(NULLIF(reviews.overall_score, 0)) <= ?", params[:total_score_max])
+          end
+
+          # 複雑さでの絞り込み
           if params[:complexity_min].present?
-            @games = @games.having("AVG(reviews.rule_complexity) >= ?", params[:complexity_min])
+            @games = @games.having("AVG(NULLIF(reviews.rule_complexity, 0)) >= ?", params[:complexity_min])
           end
           
           if params[:complexity_max].present?
-            @games = @games.having("AVG(reviews.rule_complexity) <= ?", params[:complexity_max])
+            @games = @games.having("AVG(NULLIF(reviews.rule_complexity, 0)) <= ?", params[:complexity_max])
           end
-        end
 
-        # 運要素での絞り込み
-        if params[:luck_factor_min].present? || params[:luck_factor_max].present?
-          @games = @games.joins(:reviews)
-                         .group('games.id')
-          
+          # 運要素での絞り込み
           if params[:luck_factor_min].present?
-            @games = @games.having("AVG(reviews.luck_factor) >= ?", params[:luck_factor_min])
+            @games = @games.having("AVG(NULLIF(reviews.luck_factor, 0)) >= ?", params[:luck_factor_min])
           end
           
           if params[:luck_factor_max].present?
-            @games = @games.having("AVG(reviews.luck_factor) <= ?", params[:luck_factor_max])
+            @games = @games.having("AVG(NULLIF(reviews.luck_factor, 0)) <= ?", params[:luck_factor_max])
           end
-        end
 
-        # インタラクションでの絞り込み
-        if params[:interaction_min].present? || params[:interaction_max].present?
-          @games = @games.joins(:reviews)
-                         .group('games.id')
-          
+          # インタラクションでの絞り込み
           if params[:interaction_min].present?
-            @games = @games.having("AVG(reviews.interaction) >= ?", params[:interaction_min])
+            @games = @games.having("AVG(NULLIF(reviews.interaction, 0)) >= ?", params[:interaction_min])
           end
           
           if params[:interaction_max].present?
-            @games = @games.having("AVG(reviews.interaction) <= ?", params[:interaction_max])
+            @games = @games.having("AVG(NULLIF(reviews.interaction, 0)) <= ?", params[:interaction_max])
           end
-        end
 
-        # ダウンタイムでの絞り込み
-        if params[:downtime_min].present? || params[:downtime_max].present?
-          @games = @games.joins(:reviews)
-                         .group('games.id')
-          
+          # ダウンタイムでの絞り込み
           if params[:downtime_min].present?
-            @games = @games.having("AVG(reviews.downtime) >= ?", params[:downtime_min])
+            @games = @games.having("AVG(NULLIF(reviews.downtime, 0)) >= ?", params[:downtime_min])
           end
           
           if params[:downtime_max].present?
-            @games = @games.having("AVG(reviews.downtime) <= ?", params[:downtime_max])
+            @games = @games.having("AVG(NULLIF(reviews.downtime, 0)) <= ?", params[:downtime_max])
           end
-        end
 
-        # プレイ時間での絞り込み
-        if params[:play_time_min].present? || params[:play_time_max].present?
-          @games = @games.joins(:reviews)
-                         .group('games.id')
-          
+          # プレイ時間での絞り込み
           if params[:play_time_min].present?
-            @games = @games.having("AVG(reviews.play_time) >= ?", params[:play_time_min])
+            @games = @games.having("AVG(NULLIF(reviews.play_time, 0)) >= ?", params[:play_time_min])
           end
           
           if params[:play_time_max].present?
-            @games = @games.having("AVG(reviews.play_time) <= ?", params[:play_time_max])
+            @games = @games.having("AVG(NULLIF(reviews.play_time, 0)) <= ?", params[:play_time_max])
           end
         end
 
@@ -291,6 +303,82 @@ module Api
         # BGGから人気ゲームを取得
         popular_games = BggService.get_popular_games
         render json: popular_games
+      end
+
+      def update_japanese_name
+        Rails.logger.info "Updating Japanese name for game with BGG ID: #{params[:id]}"
+        @game = Game.find_by(bgg_id: params[:id])
+        
+        if @game
+          old_japanese_name = @game.japanese_name
+          if @game.update(japanese_name: params[:japanese_name])
+            # 編集履歴を記録
+            if current_user
+              GameEditHistory.create(
+                user: current_user,
+                game: @game,
+                action: 'update_japanese_name',
+                details: {
+                  old_value: old_japanese_name,
+                  new_value: params[:japanese_name]
+                }.to_json
+              )
+              Rails.logger.info "Recorded edit history for user #{current_user.id} updating Japanese name of game #{@game.id}"
+            end
+            
+            Rails.logger.info "Updated Japanese name for game #{@game.name} to: #{params[:japanese_name]}"
+            render json: prepare_game_data(@game)
+          else
+            Rails.logger.error "Failed to update Japanese name: #{@game.errors.full_messages}"
+            render json: { error: @game.errors.full_messages.join(', ') }, status: :unprocessable_entity
+          end
+        else
+          Rails.logger.error "Game not found with BGG ID: #{params[:id]}"
+          render json: { error: 'ゲームが見つかりません' }, status: :not_found
+        end
+      end
+
+      def edit_histories
+        # 管理者権限チェック
+        unless current_user && current_user.admin?
+          render json: { error: '管理者権限が必要です' }, status: :forbidden
+          return
+        end
+
+        # ゲームIDが指定されている場合は、そのゲームの編集履歴のみを取得
+        if params[:game_id].present?
+          @game = Game.find_by(bgg_id: params[:game_id])
+          unless @game
+            render json: { error: 'ゲームが見つかりません' }, status: :not_found
+            return
+          end
+          @histories = @game.game_edit_histories.includes(:user).order(created_at: :desc)
+        else
+          # 全ての編集履歴を取得（ページネーション付き）
+          @histories = GameEditHistory.includes(:user, :game).order(created_at: :desc).page(params[:page]).per(20)
+        end
+
+        # レスポンスを整形
+        histories_json = @histories.map do |history|
+          {
+            id: history.id,
+            game_id: history.game.bgg_id,
+            game_name: history.game.name,
+            user_id: history.user_id,
+            user_name: history.user.name,
+            user_email: history.user.email,
+            action: history.action,
+            details: JSON.parse(history.details),
+            created_at: history.created_at
+          }
+        end
+
+        render json: {
+          histories: histories_json,
+          total_count: params[:game_id].present? ? @histories.count : GameEditHistory.count,
+          current_page: params[:page] || 1,
+          total_pages: params[:game_id].present? ? 1 : (GameEditHistory.count.to_f / 20).ceil
+        }
       end
 
       private
@@ -389,6 +477,18 @@ module Api
         @game.update(average_score: average)
         
         Rails.logger.info "Updated game average score: #{average}"
+      end
+
+      def review_filters_present?
+        params[:complexity_min].present? || params[:complexity_max].present? ||
+        params[:luck_factor_min].present? || params[:luck_factor_max].present? ||
+        params[:interaction_min].present? || params[:interaction_max].present? ||
+        params[:downtime_min].present? || params[:downtime_max].present? ||
+        params[:play_time_min].present? || params[:play_time_max].present?
+      end
+
+      def total_score_filters_present?
+        params[:total_score_min].present? || params[:total_score_max].present?
       end
     end
   end

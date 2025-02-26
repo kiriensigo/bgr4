@@ -62,11 +62,18 @@ module Api
       end
 
       def all
-        system_user = User.find_by(email: 'system@boardgamereview.com')
-        @reviews = Review.includes(:user, :game).where.not(user: system_user).order(created_at: :desc)
-        render json: @reviews.as_json(include: { 
-          user: { only: [:id, :name] },
-          game: { only: [:bgg_id, :name, :image_url] }
+        per_page = (params[:per_page] || 12).to_i
+        page = (params[:page] || 1).to_i
+        
+        @reviews = Review.includes(:user, :game)
+                        .where.not(user: User.find_by(email: 'system@boardgamereview.com'))
+                        .order(created_at: :desc)
+                        .offset((page - 1) * per_page)
+                        .limit(per_page)
+
+        render json: @reviews.as_json(include: {
+          user: { only: [:id, :name, :image] },
+          game: { only: [:id, :bgg_id, :name, :japanese_name, :image_url, :min_players, :max_players, :play_time, :average_score] }
         })
       end
 
