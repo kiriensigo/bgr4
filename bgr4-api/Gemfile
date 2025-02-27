@@ -69,3 +69,5 @@ group :development, :test do
 end
 
 
+
+gem "google-cloud-translate", "~> 3.7"

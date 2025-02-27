@@ -3,10 +3,12 @@
 import { Box, Typography, Paper, Rating, Grid } from "@mui/material";
 import { formatDate } from "@/lib/utils";
 import LikeButton from "./LikeButton";
+import Link from "next/link";
 
 interface Review {
   id: number;
   user: {
+    id: number;
     name: string;
   };
   overall_score: number | string;
@@ -49,9 +51,23 @@ export default function ReviewList({ reviews }: ReviewListProps) {
                 sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
               >
                 <Box>
-                  <Typography variant="subtitle2" color="primary">
-                    {review.user.name}
-                  </Typography>
+                  <Link
+                    href={`/users/${review.user.id}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      color="primary"
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": {
+                          textDecoration: "underline",
+                        },
+                      }}
+                    >
+                      {review.user.name}
+                    </Typography>
+                  </Link>
                   <Typography variant="caption" color="text.secondary">
                     {formatDate(review.created_at)}
                   </Typography>

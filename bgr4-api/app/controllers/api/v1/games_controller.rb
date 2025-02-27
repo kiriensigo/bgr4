@@ -58,143 +58,48 @@ module Api
       end
 
       def create
-        Rails.logger.info "Creating game with params: #{params.inspect}"
-
-        # 自動登録フラグがある場合はリファラーチェックをスキップ
-        skip_referer_check = params[:auto_register].present?
-        Rails.logger.info "Auto register flag: #{skip_referer_check}"
-
-        # リクエストの発信元をチェック
-        Rails.logger.info "Original referer: #{request.referer}"
+        # BGG IDからゲーム情報を取得
+        bgg_id = params[:bgg_id]
         
-        unless skip_referer_check
-          begin
-            referer_uri = URI.parse(request.referer.to_s)
-            referer_host = referer_uri.host
-            referer_port = referer_uri.port
-            referer_path = referer_uri.path
-            Rails.logger.info "Parsed referer - Host: #{referer_host}, Port: #{referer_port}, Path: #{referer_path}"
-
-            # フロントエンドのオリジンをチェック
-            frontend_origin = "localhost:3001"
-            is_from_frontend = "#{referer_host}:#{referer_port}" == frontend_origin
-
-            # 許可されたパスをチェック
-            allowed_paths = ['/search', '/popular', '/games/register', '/', '/games']
-            is_allowed_path = allowed_paths.any? { |path| referer_path == path || referer_path.start_with?("#{path}/") }
-
-            Rails.logger.info "Validation - From Frontend: #{is_from_frontend}, Allowed Path: #{is_allowed_path}, Current Path: #{referer_path}"
-
-            unless is_from_frontend && is_allowed_path
-              render json: { error: 'ゲームの登録は検索画面、人気ゲーム画面、またはゲーム登録画面からのみ可能です' }, status: :forbidden
-              return
-            end
-          rescue => e
-            Rails.logger.error "Error parsing referer: #{e.message}"
-            render json: { error: 'リファラーの検証に失敗しました' }, status: :forbidden
-            return
-          end
+        # 既存のゲームをチェック
+        existing_game = Game.find_by(bgg_id: bgg_id)
+        if existing_game
+          render json: prepare_game_data(existing_game), status: :ok
+          return
         end
-
-        game_params = params.require(:game).permit(
-          :bgg_id, :name, :description, :image_url,
-          :min_players, :max_players, :play_time,
-          :average_score, :weight,
-          best_num_players: [], recommended_num_players: []
-        )
-
-        Rails.logger.info "Game params: #{game_params.inspect}"
-
-        @game = Game.find_by(bgg_id: game_params[:bgg_id])
-
-        if @game.nil?
-          begin
-            @game = Game.new(game_params)
-            @game.save!
-            Rails.logger.info "Game saved with ID: #{@game.id}, BGG ID: #{@game.bgg_id}"
-
-            # 編集履歴を記録
-            if current_user
-              GameEditHistory.create(
-                user: current_user,
-                game: @game,
-                action: 'register_game',
-                details: {
-                  bgg_id: @game.bgg_id,
-                  name: @game.name,
-                  source: skip_referer_check ? 'auto_register' : 'manual_register'
-                }.to_json
-              )
-              Rails.logger.info "Recorded edit history for user #{current_user.id} registering game #{@game.id}"
-            end
-
-            # システムユーザーを取得
-            system_user = User.find_by(email: 'system@boardgamereview.com')
-            Rails.logger.info "Found system user: #{system_user&.email}"
-
-            if system_user
-              # 推奨プレイ人数を設定
-              recommended_players = []
-              if params[:game][:recommended_num_players].present?
-                recommended_players = params[:game][:recommended_num_players].map do |num|
-                  if num.end_with?('+')
-                    "#{num.chomp('+')}以上"
-                  else
-                    "#{num}"
-                  end
-                end
-                Rails.logger.info "Added recommended players: #{recommended_players.inspect}"
-              end
-
-              # BGGのスコアまたはweightが存在する場合、システムユーザーのレビューを作成
-              if params[:game][:average_score].present? || params[:game][:weight].present?
-                Rails.logger.info "Creating BGG reviews with score: #{params[:game][:average_score]}, weight: #{params[:game][:weight]}"
-                
-                # BGGのweightを1-5のスケールに変換（存在する場合のみ）
-                normalized_weight = nil
-                if params[:game][:weight].present?
-                  bgg_weight = params[:game][:weight].to_f
-                  normalized_weight = ((bgg_weight / 5.0) * 4.0 + 1).round(1)
-                  Rails.logger.info "Normalized weight: #{normalized_weight}"
-                end
-                
-                # システムユーザーとして10票のレビューを作成
-                10.times do |i|
-                  begin
-                    review = Review.new(
-                      user: system_user,
-                      game: @game,
-                      overall_score: params[:game][:average_score].present? ? params[:game][:average_score].to_f : nil,
-                      short_comment: "BoardGameGeekからの初期評価",
-                      play_time: params[:game][:play_time],
-                      rule_complexity: normalized_weight,
-                      recommended_players: recommended_players,
-                      mechanics: [],
-                      tags: [],
-                      custom_tags: []
-                    )
-                    review.save(validate: false)
-                    Rails.logger.info "Created BGG review #{i+1}/10 for game #{@game.id} with score: #{review.overall_score}, rule_complexity: #{review.rule_complexity}, recommended_players: #{review.recommended_players}"
-                  rescue => e
-                    Rails.logger.error "Error creating review #{i+1} for game #{@game.id}: #{e.message}"
-                    Rails.logger.error e.backtrace.join("\n")
-                    raise e
-                  end
-                end
-              end
-            end
-
-            # ゲームの平均スコアを更新
-            update_game_average_score
-          rescue => e
-            Rails.logger.error "Error creating game: #{e.message}"
-            Rails.logger.error e.backtrace.join("\n")
-            render json: { error: e.message }, status: :unprocessable_entity
-            return
+        
+        # BGG APIからゲーム情報を取得
+        game_details = BggService.get_game_details(bgg_id).first
+        
+        if game_details
+          # ゲームを作成
+          @game = Game.new(
+            bgg_id: bgg_id,
+            name: game_details[:name],
+            japanese_name: game_details[:japanese_name],
+            description: game_details[:description],
+            japanese_description: game_details[:japanese_description],
+            image_url: game_details[:image_url],
+            min_players: game_details[:min_players],
+            max_players: game_details[:max_players],
+            play_time: game_details[:play_time],
+            average_score: game_details[:average_score]
+          )
+          
+          if @game.save
+            # システムユーザーによるレビューを作成（BGGのデータを使用）
+            create_system_review(@game, game_details) if game_details[:average_score].present?
+            
+            # バックグラウンドジョブでゲームの人気機能を更新
+            UpdateGamePopularFeaturesJob.perform_later(@game.bgg_id)
+            
+            render json: prepare_game_data(@game), status: :created
+          else
+            render json: { error: @game.errors.full_messages.join(', ') }, status: :unprocessable_entity
           end
+        else
+          render json: { error: 'BGGからゲーム情報を取得できませんでした' }, status: :not_found
         end
-
-        render json: prepare_game_data(@game), status: :created
       end
 
       def search
@@ -279,20 +184,46 @@ module Api
           end
         end
 
-        # メカニクスでの絞り込み
-        if params[:mechanics].present?
+        # メカニクスでの絞り込み（レビューのメカニクス）
+        if params[:mechanics].present? && params[:use_reviews_mechanics] == 'true'
           mechanics = params[:mechanics].split(',')
           @games = @games.joins(:reviews)
                          .where("reviews.mechanics && ARRAY[?]::varchar[]", mechanics)
                          .distinct
         end
 
-        # タグでの絞り込み
-        if params[:tags].present?
+        # メカニクスでの絞り込み（人気メカニクス）
+        if params[:mechanics].present? && params[:use_reviews_mechanics] != 'true'
+          mechanics = params[:mechanics].split(',')
+          @games = @games.where("popular_mechanics && ARRAY[?]::varchar[]", mechanics)
+        end
+
+        # タグでの絞り込み（レビューのタグ）
+        if params[:tags].present? && params[:use_reviews_tags] == 'true'
           tags = params[:tags].split(',')
           @games = @games.joins(:reviews)
-                         .where("reviews.tags && ARRAY[?]::varchar[]", tags)
+                         .where("reviews.tags && ARRAY[?]::varchar[] OR reviews.custom_tags && ARRAY[?]::varchar[]", tags, tags)
                          .distinct
+        end
+
+        # タグでの絞り込み（人気タグ）
+        if params[:tags].present? && params[:use_reviews_tags] != 'true'
+          tags = params[:tags].split(',')
+          @games = @games.where("popular_tags && ARRAY[?]::varchar[]", tags)
+        end
+
+        # おすすめプレイ人数での絞り込み（レビューのおすすめプレイ人数）
+        if params[:recommended_players].present? && params[:use_reviews_recommended_players] == 'true'
+          players = params[:recommended_players].split(',')
+          @games = @games.joins(:reviews)
+                         .where("reviews.recommended_players && ARRAY[?]::varchar[]", players)
+                         .distinct
+        end
+
+        # おすすめプレイ人数での絞り込み（サイト内おすすめプレイ人数）
+        if params[:recommended_players].present? && params[:use_reviews_recommended_players] != 'true'
+          players = params[:recommended_players].split(',')
+          @games = @games.where("site_recommended_players && ARRAY[?]::varchar[]", players)
         end
 
         Rails.logger.info "Found #{@games.count} games matching the criteria"
@@ -355,7 +286,16 @@ module Api
           @histories = @game.game_edit_histories.includes(:user).order(created_at: :desc)
         else
           # 全ての編集履歴を取得（ページネーション付き）
-          @histories = GameEditHistory.includes(:user, :game).order(created_at: :desc).page(params[:page]).per(20)
+          page = (params[:page] || 1).to_i
+          per_page = 20
+          offset = (page - 1) * per_page
+          
+          @histories = GameEditHistory.includes(:user, :game)
+                                     .order(created_at: :desc)
+                                     .offset(offset)
+                                     .limit(per_page)
+          
+          total_count = GameEditHistory.count
         end
 
         # レスポンスを整形
@@ -375,9 +315,9 @@ module Api
 
         render json: {
           histories: histories_json,
-          total_count: params[:game_id].present? ? @histories.count : GameEditHistory.count,
-          current_page: params[:page] || 1,
-          total_pages: params[:game_id].present? ? 1 : (GameEditHistory.count.to_f / 20).ceil
+          total_count: params[:game_id].present? ? @histories.count : total_count,
+          current_page: params[:page].to_i || 1,
+          total_pages: params[:game_id].present? ? 1 : (total_count.to_f / 20).ceil
         }
       end
 
@@ -400,71 +340,77 @@ module Api
       end
 
       def prepare_game_data(game)
-        game_data = game.as_json
+        # ゲームデータを整形して返す
+        {
+          id: game.id,
+          bgg_id: game.bgg_id,
+          name: game.name,
+          japanese_name: game.japanese_name,
+          description: game.description,
+          japanese_description: game.japanese_description,
+          image_url: game.image_url,
+          min_players: game.min_players,
+          max_players: game.max_players,
+          play_time: game.play_time,
+          average_score: game.average_score,
+          reviews_count: game.reviews.count,
+          average_rule_complexity: game.reviews.average(:rule_complexity)&.round(1),
+          average_luck_factor: game.reviews.average(:luck_factor)&.round(1),
+          average_interaction: game.reviews.average(:interaction)&.round(1),
+          average_downtime: game.reviews.average(:downtime)&.round(1),
+          popular_tags: game.popular_tags,
+          popular_mechanics: game.popular_mechanics,
+          site_recommended_players: game.site_recommended_players,
+          bgg_url: game.bgg_url
+        }
+      end
+
+      def create_system_review(game, game_details)
+        # システムユーザーを取得
         system_user = User.find_by(email: 'system@boardgamereview.com')
+        return unless system_user
         
-        # システムユーザー以外のレビューを取得
-        user_reviews = game.reviews.includes(:user).where.not(user: system_user)
-        
-        # レビューの総数を取得（システムユーザーのレビューも含める）
-        total_reviews = game.reviews.count
-        
-        # おすすめプレイ人数を計算（システムユーザーのレビューも含める）
-        if total_reviews > 0
-          all_recommended_players = game.reviews.where.not(recommended_players: nil).pluck(:recommended_players).flatten
-          player_counts = all_recommended_players.group_by(&:itself).transform_values(&:count)
-          
-          # 50%以上選択された人数を抽出
-          threshold = total_reviews * 0.5
-          game_data['recommended_players'] = player_counts
-            .select { |_, count| count >= threshold }
-            .keys
-            .sort_by { |player| player.to_i }
-        else
-          game_data['recommended_players'] = []
+        # BGGのweightを1-5のスケールに変換（存在する場合のみ）
+        normalized_weight = nil
+        if game_details[:weight].present?
+          bgg_weight = game_details[:weight].to_f
+          normalized_weight = ((bgg_weight / 5.0) * 4.0 + 1).round(1)
+          Rails.logger.info "Normalized weight: #{normalized_weight}"
         end
         
-        # 全レビューの平均点を計算（nilの値は除外）
-        game_data['average_score'] = game.reviews.where.not(overall_score: nil).average(:overall_score)&.round(1)
+        # 推奨プレイ人数を設定
+        recommended_players = game_details[:recommendedPlayers] || []
         
-        # 一般ユーザーのレビュー数のみをカウント
-        game_data['reviews_count'] = user_reviews.count
-
-        # 各評価項目の平均値を計算（一般ユーザーのレビューのみ、nilの値は除外）
-        averages = user_reviews.pluck(
-          Arel.sql('ROUND(CAST(AVG(NULLIF(rule_complexity, 0)) AS numeric), 1)'),
-          Arel.sql('ROUND(CAST(AVG(NULLIF(luck_factor, 0)) AS numeric), 1)'),
-          Arel.sql('ROUND(CAST(AVG(NULLIF(interaction, 0)) AS numeric), 1)'),
-          Arel.sql('ROUND(CAST(AVG(NULLIF(downtime, 0)) AS numeric), 1)')
-        ).first
-
-        # 平均値をgame_dataに追加
-        game_data['average_rule_complexity'] = averages&.at(0)
-        game_data['average_luck_factor'] = averages&.at(1)
-        game_data['average_interaction'] = averages&.at(2)
-        game_data['average_downtime'] = averages&.at(3)
-        
-        # レビュー情報を返す（システムユーザーのレビューは除外）
-        game_data['reviews'] = user_reviews.map do |review|
-          review.as_json(include: { 
-            user: { only: [:id, :name] },
-            likes: { only: [:id, :user_id] }
-          }).merge(
-            likes_count: review.likes_count,
-            liked_by_current_user: false # デフォルトはfalse、必要に応じて後で更新
-          )
+        # システムユーザーとして10票のレビューを作成
+        10.times do |i|
+          begin
+            review = Review.new(
+              user: system_user,
+              game: game,
+              overall_score: game_details[:average_score].present? ? game_details[:average_score].to_f : nil,
+              short_comment: "BoardGameGeekからの初期評価",
+              play_time: game.play_time,
+              rule_complexity: normalized_weight,
+              recommended_players: recommended_players,
+              mechanics: [],
+              tags: [],
+              custom_tags: []
+            )
+            review.save(validate: false)
+            Rails.logger.info "Created BGG review #{i+1}/10 for game #{game.id} with score: #{review.overall_score}, rule_complexity: #{review.rule_complexity}, recommended_players: #{review.recommended_players}"
+          rescue => e
+            Rails.logger.error "Error creating review #{i+1} for game #{game.id}: #{e.message}"
+            Rails.logger.error e.backtrace.join("\n")
+          end
         end
+      end
+
+      def set_game
+        @game = Game.find_by(bgg_id: params[:id])
         
-        Rails.logger.info "Game #{game.name} (BGG ID: #{game.bgg_id})"
-        Rails.logger.info "Average score (including system reviews): #{game_data['average_score']}"
-        Rails.logger.info "User reviews count: #{game_data['reviews_count']}"
-        Rails.logger.info "Average rule complexity: #{game_data['average_rule_complexity']}"
-        Rails.logger.info "Average luck factor: #{game_data['average_luck_factor']}"
-        Rails.logger.info "Average interaction: #{game_data['average_interaction']}"
-        Rails.logger.info "Average downtime: #{game_data['average_downtime']}"
-        Rails.logger.info "Recommended players: #{game_data['recommended_players']&.join(', ')}"
-        
-        game_data
+        unless @game
+          render json: { error: 'ゲームが見つかりません' }, status: :not_found
+        end
       end
 
       def update_game_average_score

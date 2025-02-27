@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -24,6 +24,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
 import LikeButton from "@/components/LikeButton";
 import RateReviewIcon from "@mui/icons-material/RateReview";
+import { usePathname } from "next/navigation";
 
 type Review = {
   id: number;
@@ -59,58 +60,96 @@ type Review = {
   };
 };
 
+// キャッシュ用のオブジェクト
+const reviewsCache: { data: any[]; timestamp: number; page: number } = {
+  data: [],
+  timestamp: 0,
+  page: 0,
+};
+// キャッシュの有効期限（5分）
+const CACHE_EXPIRY = 5 * 60 * 1000;
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function ReviewsPage() {
+  const { getAuthHeaders } = useAuth();
+  const pathname = usePathname();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const { getAuthHeaders } = useAuth();
   const PER_PAGE = 12;
 
-  const fetchReviews = async (pageNum: number, append: boolean = false) => {
-    try {
-      setLoadingMore(append);
-      if (!append) setLoading(true);
+  const fetchReviews = useCallback(
+    async (pageNum: number, append: boolean = false) => {
+      try {
+        setLoadingMore(append);
+        if (!append) setLoading(true);
 
-      const response = await fetch(
-        `${API_URL}/api/v1/reviews/all?page=${pageNum}&per_page=${PER_PAGE}`,
-        {
-          headers: {
-            ...getAuthHeaders(),
-            "Content-Type": "application/json",
-          },
+        // 最初のページでキャッシュをチェック
+        const now = Date.now();
+        if (
+          pageNum === 1 &&
+          !append &&
+          reviewsCache.data.length > 0 &&
+          now - reviewsCache.timestamp < CACHE_EXPIRY
+        ) {
+          console.log("Using cached reviews data");
+          setReviews(reviewsCache.data);
+          setLoading(false);
+          setLoadingMore(false);
+          return;
         }
-      );
 
-      if (!response.ok) {
-        throw new Error("レビューの取得に失敗しました");
+        const response = await fetch(
+          `${
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+          }/api/v1/reviews/all?page=${pageNum}&per_page=${PER_PAGE}`,
+          {
+            headers: {
+              ...getAuthHeaders(),
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("レビューの取得に失敗しました");
+        }
+
+        const data = await response.json();
+
+        if (append) {
+          setReviews((prev) => [...prev, ...data]);
+        } else {
+          setReviews(data);
+          // 最初のページのデータをキャッシュ
+          if (pageNum === 1) {
+            reviewsCache.data = data;
+            reviewsCache.timestamp = now;
+            reviewsCache.page = 1;
+          }
+        }
+
+        // レビューが1ページ分未満なら、これ以上データがないと判断
+        setHasMore(data.length === PER_PAGE);
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "エラーが発生しました"
+        );
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-
-      const data = await response.json();
-
-      if (append) {
-        setReviews((prev) => [...prev, ...data]);
-      } else {
-        setReviews(data);
-      }
-
-      // レビューが1ページ分未満なら、これ以上データがないと判断
-      setHasMore(data.length === PER_PAGE);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "エラーが発生しました");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
+    },
+    [getAuthHeaders]
+  );
 
   useEffect(() => {
     fetchReviews(1);
-  }, []);
+  }, [fetchReviews]);
 
   // 無限スクロールの実装
   useEffect(() => {
@@ -131,7 +170,7 @@ export default function ReviewsPage() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [loading, loadingMore, hasMore]);
+  }, [loading, loadingMore, hasMore, fetchReviews]);
 
   if (loading) {
     return (
@@ -412,7 +451,18 @@ export default function ReviewsPage() {
                         sx={{ width: 24, height: 24 }}
                       />
                       <Typography variant="body2" color="text.secondary">
-                        {review.user.name} ・{" "}
+                        <Link
+                          href={`/users/${review.user.id}`}
+                          style={{ textDecoration: "none", color: "inherit" }}
+                        >
+                          <span
+                            style={{ cursor: "pointer" }}
+                            className="hover-underline"
+                          >
+                            {review.user.name}
+                          </span>
+                        </Link>
+                        {" ・ "}
                         {new Date(review.created_at).toLocaleDateString()}
                       </Typography>
                     </Box>

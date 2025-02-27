@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getGame, updateJapaneseName } from "@/lib/api";
 import {
   Container,
@@ -33,6 +33,7 @@ import GameCard from "@/components/GameCard";
 import ReviewList from "@/components/ReviewList";
 import GameRating from "@/components/GameRating";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePathname } from "next/navigation";
 
 interface APIGame {
   id: number;
@@ -52,6 +53,8 @@ interface APIGame {
   average_interaction: number | null;
   average_downtime: number | null;
   recommended_players: string[];
+  popular_tags: string[];
+  popular_mechanics: string[];
 }
 
 type Game = APIGame;
@@ -151,8 +154,14 @@ const getNumericScore = (score: number | string | null | undefined): number => {
   return Number.isNaN(numScore) ? 0 : numScore;
 };
 
+// キャッシュ用のオブジェクト
+const gameCache: Record<string, { data: any; timestamp: number }> = {};
+// キャッシュの有効期限（5分）
+const CACHE_EXPIRY = 5 * 60 * 1000;
+
 export default function GamePage({ params }: { params: { id: string } }) {
   const { user, getAuthHeaders } = useAuth();
+  const pathname = usePathname();
   const [game, setGame] = useState<Game | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,29 +174,52 @@ export default function GamePage({ params }: { params: { id: string } }) {
     "success"
   );
 
-  useEffect(() => {
-    const fetchGameData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data: APIGame = await getGame(params.id);
-        console.log("Fetched game data:", data);
-        setGame(data);
-        if (data.japanese_name) {
-          setJapaneseName(data.japanese_name);
-        }
-      } catch (err) {
-        console.error("Error fetching game:", err);
-        setError(
-          err instanceof Error ? err.message : "予期せぬエラーが発生しました"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchGameData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    fetchGameData();
+      // キャッシュをチェック
+      const cacheKey = `game-${params.id}`;
+      const cachedData = gameCache[cacheKey];
+      const now = Date.now();
+
+      // 有効なキャッシュがある場合はそれを使用
+      if (cachedData && now - cachedData.timestamp < CACHE_EXPIRY) {
+        console.log("Using cached game data");
+        setGame(cachedData.data);
+        if (cachedData.data.japanese_name) {
+          setJapaneseName(cachedData.data.japanese_name);
+        }
+        setLoading(false);
+        return;
+      }
+
+      const data: APIGame = await getGame(params.id);
+      console.log("Fetched game data:", data);
+      setGame(data);
+      if (data.japanese_name) {
+        setJapaneseName(data.japanese_name);
+      }
+
+      // キャッシュに保存
+      gameCache[cacheKey] = {
+        data,
+        timestamp: now,
+      };
+    } catch (err) {
+      console.error("Error fetching game:", err);
+      setError(
+        err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [params.id]);
+
+  useEffect(() => {
+    fetchGameData();
+  }, [fetchGameData]);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -364,6 +396,52 @@ export default function GamePage({ params }: { params: { id: string } }) {
                   </Typography>
                 </Box>
               )}
+
+            {/* 人気タグ */}
+            {game.popular_tags && game.popular_tags.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  人気タグ
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {game.popular_tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ m: 0.5 }}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  ※ レビュー投稿者が最も多く選択したタグです
+                </Typography>
+              </Box>
+            )}
+
+            {/* 人気メカニクス */}
+            {game.popular_mechanics && game.popular_mechanics.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  人気メカニクス
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {game.popular_mechanics.map((mechanic) => (
+                    <Chip
+                      key={mechanic}
+                      label={mechanic}
+                      color="info"
+                      variant="outlined"
+                      sx={{ m: 0.5 }}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  ※ レビュー投稿者が最も多く選択したメカニクスです
+                </Typography>
+              </Box>
+            )}
 
             {/* レビュー評価の平均 */}
             <Box sx={{ mt: 3 }}>

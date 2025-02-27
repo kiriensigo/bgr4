@@ -17,11 +17,12 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import { Menu as MenuIcon } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 export default function Header() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function Header() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [reviewCount, setReviewCount] = useState(0);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -49,15 +51,54 @@ export default function Header() {
     router.push("/");
   };
 
+  // ユーザーのレビュー数を取得
+  useEffect(() => {
+    if (user) {
+      const fetchReviewCount = async () => {
+        try {
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+            }/api/v1/reviews/my`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "access-token": Cookies.get("access-token") || "",
+                client: Cookies.get("client") || "",
+                uid: Cookies.get("uid") || "",
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setReviewCount(Array.isArray(data) ? data.length : 0);
+          }
+        } catch (error) {
+          console.error("レビュー数の取得に失敗しました:", error);
+        }
+      };
+
+      fetchReviewCount();
+    }
+  }, [user]);
+
+  // レビュー3件以上のユーザーかどうかを判定
+  const canRegisterGame = reviewCount >= 3;
+
+  // 管理者かどうかを判定
+  const isAdmin =
+    user?.email?.endsWith("@boardgamereview.com") ||
+    user?.email === "admin@example.com";
+
   const menuItems = [
     { label: "ホーム", path: "/" },
     { label: "検索", path: "/search" },
     { label: "レビュー一覧", path: "/reviews" },
-    ...(user ? [{ label: "ゲーム登録", path: "/games/register" }] : []),
-    ...(user?.email?.endsWith("@boardgamereview.com") ||
-    user?.email === "admin@example.com"
-      ? [{ label: "編集履歴", path: "/admin/edit-histories" }]
+    ...(user && (canRegisterGame || isAdmin)
+      ? [{ label: "ゲーム登録", path: "/games/register" }]
       : []),
+    ...(isAdmin ? [{ label: "編集履歴", path: "/admin/edit-histories" }] : []),
   ];
 
   if (isMobile) {
@@ -127,21 +168,6 @@ export default function Header() {
                 {item.label}
               </Button>
             ))}
-
-            {user && (
-              <Link href="/games/register" passHref>
-                <Tooltip title="ゲームを登録">
-                  <Button
-                    color="primary"
-                    startIcon={<AddCircleOutlineIcon />}
-                    variant="outlined"
-                    size="small"
-                  >
-                    登録
-                  </Button>
-                </Tooltip>
-              </Link>
-            )}
 
             {user ? (
               <Box sx={{ display: "flex", alignItems: "center" }}>

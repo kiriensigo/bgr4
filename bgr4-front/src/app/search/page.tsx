@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Box,
@@ -14,8 +14,10 @@ import {
   CardContent,
   CardMedia,
   CardActionArea,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { searchGames } from "@/lib/api";
 import SearchIcon from "@mui/icons-material/Search";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -44,13 +46,37 @@ interface LocalSearchParams {
   downtimeMin: number;
   downtimeMax: number;
   recommendedPlayers: string[];
+  // 検索モードの設定
+  useReviewsMechanics: boolean;
+  useReviewsTags: boolean;
+  useReviewsRecommendedPlayers: boolean;
 }
+
+// 検索結果とパラメータのキャッシュ
+const searchCache: {
+  params: LocalSearchParams | null;
+  results: any[];
+  timestamp: number;
+} = {
+  params: null,
+  results: [],
+  timestamp: 0,
+};
+
+// キャッシュの有効期限（5分）
+const CACHE_EXPIRY = 5 * 60 * 1000;
+
+// スクロール位置のキャッシュ
+const SCROLL_POSITION_KEY = "searchPageScrollPosition";
 
 export default function SearchPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  // スクロール復元フラグ
+  const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false);
 
   // 検索条件の状態
   const [searchParams, setSearchParams] = useState<LocalSearchParams>({
@@ -72,7 +98,59 @@ export default function SearchPage() {
     downtimeMin: 1,
     downtimeMax: 5,
     recommendedPlayers: [],
+    // デフォルトでは人気ベースの検索を使用
+    useReviewsMechanics: false,
+    useReviewsTags: false,
+    useReviewsRecommendedPlayers: false,
   });
+
+  // ページロード時にキャッシュから復元
+  useEffect(() => {
+    const now = Date.now();
+    if (searchCache.params && now - searchCache.timestamp < CACHE_EXPIRY) {
+      console.log("検索キャッシュから復元しています");
+      setSearchParams(searchCache.params);
+      setSearchResults(searchCache.results);
+      setShouldRestoreScroll(true);
+    }
+  }, []);
+
+  // スクロール位置の復元
+  useEffect(() => {
+    if (shouldRestoreScroll && searchResults.length > 0) {
+      const savedScrollPosition = sessionStorage.getItem(SCROLL_POSITION_KEY);
+      if (savedScrollPosition) {
+        const scrollY = parseInt(savedScrollPosition, 10);
+        setTimeout(() => {
+          window.scrollTo(0, scrollY);
+          console.log(`スクロール位置を復元しました: ${scrollY}px`);
+        }, 100); // 少し遅延させて確実にDOMが描画された後に実行
+      }
+      setShouldRestoreScroll(false);
+    }
+  }, [shouldRestoreScroll, searchResults]);
+
+  // スクロール位置の保存
+  useEffect(() => {
+    const handleScroll = () => {
+      if (searchResults.length > 0) {
+        sessionStorage.setItem(SCROLL_POSITION_KEY, window.scrollY.toString());
+      }
+    };
+
+    // スクロールイベントのデバウンス処理
+    let scrollTimeout: NodeJS.Timeout;
+    const debouncedHandleScroll = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(handleScroll, 100);
+    };
+
+    window.addEventListener("scroll", debouncedHandleScroll);
+    return () => {
+      window.removeEventListener("scroll", debouncedHandleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [searchResults]);
 
   const isDefaultRange = (
     min: number,
@@ -83,145 +161,169 @@ export default function SearchPage() {
     return min === defaultMin && max === defaultMax;
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+  const handleSearch = useCallback(
+    async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      setError(null);
+      setLoading(true);
 
-    try {
-      // APIパラメータの変換
-      const apiParams = {
-        keyword: searchParams.keyword || undefined,
-        min_players: searchParams.min_players || undefined,
-        max_players: searchParams.max_players || undefined,
-        play_time_min: isDefaultRange(
-          searchParams.playTimeMin,
-          searchParams.playTimeMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.playTimeMin,
-        play_time_max: isDefaultRange(
-          searchParams.playTimeMin,
-          searchParams.playTimeMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.playTimeMax,
-        complexity_min: isDefaultRange(
-          searchParams.complexityMin,
-          searchParams.complexityMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.complexityMin,
-        complexity_max: isDefaultRange(
-          searchParams.complexityMin,
-          searchParams.complexityMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.complexityMax,
-        total_score_min: isDefaultRange(
-          searchParams.totalScoreMin,
-          searchParams.totalScoreMax,
-          0,
-          10
-        )
-          ? undefined
-          : searchParams.totalScoreMin,
-        total_score_max: isDefaultRange(
-          searchParams.totalScoreMin,
-          searchParams.totalScoreMax,
-          0,
-          10
-        )
-          ? undefined
-          : searchParams.totalScoreMax,
-        interaction_min: isDefaultRange(
-          searchParams.interactionMin,
-          searchParams.interactionMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.interactionMin,
-        interaction_max: isDefaultRange(
-          searchParams.interactionMin,
-          searchParams.interactionMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.interactionMax,
-        luck_factor_min: isDefaultRange(
-          searchParams.luckFactorMin,
-          searchParams.luckFactorMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.luckFactorMin,
-        luck_factor_max: isDefaultRange(
-          searchParams.luckFactorMin,
-          searchParams.luckFactorMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.luckFactorMax,
-        downtime_min: isDefaultRange(
-          searchParams.downtimeMin,
-          searchParams.downtimeMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.downtimeMin,
-        downtime_max: isDefaultRange(
-          searchParams.downtimeMin,
-          searchParams.downtimeMax,
-          1,
-          5
-        )
-          ? undefined
-          : searchParams.downtimeMax,
-        mechanics:
-          searchParams.mechanics.length > 0
-            ? searchParams.mechanics
+      try {
+        // APIパラメータの変換
+        const apiParams = {
+          keyword: searchParams.keyword || undefined,
+          min_players: searchParams.min_players || undefined,
+          max_players: searchParams.max_players || undefined,
+          play_time_min: isDefaultRange(
+            searchParams.playTimeMin,
+            searchParams.playTimeMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.playTimeMin,
+          play_time_max: isDefaultRange(
+            searchParams.playTimeMin,
+            searchParams.playTimeMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.playTimeMax,
+          complexity_min: isDefaultRange(
+            searchParams.complexityMin,
+            searchParams.complexityMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.complexityMin,
+          complexity_max: isDefaultRange(
+            searchParams.complexityMin,
+            searchParams.complexityMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.complexityMax,
+          total_score_min: isDefaultRange(
+            searchParams.totalScoreMin,
+            searchParams.totalScoreMax,
+            0,
+            10
+          )
+            ? undefined
+            : searchParams.totalScoreMin,
+          total_score_max: isDefaultRange(
+            searchParams.totalScoreMin,
+            searchParams.totalScoreMax,
+            0,
+            10
+          )
+            ? undefined
+            : searchParams.totalScoreMax,
+          interaction_min: isDefaultRange(
+            searchParams.interactionMin,
+            searchParams.interactionMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.interactionMin,
+          interaction_max: isDefaultRange(
+            searchParams.interactionMin,
+            searchParams.interactionMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.interactionMax,
+          luck_factor_min: isDefaultRange(
+            searchParams.luckFactorMin,
+            searchParams.luckFactorMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.luckFactorMin,
+          luck_factor_max: isDefaultRange(
+            searchParams.luckFactorMin,
+            searchParams.luckFactorMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.luckFactorMax,
+          downtime_min: isDefaultRange(
+            searchParams.downtimeMin,
+            searchParams.downtimeMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.downtimeMin,
+          downtime_max: isDefaultRange(
+            searchParams.downtimeMin,
+            searchParams.downtimeMax,
+            1,
+            5
+          )
+            ? undefined
+            : searchParams.downtimeMax,
+          mechanics:
+            searchParams.mechanics.length > 0
+              ? searchParams.mechanics.join(",")
+              : undefined,
+          tags:
+            searchParams.tags.length > 0
+              ? searchParams.tags.join(",")
+              : undefined,
+          recommended_players:
+            searchParams.recommendedPlayers.length > 0
+              ? searchParams.recommendedPlayers.join(",")
+              : undefined,
+          // 検索モードの設定
+          use_reviews_mechanics: searchParams.useReviewsMechanics
+            ? "true"
             : undefined,
-        tags: searchParams.tags.length > 0 ? searchParams.tags : undefined,
-        recommended_players:
-          searchParams.recommendedPlayers.length > 0
-            ? searchParams.recommendedPlayers
-            : undefined,
-      };
+          use_reviews_tags: searchParams.useReviewsTags ? "true" : undefined,
+          use_reviews_recommended_players:
+            searchParams.useReviewsRecommendedPlayers ? "true" : undefined,
+        };
 
-      // 値がundefinedのパラメータを除外
-      const filteredParams = Object.fromEntries(
-        Object.entries(apiParams).filter(([_, value]) => value !== undefined)
-      );
+        // 値がundefinedのパラメータを除外
+        const filteredParams = Object.fromEntries(
+          Object.entries(apiParams).filter(([_, value]) => value !== undefined)
+        );
 
-      console.log("Filtered search params:", filteredParams);
-      const results = await searchGames(filteredParams);
-      setSearchResults(results);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "検索中にエラーが発生しました"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        console.log("Filtered search params:", filteredParams);
+
+        // 検索結果ページにリダイレクト
+        const queryString = new URLSearchParams(
+          filteredParams as Record<string, string>
+        ).toString();
+        router.push(`/search/results?${queryString}`);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "検索中にエラーが発生しました"
+        );
+        setLoading(false);
+      }
+    },
+    [searchParams, router]
+  );
 
   const handleEvaluationChange = (name: string, value: any) => {
     setSearchParams((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  // 検索モードの切り替え
+  const handleSearchModeChange = (name: string, checked: boolean) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      [name]: checked,
     }));
   };
 
@@ -307,6 +409,63 @@ export default function SearchPage() {
                   >
                     ※ゲームのルールで定められた人数範囲で検索します
                   </Typography>
+                </Grid>
+
+                {/* 検索モード設定 */}
+                <Grid item xs={12}>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight="medium"
+                    gutterBottom
+                  >
+                    検索モード設定
+                  </Typography>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={searchParams.useReviewsTags}
+                          onChange={(e) =>
+                            handleSearchModeChange(
+                              "useReviewsTags",
+                              e.target.checked
+                            )
+                          }
+                        />
+                      }
+                      label="タグ検索で全レビューから検索（チェックなしの場合は人気タグから検索）"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={searchParams.useReviewsMechanics}
+                          onChange={(e) =>
+                            handleSearchModeChange(
+                              "useReviewsMechanics",
+                              e.target.checked
+                            )
+                          }
+                        />
+                      }
+                      label="メカニクス検索で全レビューから検索（チェックなしの場合は人気メカニクスから検索）"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={searchParams.useReviewsRecommendedPlayers}
+                          onChange={(e) =>
+                            handleSearchModeChange(
+                              "useReviewsRecommendedPlayers",
+                              e.target.checked
+                            )
+                          }
+                        />
+                      }
+                      label="おすすめプレイ人数検索で全レビューから検索（チェックなしの場合は人気おすすめプレイ人数から検索）"
+                    />
+                  </Box>
                 </Grid>
 
                 {/* 評価セクション */}

@@ -46,6 +46,17 @@ Rails.application.routes.draw do
           delete :unlike
         end
       end
+
+      # ユーザープロフィール関連のエンドポイント
+      resources :users, only: [:show] do
+        collection do
+          get :profile
+          put :profile
+        end
+        member do
+          get :reviews
+        end
+      end
     end
   end
 

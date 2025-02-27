@@ -1,0 +1,1687 @@
+<?xml version="1.0" encoding="utf-8"?><items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse"><item type="boardgame" id="229853">
+         <thumbnail>https://cf.geekdo-images.com/wW5xjgBJcFyLaEWZwrYuKA__thumb/img/MppmP7GtDAfKiB5LiAl-ZtPxOPE=/fit-in/200x150/filters:strip_icc()/pic4583626.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/wW5xjgBJcFyLaEWZwrYuKA__original/img/72kzn6t41ZxLEr3GFd8ir6hDdH4=/0x0/filters:format(jpeg)/pic4583626.jpg</image>
+                                     				
+				<name type="primary" sortindex="1" value="Teotihuacan: City of Gods" />
+			
+						                               				
+				<name type="alternate" sortindex="1" value="Teotihuacan: Az istenek városa" />
+			    				
+				<name type="alternate" sortindex="1" value="Teotihuacan: Città degli Dei" />
+			    				
+				<name type="alternate" sortindex="1" value="Teotihuacan: Ciudad de Dioses" />
+			    				
+				<name type="alternate" sortindex="1" value="Teotihuacan: Die Stadt der Götter" />
+			    				
+				<name type="alternate" sortindex="1" value="Teotihuacan: La Cité Des Dieux" />
+			    				
+				<name type="alternate" sortindex="1" value="Teotihuacan: Miasto Bogów" />
+			    				
+				<name type="alternate" sortindex="1" value="Teotihuacan: Stad der Goden" />
+			    				
+				<name type="alternate" sortindex="1" value="Теотиуакан. Город богов" />
+			    				
+				<name type="alternate" sortindex="1" value="テオティワカン：シティオブゴッズ" />
+			    				
+				<name type="alternate" sortindex="1" value="特奧蒂瓦坎：眾神之城" />
+			    				
+				<name type="alternate" sortindex="1" value="테오티우아칸: 신들의 도시" />
+			
+						               													<description>Travel back in time to the greatest city in Mesoamerica. Witness the glory and the twilight of the powerful pre-Columbian civilization. Strategize, accrue wealth, gain the favour of the gods, and become the builder of the magnificent Pyramid of the Sun.&amp;#10;&amp;#10;In Teotihuacan: City of Gods, each player commands a force of worker dice, which grow in strength with every move. On your turn, you move a worker around a modular board, always choosing one of two areas of the location tile you land on: one offering you an action (and a worker upgrade), the other providing you with a powerful bonus (but without an upgrade).&amp;#10;&amp;#10;While managing their workforce and resources, players develop new technologies, climb the steps of the three great temples, build houses for the inhabitants of the city, and raise the legendary and breath-taking Pyramid of the Sun in the center of the city.&amp;#10;&amp;#10;Each game is played in three eras. As the dawn of the Aztecs comes closer, player efforts (and their ability to feed their workforce) are evaluated a total of three times. The player with the most fame is the winner.&amp;#10;&amp;#10;</description>
+										      	               				<yearpublished value="2018" />
+						               				<minplayers value="1" />
+						               				<maxplayers value="4" />
+						      			<poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="386">
+			
+		<results numplayers="1">		
+					<result value="Best" numvotes="10" />
+					<result value="Recommended" numvotes="139" />
+					<result value="Not Recommended" numvotes="92" />
+				</results>					
+			
+		<results numplayers="2">		
+					<result value="Best" numvotes="46" />
+					<result value="Recommended" numvotes="214" />
+					<result value="Not Recommended" numvotes="46" />
+				</results>					
+			
+		<results numplayers="3">		
+					<result value="Best" numvotes="139" />
+					<result value="Recommended" numvotes="158" />
+					<result value="Not Recommended" numvotes="8" />
+				</results>					
+			
+		<results numplayers="4">		
+					<result value="Best" numvotes="188" />
+					<result value="Recommended" numvotes="94" />
+					<result value="Not Recommended" numvotes="19" />
+				</results>					
+			
+		<results numplayers="4+">		
+					<result value="Best" numvotes="2" />
+					<result value="Recommended" numvotes="1" />
+					<result value="Not Recommended" numvotes="158" />
+				</results>					
+	</poll>
+<poll-summary name="suggested_numplayers"  title="User Suggested Number of Players">
+  <result name="bestwith" value="Best with 4 players" />
+  <result name="recommmendedwith" value="Recommended with 1–4 players" />
+</poll-summary> 			               				<playingtime value="120" />
+						               				<minplaytime value="90" />
+						               				<maxplaytime value="120" />
+						               				<minage value="14" />
+						      			<poll name="suggested_playerage" title="User Suggested Player Age" totalvotes="74">
+			<results>		
+					<result value="2" numvotes="0" />
+					<result value="3" numvotes="0" />
+					<result value="4" numvotes="1" />
+					<result value="5" numvotes="0" />
+					<result value="6" numvotes="1" />
+					<result value="8" numvotes="1" />
+					<result value="10" numvotes="3" />
+					<result value="12" numvotes="29" />
+					<result value="14" numvotes="32" />
+					<result value="16" numvotes="6" />
+					<result value="18" numvotes="0" />
+					<result value="21 and up" numvotes="1" />
+				</results>					
+	</poll> 			      			<poll name="language_dependence" title="Language Dependence" totalvotes="26">
+			
+		<results>		
+					<result level="1" value="No necessary in-game text" numvotes="26" />
+					<result level="2" value="Some necessary text - easily memorized or small crib sheet" numvotes="0" />
+					<result level="3" value="Moderate in-game text - needs crib sheet or paste ups" numvotes="0" />
+					<result level="4" value="Extensive use of text - massive conversion needed to be playable" numvotes="0" />
+					<result level="5" value="Unplayable in another language" numvotes="0" />
+				</results>					
+	</poll> 			      			 			      				
+		 			
+
+			
+		
+					<link type="boardgamecategory" id="1050" value="Ancient" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2046" value="Area Movement" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2813" value="Rondel" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2004" value="Set Collection" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2819" value="Solo / Solitaire Game" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2002" value="Tile Placement" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2939" value="Track Movement" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2897" value="Variable Set-up" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamemechanic" id="2935" value="Worker Placement with Dice Workers" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="77012" value="Constructions: Pyramids" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="10642" value="Country: Mexico" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="70360" value="Digital Implementations: Board Game Arena" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="70948" value="Digital Implementations: Tabletopia" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="60543" value="Game: Teotihuacan" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="59705" value="Misc: LongPack Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="78198" value="Misc: Watch It Played How To Videos" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="5666" value="Players: Games with Solitaire Rules" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamefamily" id="43639" value="Theme: Native Americans / First Peoples" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="256951" value="Brettspiel Adventskalender 2018" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="350461" value="Loot Box #1" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="264153" value="Teotihuacan: Brettspiel Adventskalender 2018 Promo" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="382252" value="Teotihuacan: City of Gods – 5th Player Expansion" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="283302" value="Teotihuacan: City of Gods – Decoration Tiles" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="315049" value="Teotihuacan: City of Gods – Increased Workforce" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="279161" value="Teotihuacan: City of Gods – Man vs Meeple Promo" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="301254" value="Teotihuacan: City of Gods – Promo Bundle" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="279160" value="Teotihuacan: City of Gods – Pyramid Tile Promo, Red Temple" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="262936" value="Teotihuacan: Dice Settlers Promo" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="316777" value="Teotihuacan: Expansion Period" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="340392" value="Teotihuacan: Expert Challenges – Book 1" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="341949" value="Teotihuacan: Expert Challenges – Book 2" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="350462" value="Teotihuacan: Expert Challenges – Book 3" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="270364" value="Teotihuacan: Late Preclassic Period" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="386071" value="Teotihuacan: New Priests" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameexpansion" id="293473" value="Teotihuacan: Shadow of Xitle" />
+		
+									
+			
+
+			      			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="349236" value="Teotihuacan: City of Gods + three expansions – reDrewno Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="334572" value="Teotihuacan: City of Gods + two expansions – reDrewno Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="309505" value="Teotihuacan: City of Gods – e-Raptor Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="316247" value="Teotihuacan: City of Gods – GeekUp Bit Set" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="393627" value="Teotihuacan: City of Gods – Meeple Source Upgraded Decorations" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="427460" value="Teotihuacan: City of Gods – Set of Players&#039; Game Mats" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="365909" value="Teotihuacan: City of Gods – Tower Rex Organizer" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="284314" value="Teotihuacan: City of Gods – Upgrade Set" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="427458" value="Teotihuacan: City of the Gods – Set of Double Sided Playmats" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="310082" value="Teotihuacan: Folded Space Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="282767" value="Teotihuacan: GeekUp Drawstring Bags" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="268237" value="Teotihuacan: Meeple Realty Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="382562" value="Teotihuacan: Sloyca Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="373841" value="Teotihuacan: Spike Craft Insert" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgameaccessory" id="348654" value="Teotihuacan: The GiftForge Insert" />
+		
+									
+			
+
+			      			
+
+			      			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgamecompilation" id="381715" value="Teotihuacan: City of Gods – Deluxe Master Set" />
+		
+									
+			
+
+			      			
+
+			      			
+
+			      	      	      				
+		 			
+
+			
+		
+					<link type="boardgamedesigner" id="59986" value="Daniele Tascini" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			      	      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="18529" value="NSKN Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="26630" value="Board&amp;Dice" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="41518" value="Bucaneiros Jogos" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="34522" value="CrowD Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="6194" value="Delta Vision Publishing" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="12540" value="Game Harbor" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="7251" value="Giochix.it" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="25996" value="Jumping Turtle Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="30677" value="Maldito Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="30034" value="Pixie Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="2726" value="Portal Games" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="24844" value="Schwerkraft-Verlag" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="39249" value="sternenschimmermeer" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="22609" value="テンデイズゲームズ(TendaysGames)" />
+		
+									
+			
+
+			
+	
+
+	<versions><item type="boardgameversion" id="421629">
+         <thumbnail>https://cf.geekdo-images.com/usxeroa8D7pfYGkwxgK6RQ__thumb/img/I0Fqhb0e6NOoX7hRz-Dvte3zbSI=/fit-in/200x150/filters:strip_icc()/pic4300696.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/usxeroa8D7pfYGkwxgK6RQ__original/img/wQs9Rl7KCiRuxpgt1Ty1OMltYxs=/0x0/filters:format(jpeg)/pic4300696.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Chinese edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="12540" value="Game Harbor" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2181" value="Chinese" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="439114">
+         <thumbnail>https://cf.geekdo-images.com/j50PVSAQ7jR7arju8GzWgg__thumb/img/n3dY_tOWkBF8Y3pWZcZ9fxZcb78=/fit-in/200x150/filters:strip_icc()/pic4504466.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/j50PVSAQ7jR7arju8GzWgg__original/img/6kaW4yOeTpkA9e6gJJ4-se7HTqE=/0x0/filters:format(jpeg)/pic4504466.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Dutch edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="25996" value="Jumping Turtle Games" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2019" />
+						               				<productcode value="JTG-TEO-001" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2183" value="Dutch" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="359343">
+         <thumbnail>https://cf.geekdo-images.com/Ij5FONNUvya88I7HfPXRxQ__thumb/img/ffm9XPl8C8IWvgynVOyAPWJRvQA=/fit-in/200x150/filters:strip_icc()/pic3949618.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/Ij5FONNUvya88I7HfPXRxQ__original/img/xny_MNJF_gWn9urGSmqsS_MFM_Y=/0x0/filters:format(jpeg)/pic3949618.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="English edition, first printing" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="18529" value="NSKN Games" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2184" value="English" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="432101">
+         <thumbnail>https://cf.geekdo-images.com/Ij5FONNUvya88I7HfPXRxQ__thumb/img/ffm9XPl8C8IWvgynVOyAPWJRvQA=/fit-in/200x150/filters:strip_icc()/pic3949618.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/Ij5FONNUvya88I7HfPXRxQ__original/img/xny_MNJF_gWn9urGSmqsS_MFM_Y=/0x0/filters:format(jpeg)/pic3949618.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="English edition, second printing" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="18529" value="NSKN Games" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.59443" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2184" value="English" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="432102">
+         <thumbnail>https://cf.geekdo-images.com/wW5xjgBJcFyLaEWZwrYuKA__thumb/img/MppmP7GtDAfKiB5LiAl-ZtPxOPE=/fit-in/200x150/filters:strip_icc()/pic4583626.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/wW5xjgBJcFyLaEWZwrYuKA__original/img/72kzn6t41ZxLEr3GFd8ir6hDdH4=/0x0/filters:format(jpeg)/pic4583626.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="English edition, third printing" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="26630" value="Board&amp;Dice" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2019" />
+						               				<productcode value="" />
+						               				<width value="11.5748" />
+						               				<length value="11.5748" />
+						               				<depth value="2.91339" />
+						               				<weight value="4.59443" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2184" value="English" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="421428">
+         <thumbnail>https://cf.geekdo-images.com/v1Pd9CISq9TCXfukC66C5g__thumb/img/-lhsROMK3y11szLlZnR94VNg2-I=/fit-in/200x150/filters:strip_icc()/pic4298978.png</thumbnail>
+      <image>https://cf.geekdo-images.com/v1Pd9CISq9TCXfukC66C5g__original/img/k1t1CX1fSnTVbq0YXAyXo94UAMY=/0x0/filters:format(png)/pic4298978.png</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="French edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="30034" value="Pixie Games" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2187" value="French" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="410625">
+         <thumbnail>https://cf.geekdo-images.com/jPvHGh1TAKa96mYN_t17CA__thumb/img/E7n7X9TrH--sDjQNpCzPmlRggNg=/fit-in/200x150/filters:strip_icc()/pic4189326.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/jPvHGh1TAKa96mYN_t17CA__original/img/fcyPsI6ouXI3EclnqOXJDMASuW0=/0x0/filters:format(jpeg)/pic4189326.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="German edition, first printing" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="24844" value="Schwerkraft-Verlag" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="SKV1070" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2188" value="German" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="451618">
+         <thumbnail>https://cf.geekdo-images.com/jPvHGh1TAKa96mYN_t17CA__thumb/img/E7n7X9TrH--sDjQNpCzPmlRggNg=/fit-in/200x150/filters:strip_icc()/pic4189326.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/jPvHGh1TAKa96mYN_t17CA__original/img/fcyPsI6ouXI3EclnqOXJDMASuW0=/0x0/filters:format(jpeg)/pic4189326.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="German edition, second printing" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="24844" value="Schwerkraft-Verlag" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2019" />
+						               				<productcode value="SKV1070" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.63" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2188" value="German" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="617949">
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Hungarian edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="26630" value="Board&amp;Dice" />
+		
+									
+				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="6194" value="Delta Vision Publishing" />
+		
+									
+			
+
+			      			
+
+			               				<yearpublished value="2022" />
+						               				<productcode value="" />
+						               				<width value="0" />
+						               				<length value="0" />
+						               				<depth value="0" />
+						               				<weight value="0" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2191" value="Hungarian" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="426896">
+         <thumbnail>https://cf.geekdo-images.com/2GbsEyopYzSPO9UCzhW8ow__thumb/img/pM1BM2XQ4KJukiDSOL2ufZfqkXs=/fit-in/200x150/filters:strip_icc()/pic5794830.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/2GbsEyopYzSPO9UCzhW8ow__original/img/ydp4EQNEbs-aQhAZbm3smS0ONqg=/0x0/filters:format(jpeg)/pic5794830.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Italian edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="7251" value="Giochix.it" />
+		
+									
+			
+
+			      			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.6929" />
+						               				<length value="11.6929" />
+						               				<depth value="2.79528" />
+						               				<weight value="4.59443" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2193" value="Italian" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="427499">
+         <thumbnail>https://cf.geekdo-images.com/E1copIUmNeTCZaqOUgP-GA__thumb/img/QujCxnOvMCjOIyZ1CNHNrhWjkZ0=/fit-in/200x150/filters:strip_icc()/pic4376323.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/E1copIUmNeTCZaqOUgP-GA__original/img/vhvlLigs3eYxXgbUHeMxx18Y5js=/0x0/filters:format(jpeg)/pic4376323.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Japanese edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="22609" value="テンデイズゲームズ(TendaysGames)" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="3.30693" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2194" value="Japanese" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="405737">
+         <thumbnail>https://cf.geekdo-images.com/BjYUuJQBDQNBpSNlRlXLFg__thumb/img/Mx5OtBncA8-XEj3lQlNGL2yPhw4=/fit-in/200x150/filters:strip_icc()/pic4134792.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/BjYUuJQBDQNBpSNlRlXLFg__original/img/srFN_X9qYG9OON9EfgVEUJ1-CDU=/0x0/filters:format(jpeg)/pic4134792.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Korean edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="39249" value="sternenschimmermeer" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2195" value="Korean" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="442257">
+         <thumbnail>https://cf.geekdo-images.com/qfFICeUJJOWvfFTUsVnCOA__thumb/img/EhsG-BnmkR7oTcLluqhFfioTR_4=/fit-in/200x150/filters:strip_icc()/pic4542368.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/qfFICeUJJOWvfFTUsVnCOA__original/img/pCQea2xSHO7T55Ejvag-joY7uck=/0x0/filters:format(jpeg)/pic4542368.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Polish edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="2726" value="Portal Games" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2019" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.59443" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2199" value="Polish" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="459075">
+         <thumbnail>https://cf.geekdo-images.com/2DezsPmGApaLkmYo17R_sQ__thumb/img/knwvj_jCQbCyWc03KSgI2O_XJI8=/fit-in/200x150/filters:strip_icc()/pic7724110.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/2DezsPmGApaLkmYo17R_sQ__original/img/1X4Y3TDfWoK7cHWWrJeQ6oGt2dM=/0x0/filters:format(jpeg)/pic7724110.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Portuguese edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="41518" value="Bucaneiros Jogos" />
+		
+									
+			
+
+			      			
+
+			               				<yearpublished value="2019" />
+						               				<productcode value="" />
+						               				<width value="0" />
+						               				<length value="0" />
+						               				<depth value="0" />
+						               				<weight value="0" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2200" value="Portuguese" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="441733">
+         <thumbnail>https://cf.geekdo-images.com/4dbIwq3X1SlZpHQRf3X2tA__thumb/img/PLN-Oy6FtH6XPuVDkRbrPQb0HEI=/fit-in/200x150/filters:strip_icc()/pic4534440.png</thumbnail>
+      <image>https://cf.geekdo-images.com/4dbIwq3X1SlZpHQRf3X2tA__original/img/SIJWDpFK56Fc3e_0DZd5LMn1k0U=/0x0/filters:format(png)/pic4534440.png</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Russian edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="34522" value="CrowD Games" />
+		
+									
+			
+
+			      			
+
+			               				<yearpublished value="2019" />
+						               				<productcode value="" />
+						               				<width value="11.6929" />
+						               				<length value="11.6929" />
+						               				<depth value="2.79528" />
+						               				<weight value="4.59443" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2202" value="Russian" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+<item type="boardgameversion" id="422155">
+         <thumbnail>https://cf.geekdo-images.com/Vl5kx5bhd-DoOsvBMRBWxQ__thumb/img/cE1lJU1p5VNHRG_B3T2g-ZPWzCU=/fit-in/200x150/filters:strip_icc()/pic4342105.jpg</thumbnail>
+      <image>https://cf.geekdo-images.com/Vl5kx5bhd-DoOsvBMRBWxQ__original/img/VrMpq5YsYPuliGWNy9aYEfYHiAw=/0x0/filters:format(jpeg)/pic4342105.jpg</image>
+            				
+		 			
+
+			
+		
+					<link type="boardgameversion" id="229853" value="Teotihuacan: City of Gods" inbound="true"/>
+		
+									
+			
+
+			                               				
+				<name type="primary" sortindex="1" value="Spanish edition" />
+			
+						                           
+						      				
+		 			
+
+			
+		
+					<link type="boardgamepublisher" id="30677" value="Maldito Games" />
+		
+									
+			
+
+			      				
+		 			
+
+			
+		
+					<link type="boardgameartist" id="59181" value="Odysseas Stamoglou" />
+		
+									
+			
+
+			               				<yearpublished value="2018" />
+						               				<productcode value="" />
+						               				<width value="11.7" />
+						               				<length value="11.7" />
+						               				<depth value="2.8" />
+						               				<weight value="4.62971" />
+						      				
+		 			
+
+			
+		
+					<link type="language" id="2203" value="Spanish" />
+		
+									
+			
+
+			
+	
+
+	
+
+	
+	
+	
+   
+	
+          
+</item>
+</versions>
+
+	
+	
+	
+   
+	
+          
+</item>
+</items>

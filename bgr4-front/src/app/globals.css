@@ -7,9 +7,9 @@
   --background-rgb: 255, 255, 255;
   --max-width: 1200px;
   --border-radius: 8px;
-  --font-mono: ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono',
-    'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
-    'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
+  --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro",
+    "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
 }
 
 body {
@@ -33,4 +33,9 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-} 
+}
+
+/* ユーザー名ホバー時のスタイル */
+.hover-underline:hover {
+  text-decoration: underline;
+}

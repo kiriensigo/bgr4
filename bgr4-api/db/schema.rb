@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_26_154117) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_01_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,7 +40,14 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_26_154117) do
     t.decimal "weight", precision: 5, scale: 4
     t.string "best_num_players", default: [], array: true
     t.string "recommended_num_players", default: [], array: true
+    t.string "popular_tags", default: [], array: true
+    t.string "popular_mechanics", default: [], array: true
+    t.string "site_recommended_players", default: [], array: true
+    t.text "japanese_description"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
+    t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin
+    t.index ["popular_tags"], name: "index_games_on_popular_tags", using: :gin
+    t.index ["site_recommended_players"], name: "index_games_on_site_recommended_players", using: :gin
   end
 
   create_table "likes", force: :cascade do |t|
@@ -97,6 +104,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_26_154117) do
     t.string "unconfirmed_email"
     t.string "image"
     t.boolean "is_admin", default: false, null: false
+    t.text "bio"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true

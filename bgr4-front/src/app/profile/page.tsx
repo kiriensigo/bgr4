@@ -18,11 +18,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, getAuthHeaders } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    bio: "",
     currentPassword: "",
     newPassword: "",
     newPasswordConfirmation: "",
@@ -35,18 +35,58 @@ export default function ProfilePage() {
     if (!isLoading && !user) {
       router.push("/login");
     } else if (user) {
-      setFormData((prev) => ({
-        ...prev,
-        name: user.name,
-        email: user.email,
-      }));
+      // ユーザープロフィールを取得
+      const fetchUserProfile = async () => {
+        try {
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+            }/api/v1/users/profile`,
+            {
+              headers: getAuthHeaders(),
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setFormData((prev) => ({
+              ...prev,
+              name: user.name,
+              bio: data.bio || "",
+            }));
+          } else {
+            // プロフィールが取得できない場合は名前だけセット
+            setFormData((prev) => ({
+              ...prev,
+              name: user.name,
+              bio: "",
+            }));
+          }
+        } catch (error) {
+          console.error("プロフィール取得エラー:", error);
+          setFormData((prev) => ({
+            ...prev,
+            name: user.name,
+            bio: "",
+          }));
+        }
+      };
+
+      fetchUserProfile();
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, getAuthHeaders]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    // bioフィールドの場合、100文字制限を適用
+    if (name === "bio" && value.length > 100) {
+      return;
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
     setError(null);
     setSuccess(null);
@@ -59,25 +99,53 @@ export default function ProfilePage() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          current_password: formData.currentPassword,
-          password: formData.newPassword,
-          password_confirmation: formData.newPasswordConfirmation,
-        }),
-      });
+      // プロフィール情報の更新
+      const profileResponse = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+        }/api/v1/users/profile`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            bio: formData.bio,
+          }),
+        }
+      );
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.errors?.[0] || "プロフィールの更新に失敗しました");
+      if (!profileResponse.ok) {
+        const data = await profileResponse.json();
+        throw new Error(data.error || "プロフィールの更新に失敗しました");
+      }
+
+      // パスワード変更が入力されている場合のみパスワード更新
+      if (formData.currentPassword && formData.newPassword) {
+        const passwordResponse = await fetch(
+          `${
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+          }/auth/password`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({
+              current_password: formData.currentPassword,
+              password: formData.newPassword,
+              password_confirmation: formData.newPasswordConfirmation,
+            }),
+          }
+        );
+
+        if (!passwordResponse.ok) {
+          const data = await passwordResponse.json();
+          throw new Error(data.errors?.[0] || "パスワードの更新に失敗しました");
+        }
       }
 
       setSuccess("プロフィールを更新しました");
@@ -164,13 +232,15 @@ export default function ProfilePage() {
                 />
                 <TextField
                   fullWidth
-                  label="メールアドレス"
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                  label="自己紹介"
+                  name="bio"
+                  value={formData.bio}
                   onChange={handleChange}
                   margin="normal"
-                  required
+                  multiline
+                  rows={3}
+                  inputProps={{ maxLength: 100 }}
+                  helperText={`${formData.bio.length}/100文字`}
                 />
               </Grid>
 
