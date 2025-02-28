@@ -69,3 +69,22 @@ yarn-error.log*
 
 .cursorrules
 
+# Ignore all log files
+/bgr4-api/log/*.log
+/bgr4-api/log/development.log
+/bgr4-api/log/test.log
+/bgr4-api/log/production.log
+/bgr4-api/log/dev
+
+# Ignore large files
+*.log
+*.dump
+*.gz
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.bz2
+*.7z
+*.rar
+
