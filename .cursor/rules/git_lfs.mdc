@@ -1,107 +1,114 @@
-# Git LFSの使用方法
+# Git LFS (Large File Storage) の使用方法
 
-GIT!
+## 概要
 
-## Git LFSとは
-
-Git Large File Storage (LFS) は、大きなファイルをGitリポジトリで効率的に管理するための拡張機能です。通常のGitでは大きなファイルを扱うと、リポジトリのサイズが肥大化し、クローンやプッシュ/プルの操作が遅くなる問題があります。Git LFSはこの問題を解決するために、大きなファイルの内容をリポジトリ外の専用ストレージに保存し、リポジトリ内にはそのファイルへの参照情報のみを保持します。
+Git LFSは、大きなファイルをGitリポジトリで効率的に管理するためのGit拡張機能です。
+大きなファイル（通常は50MB以上）をGitHubにプッシュする際に発生する問題を解決します。
 
 ## インストール方法
 
-### Windowsの場合
+### Windows
 
-1. Git LFSをダウンロードしてインストール
-   ```
-   # GitHubから直接ダウンロード
-   https://git-lfs.github.com/
-   
-   # または、Chocolateyを使用
-   choco install git-lfs
-   ```
-
-2. Git LFSを初期化
+1. [Git LFSのダウンロードページ](https://git-lfs.github.com/)からインストーラーをダウンロード
+2. インストーラーを実行
+3. コマンドプロンプトまたはPowerShellで初期化:
    ```
    git lfs install
    ```
 
-### macOSの場合
+### macOS
 
-1. Homebrewを使用してインストール
-   ```
-   brew install git-lfs
-   ```
-
-2. Git LFSを初期化
-   ```
-   git lfs install
-   ```
-
-### Linuxの場合
-
-1. パッケージマネージャーを使用してインストール
-   ```
-   # Debian/Ubuntu
-   sudo apt-get install git-lfs
-   
-   # Fedora
-   sudo dnf install git-lfs
-   ```
-
-2. Git LFSを初期化
-   ```
-   git lfs install
-   ```
-
-## 使用方法
-
-1. Git LFSで管理するファイルタイプを指定
-   ```
-   git lfs track "*.log"
-   git lfs track "*.zip"
-   git lfs track "*.pdf"
-   ```
-
-2. `.gitattributes`ファイルをコミット
-   ```
-   git add .gitattributes
-   git commit -m "Configure Git LFS for large files"
-   ```
-
-3. 通常通りファイルを追加・コミット
-   ```
-   git add large_file.pdf
-   git commit -m "Add large file"
-   git push
-   ```
-
-## BGReviewsプロジェクトでの設定
-
-BGReviewsプロジェクトでは、以下のファイルタイプをGit LFSで管理することをお勧めします：
-
+Homebrewを使用:
 ```
-git lfs track "*.log"
-git lfs track "bgr4-api/log/*"
-git lfs track "*.pdf"
-git lfs track "*.zip"
-git lfs track "*.gz"
-git lfs track "*.tar"
-git lfs track "*.tar.gz"
-git lfs track "*.dump"
+brew install git-lfs
+git lfs install
 ```
 
-## 注意点
+### Linux (Ubuntu/Debian)
 
-1. Git LFSを使用するには、リモートリポジトリ（GitHubなど）がGit LFSをサポートしている必要があります。
-2. 無料のGitHubアカウントでは、Git LFSの容量に制限があります（通常は1GBまで）。
-3. すでにGitで管理されているファイルをGit LFSに移行する場合は、追加の手順が必要です。
+```
+sudo apt-get update
+sudo apt-get install git-lfs
+git lfs install
+```
+
+## 基本的な使い方
+
+### 1. 大きなファイルを追跡する
+
+特定の拡張子を持つファイルをLFSで追跡するには:
+
+```
+git lfs track "*.拡張子"
+```
+
+例:
+```
+git lfs track "*.psd"    # Photoshopファイル
+git lfs track "*.zip"    # ZIPアーカイブ
+git lfs track "*.log"    # ログファイル
+```
+
+### 2. .gitattributesファイルをコミット
+
+LFS設定は`.gitattributes`ファイルに保存されます。このファイルをコミットする必要があります:
+
+```
+git add .gitattributes
+git commit -m "Configure Git LFS for [ファイルタイプ]"
+```
+
+### 3. 通常通りGitを使用
+
+LFSの設定後は、通常通りGitコマンドを使用できます:
+
+```
+git add ファイル名
+git commit -m "コミットメッセージ"
+git push
+```
+
+## 既存のリポジトリでLFSを設定する場合
+
+既に追跡されているファイルをLFSに移行する場合:
+
+```
+git lfs migrate import --include="*.拡張子" --everything
+```
 
 ## トラブルシューティング
 
-1. **「This repository is over its data quota」エラー**
-   - GitHubの容量制限を超えています。不要なLFSオブジェクトを削除するか、有料プランにアップグレードしてください。
+### エラー: "Git LFS is not installed"
 
-2. **「Git LFS is not installed」エラー**
-   - Git LFSがインストールされていません。上記のインストール手順に従ってください。
+Git LFSがインストールされていない場合に発生します。インストール方法を参照してください。
 
-3. **「Encountered X file(s) that should have been pointers, but weren't」エラー**
-   - ファイルがGit LFSポインターに変換されていません。`git lfs migrate`コマンドを使用して修正してください。 
+### エラー: "Encountered X file(s) that should have been pointers, but weren't"
+
+ファイルが正しくLFSポインタに変換されていない場合に発生します。以下のコマンドで修正できます:
+
+```
+git lfs migrate import --include="*.拡張子" --no-rewrite
+```
+
+### エラー: "batch response: Authentication required"
+
+認証の問題です。GitHubの認証情報を確認してください。
+
+## 注意点
+
+- Git LFSを使用する場合、リモートリポジトリ（GitHub）の容量制限に注意してください
+- 無料のGitHubアカウントでは、Git LFSの容量に制限があります（通常は1GBまで）
+- チーム全員がGit LFSをインストールする必要があります
+
+## BGReviewsプロジェクトでの使用方法
+
+BGReviewsプロジェクトでは、以下のファイルタイプをLFSで管理することを推奨します:
+
+- ログファイル: `git lfs track "bgr4-api/log/*.log"`
+- データベースダンプ: `git lfs track "*.dump"`
+- 画像ファイル（必要に応じて）: `git lfs track "*.jpg" "*.png"`
+
+## 参考リンク
+
+- [Git LFS公式ドキュメント](https://git-lfs.github.com/)
+- [GitHub LFSドキュメント](https://docs.github.com/ja/repositories/working-with-files/managing-large-files/about-git-large-file-storage) 
