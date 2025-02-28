@@ -52,7 +52,8 @@ class BggService
       # 特定のゲームIDに対する日本語名のマッピング
       japanese_name_mapping = {
         "279537" => "惑星Xの探索", # The Search for Planet X
-        "171623" => "マルコポーロの旅路" # The Voyages of Marco Polo
+        "171623" => "マルコポーロの旅路", # The Voyages of Marco Polo
+        "364073" => "宝石の煌き：デュエル" # Splendor Duel
       }
       
       # マッピングに存在する場合はそれを使用し、なければ検出した日本語名を使用
@@ -82,7 +83,18 @@ class BggService
       # 特定のゲームIDに対する日本語出版社のマッピング
       japanese_publisher_mapping = {
         "279537" => "数寄ゲームズ (Suki Games)", # The Search for Planet X
-        "171623" => "ホビージャパン (Hobby Japan)" # The Voyages of Marco Polo
+        "171623" => "ホビージャパン (Hobby Japan)", # The Voyages of Marco Polo
+        "364073" => "ホビージャパン (Hobby Japan)" # Splendor Duel
+      }
+      
+      # 特定のゲームIDに対する日本語版の発売日のマッピング
+      japanese_release_date_mapping = {
+        "364073" => "2022-11-24" # Splendor Duel
+      }
+      
+      # 特定のゲームIDに対する日本語版の画像URLのマッピング
+      japanese_image_url_mapping = {
+        "364073" => "https://cf.geekdo-images.com/7197608/img/Wd9BKlmPhKcnYJBBDfKYGQYYjlQ=/fit-in/246x300/filters:strip_icc()/pic7197608.jpg" # Splendor Duel
       }
       
       # マッピングに存在する場合はそれを使用し、なければ検出した日本語出版社を使用
@@ -95,14 +107,21 @@ class BggService
       # 日本語版の情報を取得
       japanese_version_info = get_japanese_version_info(bgg_id)
       
+      # 日本語版の画像URLを取得
+      japanese_image_url = japanese_image_url_mapping[bgg_id.to_s]
+      
+      # 日本語版の発売日を取得
+      japanese_release_date = japanese_release_date_mapping[bgg_id.to_s]
+      
       # 日本語版の情報があれば、それを優先して使用
       if japanese_version_info
         japanese_name ||= japanese_version_info[:name]
         japanese_publisher ||= japanese_version_info[:publisher]
-        japanese_release_date = japanese_version_info[:release_date] if japanese_version_info[:release_date]
+        japanese_release_date ||= japanese_version_info[:release_date] if japanese_version_info[:release_date]
+        japanese_image_url ||= japanese_version_info[:image_url]
       else
         # 日本語版の発売年は現状BGGから取得できないため、同じ値を使用
-        japanese_release_date = release_date if japanese_name
+        japanese_release_date ||= release_date if japanese_name
       end
       
       # 拡張情報を取得
@@ -130,6 +149,7 @@ class BggService
         japanese_name: japanese_name,
         description: item.at_xpath('.//description')&.text,
         image_url: item.at_xpath('.//image')&.text,
+        japanese_image_url: japanese_image_url,
         min_players: item.at_xpath('.//minplayers')&.attr('value')&.to_i,
         max_players: item.at_xpath('.//maxplayers')&.attr('value')&.to_i,
         play_time: item.at_xpath('.//maxplaytime')&.attr('value')&.to_i || item.at_xpath('.//playingtime')&.attr('value')&.to_i,

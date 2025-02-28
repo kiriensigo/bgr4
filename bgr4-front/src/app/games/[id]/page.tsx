@@ -45,6 +45,7 @@ import GameRating from "@/components/GameRating";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
 import { formatDate } from "@/lib/utils";
+import { getAuthHeaders } from "@/lib/auth";
 
 interface Review {
   id: number;
@@ -184,30 +185,11 @@ export default function GamePage({ params }: GamePageProps) {
   const [submitting, setSubmitting] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
-    "success"
-  );
+  const [snackbarSeverity, setSnackbarSeverity] = useState<
+    "success" | "error" | "info" | "warning"
+  >("success");
   const [wishlistItemId, setWishlistItemId] = useState<number | null>(null);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
-
-  // やりたいリストからゲームのIDを取得する
-  const fetchWishlistItemId = useCallback(
-    async (gameId: string) => {
-      if (!user) return;
-
-      try {
-        const authHeaders = getAuthHeaders();
-        const wishlistItems = await getWishlist(authHeaders);
-        const item = wishlistItems.find((item) => item.game_id === gameId);
-        if (item) {
-          setWishlistItemId(item.id);
-        }
-      } catch (error) {
-        console.error("Error fetching wishlist item ID:", error);
-      }
-    },
-    [user, getAuthHeaders]
-  );
 
   const fetchGameData = useCallback(async () => {
     try {
@@ -228,42 +210,52 @@ export default function GamePage({ params }: GamePageProps) {
         }
         if (cachedData.data.in_wishlist) {
           // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
-          fetchWishlistItemId(params.id);
+          setWishlistItemId(cachedData.data.id);
         }
         setLoading(false);
         return;
       }
 
-      const headers = user ? getAuthHeaders() : {};
-      const data = (await getGame(params.id, headers)) as ExtendedGame;
-      console.log("Fetched game data:", {
-        ...data,
-        reviews: data.reviews ? `${data.reviews.length} reviews` : "no reviews",
-        hasReviews: data.reviews && data.reviews.length > 0,
-      });
-      setGame(data);
-      if (data.japanese_name) {
-        setJapaneseName(data.japanese_name);
-      }
-      if (data.in_wishlist) {
-        // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
-        fetchWishlistItemId(params.id);
-      }
+      try {
+        // まずAPIからゲーム情報の取得を試みる
+        const headers = user ? getAuthHeaders() : {};
+        const data = (await getGame(params.id, headers)) as ExtendedGame;
+        console.log("Fetched game data:", {
+          ...data,
+          reviews: data.reviews
+            ? `${data.reviews.length} reviews`
+            : "no reviews",
+          hasReviews: data.reviews && data.reviews.length > 0,
+        });
+        setGame(data);
+        if (data.japanese_name) {
+          setJapaneseName(data.japanese_name);
+        }
+        if (data.in_wishlist) {
+          // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
+          setWishlistItemId(data.id);
+        }
 
-      // キャッシュに保存
-      gameCache[cacheKey] = {
-        data,
-        timestamp: now,
-      };
+        // キャッシュに保存
+        gameCache[cacheKey] = {
+          data,
+          timestamp: now,
+        };
+      } catch (err) {
+        console.error("Error fetching game:", err);
+        setError(
+          err instanceof Error ? err.message : "予期せぬエラーが発生しました"
+        );
+      }
     } catch (err) {
-      console.error("Error fetching game:", err);
+      console.error("Error in fetchGameData:", err);
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"
       );
     } finally {
       setLoading(false);
     }
-  }, [params.id, user, getAuthHeaders, fetchWishlistItemId]);
+  }, [params.id, user, getAuthHeaders]);
 
   useEffect(() => {
     fetchGameData();
@@ -312,8 +304,8 @@ export default function GamePage({ params }: GamePageProps) {
     setAddingToWishlist(true);
     try {
       const authHeaders = getAuthHeaders();
-      const result = await addToWishlist(game.bgg_id, authHeaders);
-      setWishlistItemId(result.id);
+      const data = await addToWishlist(game.bgg_id, authHeaders);
+      setWishlistItemId(data.id);
       setGame({
         ...game,
         in_wishlist: true,
@@ -380,6 +372,23 @@ export default function GamePage({ params }: GamePageProps) {
           <Typography color="error" variant="h6">
             {error}
           </Typography>
+          {typeof error === "string" &&
+            error.includes("まだデータベースに登録されていません") && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body1" gutterBottom>
+                  このゲームはまだデータベースに登録されていません。
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  component={Link}
+                  href="/games/register"
+                  sx={{ mt: 1 }}
+                >
+                  ゲーム登録ページへ
+                </Button>
+              </Box>
+            )}
         </Paper>
       </Container>
     );

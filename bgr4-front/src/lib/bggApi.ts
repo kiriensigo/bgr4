@@ -133,6 +133,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
     const japaneseNameMapping: Record<string, string> = {
       "279537": "惑星Xの探索", // The Search for Planet X
       "171623": "マルコポーロの旅路", // The Voyages of Marco Polo
+      "364073": "宝石の煌き：デュエル", // Splendor Duel
     };
 
     // マッピングに存在する場合はそれを使用し、なければ検出した日本語名を使用
@@ -283,6 +284,18 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
     const japanesePublisherMapping: Record<string, string> = {
       "279537": "数寄ゲームズ (Suki Games)", // The Search for Planet X
       "171623": "ホビージャパン (Hobby Japan)", // The Voyages of Marco Polo
+      "364073": "ホビージャパン (Hobby Japan)", // Splendor Duel
+    };
+
+    // 特定のゲームIDに対する日本語版の発売日のマッピング
+    const japaneseReleaseDateMapping: Record<string, string> = {
+      "364073": "2022-11-24", // Splendor Duel
+    };
+
+    // 特定のゲームIDに対する日本語版の画像URLのマッピング
+    const japaneseImageUrlMapping: Record<string, string> = {
+      "364073":
+        "https://cf.geekdo-images.com/7197608/img/Wd9BKlmPhKcnYJBBDfKYGQYYjlQ=/fit-in/246x300/filters:strip_icc()/pic7197608.jpg", // Splendor Duel
     };
 
     // マッピングに存在する場合はそれを使用し、なければ検出した日本語出版社を使用
@@ -291,7 +304,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       (japanesePublishers.length > 0 ? japanesePublishers[0] : undefined);
 
     // 日本語版の画像を探す
-    let japaneseImage: string | undefined = undefined;
+    let japaneseImage: string | undefined = japaneseImageUrlMapping[id];
 
     // 画像バージョンを取得
     const images = Array.isArray(item.image)
@@ -383,7 +396,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
 
             // 日本語名が見つかった場合は設定
             if (versionJapaneseName) {
-              japaneseImage = versionImageUrl;
+              japaneseImage = japaneseImage || versionImageUrl;
             }
           }
         }
@@ -403,12 +416,14 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       : undefined;
 
     // 日本語版の発売日
-    let japaneseReleaseDate = undefined;
-    if (japaneseVersionInfo && japaneseVersionInfo.releaseDate) {
-      japaneseReleaseDate = japaneseVersionInfo.releaseDate;
-    } else if (mappedJapaneseName && releaseDate) {
-      // 日本語名があるが日本語版の発売日がない場合は、同じ値を使用
-      japaneseReleaseDate = releaseDate;
+    let japaneseReleaseDate = japaneseReleaseDateMapping[id];
+    if (!japaneseReleaseDate) {
+      if (japaneseVersionInfo && japaneseVersionInfo.releaseDate) {
+        japaneseReleaseDate = japaneseVersionInfo.releaseDate;
+      } else if (mappedJapaneseName && releaseDate) {
+        // 日本語名があるが日本語版の発売日がない場合は、同じ値を使用
+        japaneseReleaseDate = releaseDate;
+      }
     }
 
     // 拡張情報を取得
