@@ -59,6 +59,53 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<string> {
   throw new Error("BGGへのリクエストが失敗しました");
 }
 
+// 日本語版の画像を検索する関数
+async function searchJapaneseVersionImage(
+  id: string,
+  japaneseName: string
+): Promise<string | null> {
+  try {
+    // BGGの画像ギャラリーを検索
+    const galleryXml = await fetchWithRetry(
+      `${BGG_API_BASE}/images?thing=${id}`
+    );
+    const galleryResult = parser.parse(galleryXml);
+
+    if (!galleryResult.items?.item) {
+      return null;
+    }
+
+    const imageItems = Array.isArray(galleryResult.items.item)
+      ? galleryResult.items.item
+      : [galleryResult.items.item];
+
+    console.log("Found images in gallery:", imageItems.length);
+
+    // 日本語版の画像を探す（キャプションに日本語が含まれているか、「Japanese」「Japan」などのキーワードが含まれている画像）
+    for (const image of imageItems) {
+      const caption = image.caption || "";
+
+      // 日本語版の画像かどうかを判定
+      const isJapaneseImage =
+        caption.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/) ||
+        caption.toLowerCase().includes("japanese") ||
+        caption.toLowerCase().includes("japan") ||
+        caption.includes("日本語");
+
+      if (isJapaneseImage) {
+        const imageUrl = image.large || image.medium || image.small;
+        console.log("Found Japanese version image with caption:", caption);
+        return imageUrl;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error searching Japanese version image:", error);
+    return null;
+  }
+}
+
 export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
   try {
     const xml = await fetchWithRetry(`${BGG_API_BASE}/thing?id=${id}&stats=1`);
@@ -412,6 +459,29 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
               if (versionJapaneseName) {
                 japaneseImage = japaneseImage || versionImageUrl;
               }
+
+              // 画像URLが取得できない場合は、BGGの画像ギャラリーを検索して日本語版の画像を探す
+              if (!japaneseVersionInfo.imageUrl && japaneseVersionInfo.name) {
+                try {
+                  const japaneseImageUrl = await searchJapaneseVersionImage(
+                    id,
+                    japaneseVersionInfo.name
+                  );
+                  if (japaneseImageUrl) {
+                    console.log(
+                      "Found Japanese version image through search:",
+                      japaneseImageUrl
+                    );
+                    japaneseVersionInfo.imageUrl = japaneseImageUrl;
+                    japaneseImage = japaneseImageUrl;
+                  }
+                } catch (imageError) {
+                  console.error(
+                    "Error searching Japanese version image:",
+                    imageError
+                  );
+                }
+              }
             }
           } catch (versionError) {
             console.error("Error fetching version details:", versionError);
@@ -455,47 +525,6 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       japaneseVersionInfo?.imageUrl || japaneseImage;
     console.log("Final Japanese image URL:", finalJapaneseImageUrl);
 
-    // 特定のゲームIDに対する日本語版情報のマッピング
-    // BGG APIから取得した情報が不正確な場合に使用
-    const japaneseInfoMapping: Record<
-      string,
-      {
-        name?: string;
-        publisher?: string;
-        releaseDate?: string;
-        imageUrl?: string;
-      }
-    > = {
-      // パッチワーク
-      "163412": {
-        name: "パッチワーク",
-        publisher: "ホビージャパン (Hobby Japan)",
-        releaseDate: "2015-01-01",
-        imageUrl:
-          "https://cf.geekdo-images.com/7219702/img/Wd9BKlmPhKcnYJBBDfKYGQYYjlQ=/fit-in/246x300/filters:strip_icc()/pic7219702.jpg",
-      },
-      // 他のゲームも必要に応じて追加
-    };
-
-    // マッピングに存在する場合は、マッピングの情報を優先
-    const mappedInfo = japaneseInfoMapping[id];
-    const mappedJapaneseName = mappedInfo?.name || finalJapaneseName;
-    const mappedJapanesePublisher =
-      mappedInfo?.publisher || finalJapanesePublisher;
-    const mappedJapaneseReleaseDate =
-      mappedInfo?.releaseDate || japaneseReleaseDate;
-    const mappedJapaneseImageUrl =
-      mappedInfo?.imageUrl || finalJapaneseImageUrl;
-
-    // マッピング情報があれば、それを使用していることをログに出力
-    if (mappedInfo) {
-      console.log("Using mapped Japanese info for game ID:", id);
-      console.log("Mapped Japanese name:", mappedJapaneseName);
-      console.log("Mapped Japanese publisher:", mappedJapanesePublisher);
-      console.log("Mapped Japanese release date:", mappedJapaneseReleaseDate);
-      console.log("Mapped Japanese image URL:", mappedJapaneseImageUrl);
-    }
-
     // 拡張情報を取得
     const expansions = (item.link || [])
       .filter(
@@ -524,7 +553,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       name: primaryName,
       description: item.description?.replace(/&#10;/g, "\n") || "",
       image: item.image || item.thumbnail || "",
-      japaneseImage: mappedJapaneseImageUrl,
+      japaneseImage: finalJapaneseImageUrl,
       minPlayers: parseInt(item.minplayers?.["@_value"]) || 0,
       maxPlayers: parseInt(item.maxplayers?.["@_value"]) || 0,
       minPlayTime: parseInt(item.minplaytime?.["@_value"]) || 0,
@@ -547,9 +576,9 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       publisher: publishers.length > 0 ? publishers[0] : undefined,
       designer: designers.length > 0 ? designers[0] : undefined,
       releaseDate,
-      japanesePublisher: mappedJapanesePublisher,
-      japaneseReleaseDate: mappedJapaneseReleaseDate,
-      japaneseName: mappedJapaneseName,
+      japanesePublisher: finalJapanesePublisher,
+      japaneseReleaseDate: japaneseReleaseDate,
+      japaneseName: finalJapaneseName,
       expansions: expansions.length > 0 ? expansions : undefined,
       baseGame,
     };

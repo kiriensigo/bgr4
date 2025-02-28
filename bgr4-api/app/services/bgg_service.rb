@@ -92,28 +92,6 @@ class BggService
         japanese_release_date = release_date if japanese_name
       end
       
-      # 特定のゲームIDに対する日本語版情報のマッピング
-      # BGG APIから取得した情報が不正確な場合に使用
-      japanese_info_mapping = {
-        # パッチワーク
-        "163412" => {
-          name: "パッチワーク",
-          publisher: "ホビージャパン (Hobby Japan)",
-          release_date: "2015-01-01",
-          image_url: "https://cf.geekdo-images.com/7219702/img/Wd9BKlmPhKcnYJBBDfKYGQYYjlQ=/fit-in/246x300/filters:strip_icc()/pic7219702.jpg"
-        }
-        # 他のゲームも必要に応じて追加
-      }
-      
-      # マッピングに存在する場合は、マッピングの情報を優先
-      if mapped_info = japanese_info_mapping[bgg_id.to_s]
-        Rails.logger.info "Using mapped Japanese info for game ID: #{bgg_id}"
-        japanese_name = mapped_info[:name] if mapped_info[:name]
-        japanese_publisher = mapped_info[:publisher] if mapped_info[:publisher]
-        japanese_release_date = mapped_info[:release_date] if mapped_info[:release_date]
-        japanese_image_url = mapped_info[:image_url] if mapped_info[:image_url]
-      end
-      
       # 拡張情報を取得
       expansions = item.xpath('.//link[@type="boardgameexpansion" and @inbound="true"]').map do |link|
         {
@@ -253,6 +231,13 @@ class BggService
       image_url = version_item.at_xpath('./image')&.text || version_item.at_xpath('./thumbnail')&.text
       Rails.logger.info "Version image URL: #{image_url}"
       
+      # 画像URLが取得できない場合は、BGGの画像検索APIを使用して日本語版の画像を検索
+      if image_url.blank? && japanese_name.present?
+        # 日本語名を使用して画像を検索
+        image_url = search_japanese_version_image(bgg_id, japanese_name)
+        Rails.logger.info "Found Japanese version image through search: #{image_url}" if image_url.present?
+      end
+      
       {
         name: japanese_name,
         publisher: publishers.first,
@@ -261,6 +246,43 @@ class BggService
       }
     rescue => e
       Rails.logger.error "Error fetching version details: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      nil
+    end
+  end
+  
+  # 日本語版の画像を検索するメソッド
+  def self.search_japanese_version_image(bgg_id, japanese_name)
+    begin
+      # BGGの画像ギャラリーを検索
+      gallery_response = get("/images?thing=#{bgg_id}")
+      return nil unless gallery_response.success?
+      
+      gallery_xml = Nokogiri::XML(gallery_response.body)
+      
+      # 日本語版の画像を探す（キャプションに日本語が含まれているか、「Japanese」「Japan」などのキーワードが含まれている画像）
+      japanese_image = nil
+      
+      gallery_xml.xpath('//item').each do |image|
+        caption = image.at_xpath('./caption')&.text || ''
+        
+        # 日本語版の画像かどうかを判定
+        is_japanese_image = 
+          caption.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/) ||
+          caption.downcase.include?('japanese') ||
+          caption.downcase.include?('japan') ||
+          caption.include?('日本語')
+        
+        if is_japanese_image
+          japanese_image = image.at_xpath('./large')&.text || image.at_xpath('./medium')&.text || image.at_xpath('./small')&.text
+          Rails.logger.info "Found Japanese version image: #{japanese_image}"
+          break
+        end
+      end
+      
+      japanese_image
+    rescue => e
+      Rails.logger.error "Error searching Japanese version image: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       nil
     end
