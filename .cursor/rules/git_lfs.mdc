@@ -1,0 +1,107 @@
+# Git LFSの使用方法
+
+GIT!
+
+## Git LFSとは
+
+Git Large File Storage (LFS) は、大きなファイルをGitリポジトリで効率的に管理するための拡張機能です。通常のGitでは大きなファイルを扱うと、リポジトリのサイズが肥大化し、クローンやプッシュ/プルの操作が遅くなる問題があります。Git LFSはこの問題を解決するために、大きなファイルの内容をリポジトリ外の専用ストレージに保存し、リポジトリ内にはそのファイルへの参照情報のみを保持します。
+
+## インストール方法
+
+### Windowsの場合
+
+1. Git LFSをダウンロードしてインストール
+   ```
+   # GitHubから直接ダウンロード
+   https://git-lfs.github.com/
+   
+   # または、Chocolateyを使用
+   choco install git-lfs
+   ```
+
+2. Git LFSを初期化
+   ```
+   git lfs install
+   ```
+
+### macOSの場合
+
+1. Homebrewを使用してインストール
+   ```
+   brew install git-lfs
+   ```
+
+2. Git LFSを初期化
+   ```
+   git lfs install
+   ```
+
+### Linuxの場合
+
+1. パッケージマネージャーを使用してインストール
+   ```
+   # Debian/Ubuntu
+   sudo apt-get install git-lfs
+   
+   # Fedora
+   sudo dnf install git-lfs
+   ```
+
+2. Git LFSを初期化
+   ```
+   git lfs install
+   ```
+
+## 使用方法
+
+1. Git LFSで管理するファイルタイプを指定
+   ```
+   git lfs track "*.log"
+   git lfs track "*.zip"
+   git lfs track "*.pdf"
+   ```
+
+2. `.gitattributes`ファイルをコミット
+   ```
+   git add .gitattributes
+   git commit -m "Configure Git LFS for large files"
+   ```
+
+3. 通常通りファイルを追加・コミット
+   ```
+   git add large_file.pdf
+   git commit -m "Add large file"
+   git push
+   ```
+
+## BGReviewsプロジェクトでの設定
+
+BGReviewsプロジェクトでは、以下のファイルタイプをGit LFSで管理することをお勧めします：
+
+```
+git lfs track "*.log"
+git lfs track "bgr4-api/log/*"
+git lfs track "*.pdf"
+git lfs track "*.zip"
+git lfs track "*.gz"
+git lfs track "*.tar"
+git lfs track "*.tar.gz"
+git lfs track "*.dump"
+```
+
+## 注意点
+
+1. Git LFSを使用するには、リモートリポジトリ（GitHubなど）がGit LFSをサポートしている必要があります。
+2. 無料のGitHubアカウントでは、Git LFSの容量に制限があります（通常は1GBまで）。
+3. すでにGitで管理されているファイルをGit LFSに移行する場合は、追加の手順が必要です。
+
+## トラブルシューティング
+
+1. **「This repository is over its data quota」エラー**
+   - GitHubの容量制限を超えています。不要なLFSオブジェクトを削除するか、有料プランにアップグレードしてください。
+
+2. **「Git LFS is not installed」エラー**
+   - Git LFSがインストールされていません。上記のインストール手順に従ってください。
+
+3. **「Encountered X file(s) that should have been pointers, but weren't」エラー**
+   - ファイルがGit LFSポインターに変換されていません。`git lfs migrate`コマンドを使用して修正してください。 
