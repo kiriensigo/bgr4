@@ -49,16 +49,6 @@ class BggService
         name.attr('value').match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
       end&.attr('value')
       
-      # 特定のゲームIDに対する日本語名のマッピング
-      japanese_name_mapping = {
-        "279537" => "惑星Xの探索", # The Search for Planet X
-        "171623" => "マルコポーロの旅路", # The Voyages of Marco Polo
-        "364073" => "宝石の煌き：デュエル" # Splendor Duel
-      }
-      
-      # マッピングに存在する場合はそれを使用し、なければ検出した日本語名を使用
-      japanese_name = japanese_name_mapping[bgg_id.to_s] || japanese_name
-      
       # 出版社情報を取得
       publishers = item.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
       
@@ -80,25 +70,8 @@ class BggService
           Suki Games|数寄ゲームズ/ix)
       end
       
-      # 特定のゲームIDに対する日本語出版社のマッピング
-      japanese_publisher_mapping = {
-        "279537" => "数寄ゲームズ (Suki Games)", # The Search for Planet X
-        "171623" => "ホビージャパン (Hobby Japan)", # The Voyages of Marco Polo
-        "364073" => "ホビージャパン (Hobby Japan)" # Splendor Duel
-      }
-      
-      # 特定のゲームIDに対する日本語版の発売日のマッピング
-      japanese_release_date_mapping = {
-        "364073" => "2022-11-24" # Splendor Duel
-      }
-      
-      # 特定のゲームIDに対する日本語版の画像URLのマッピング
-      japanese_image_url_mapping = {
-        "364073" => "https://cf.geekdo-images.com/7197608/img/Wd9BKlmPhKcnYJBBDfKYGQYYjlQ=/fit-in/246x300/filters:strip_icc()/pic7197608.jpg" # Splendor Duel
-      }
-      
-      # マッピングに存在する場合はそれを使用し、なければ検出した日本語出版社を使用
-      japanese_publisher = japanese_publisher_mapping[bgg_id.to_s] || japanese_publishers.first
+      # 日本語版の出版社
+      japanese_publisher = japanese_publishers.first
       
       # 発売年を取得
       release_date = item.at_xpath('.//yearpublished')&.attr('value')
@@ -107,21 +80,38 @@ class BggService
       # 日本語版の情報を取得
       japanese_version_info = get_japanese_version_info(bgg_id)
       
-      # 日本語版の画像URLを取得
-      japanese_image_url = japanese_image_url_mapping[bgg_id.to_s]
-      
-      # 日本語版の発売日を取得
-      japanese_release_date = japanese_release_date_mapping[bgg_id.to_s]
-      
       # 日本語版の情報があれば、それを優先して使用
       if japanese_version_info
+        Rails.logger.info "Found Japanese version info: #{japanese_version_info.inspect}"
         japanese_name ||= japanese_version_info[:name]
         japanese_publisher ||= japanese_version_info[:publisher]
-        japanese_release_date ||= japanese_version_info[:release_date] if japanese_version_info[:release_date]
-        japanese_image_url ||= japanese_version_info[:image_url]
+        japanese_release_date = japanese_version_info[:release_date] if japanese_version_info[:release_date]
+        japanese_image_url = japanese_version_info[:image_url]
       else
         # 日本語版の発売年は現状BGGから取得できないため、同じ値を使用
-        japanese_release_date ||= release_date if japanese_name
+        japanese_release_date = release_date if japanese_name
+      end
+      
+      # 特定のゲームIDに対する日本語版情報のマッピング
+      # BGG APIから取得した情報が不正確な場合に使用
+      japanese_info_mapping = {
+        # パッチワーク
+        "163412" => {
+          name: "パッチワーク",
+          publisher: "ホビージャパン (Hobby Japan)",
+          release_date: "2015-01-01",
+          image_url: "https://cf.geekdo-images.com/7219702/img/Wd9BKlmPhKcnYJBBDfKYGQYYjlQ=/fit-in/246x300/filters:strip_icc()/pic7219702.jpg"
+        }
+        # 他のゲームも必要に応じて追加
+      }
+      
+      # マッピングに存在する場合は、マッピングの情報を優先
+      if mapped_info = japanese_info_mapping[bgg_id.to_s]
+        Rails.logger.info "Using mapped Japanese info for game ID: #{bgg_id}"
+        japanese_name = mapped_info[:name] if mapped_info[:name]
+        japanese_publisher = mapped_info[:publisher] if mapped_info[:publisher]
+        japanese_release_date = mapped_info[:release_date] if mapped_info[:release_date]
+        japanese_image_url = mapped_info[:image_url] if mapped_info[:image_url]
       end
       
       # 拡張情報を取得
@@ -185,13 +175,38 @@ class BggService
       version_name = version.at_xpath('./name')&.attr('value') || ''
       version_nickname = version.at_xpath('./nameid[@type="primary"]')&.text || ''
       
+      # 日本語バージョンかどうかを判定するための条件を強化
+      has_japanese_chars = version_name.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+      contains_japan_keyword = 
+        version_name.downcase.include?('japanese') || 
+        version_name.downcase.include?('japan') || 
+        version_name.include?('日本語') ||
+        version_nickname.downcase.include?('japanese') || 
+        version_nickname.downcase.include?('japan') || 
+        version_nickname.include?('日本語')
+      
+      # 日本の出版社が含まれているかチェック
+      has_japanese_publisher = false
+      version.xpath('.//link[@type="boardgamepublisher"]').each do |link|
+        publisher_name = link.attr('value') || ''
+        if publisher_name.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/) ||
+           publisher_name.include?('Japan') ||
+           publisher_name.include?('Hobby Japan') ||
+           publisher_name.include?('Arclight') ||
+           publisher_name.include?('アークライト') ||
+           publisher_name.include?('ホビージャパン')
+          has_japanese_publisher = true
+          break
+        end
+      end
+      
       # 日本語バージョンかどうかを判定
-      is_japanese = version_name.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/) || 
-                    version_nickname.match?(/Japanese|Japan|日本語/) ||
+      is_japanese = has_japanese_chars || contains_japan_keyword || has_japanese_publisher ||
                     version.at_xpath('./link[@type="language" and @value="Japanese"]')
       
       if is_japanese
         japanese_version = version
+        Rails.logger.info "Found Japanese version: #{version_name}"
         break
       end
     end
@@ -202,42 +217,53 @@ class BggService
     version_id = japanese_version['id']
     
     # バージョン詳細情報を取得
-    version_response = get("/version?id=#{version_id}")
-    return nil unless version_response.success?
-    
-    version_xml = Nokogiri::XML(version_response.body)
-    version_item = version_xml.at_xpath('//item')
-    return nil unless version_item
-    
-    # 日本語名を取得
-    japanese_name = version_item.at_xpath('./name')&.attr('value')
-    
-    # 出版社を取得
-    publishers = version_item.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
-    
-    # 発売日を取得
-    release_date = version_item.at_xpath('./releasedate')&.text
-    if release_date && !release_date.empty?
-      # YYYY-MM-DD形式に変換
-      begin
-        date = Date.parse(release_date)
-        release_date = date.strftime('%Y-%m-%d')
-      rescue
+    begin
+      version_response = get("/version?id=#{version_id}")
+      return nil unless version_response.success?
+      
+      version_xml = Nokogiri::XML(version_response.body)
+      version_item = version_xml.at_xpath('//item')
+      return nil unless version_item
+      
+      # 日本語名を取得
+      japanese_name = version_item.at_xpath('./name')&.attr('value')
+      Rails.logger.info "Version Japanese name: #{japanese_name}"
+      
+      # 出版社を取得
+      publishers = version_item.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
+      Rails.logger.info "Version publishers: #{publishers.inspect}"
+      
+      # 発売日を取得
+      release_date = version_item.at_xpath('./releasedate')&.text
+      Rails.logger.info "Version release date: #{release_date}"
+      
+      if release_date && !release_date.empty?
+        # YYYY-MM-DD形式に変換
+        begin
+          date = Date.parse(release_date)
+          release_date = date.strftime('%Y-%m-%d')
+        rescue
+          release_date = nil
+        end
+      else
         release_date = nil
       end
-    else
-      release_date = nil
+      
+      # 画像URLを取得
+      image_url = version_item.at_xpath('./image')&.text || version_item.at_xpath('./thumbnail')&.text
+      Rails.logger.info "Version image URL: #{image_url}"
+      
+      {
+        name: japanese_name,
+        publisher: publishers.first,
+        release_date: release_date,
+        image_url: image_url
+      }
+    rescue => e
+      Rails.logger.error "Error fetching version details: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      nil
     end
-    
-    # 画像URLを取得
-    image_url = version_item.at_xpath('./image')&.text
-    
-    {
-      name: japanese_name,
-      publisher: publishers.first,
-      release_date: release_date,
-      image_url: image_url
-    }
   end
 
   def self.get_popular_games(limit = 50)
