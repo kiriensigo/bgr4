@@ -94,6 +94,7 @@ export default function Header() {
   const menuItems = [
     { label: "ホーム", path: "/" },
     { label: "検索", path: "/search" },
+    { label: "ゲーム一覧", path: "/games" },
     { label: "レビュー一覧", path: "/reviews" },
     ...(user && (canRegisterGame || isAdmin)
       ? [{ label: "ゲーム登録", path: "/games/register" }]
@@ -217,6 +218,13 @@ export default function Header() {
                     onClick={handleClose}
                   >
                     マイレビュー
+                  </MenuItem>
+                  <MenuItem
+                    component={Link}
+                    href="/wishlist"
+                    onClick={handleClose}
+                  >
+                    やりたいリスト
                   </MenuItem>
                   <MenuItem onClick={handleSignOut}>ログアウト</MenuItem>
                 </Menu>

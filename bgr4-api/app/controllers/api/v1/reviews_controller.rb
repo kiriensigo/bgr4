@@ -71,10 +71,20 @@ module Api
                         .offset((page - 1) * per_page)
                         .limit(per_page)
 
+        # ゲームごとのレビュー数を取得
+        game_ids = @reviews.map { |review| review.game_id }.uniq
+        reviews_count_by_game = Review.where(game_id: game_ids)
+                                     .group(:game_id)
+                                     .count
+
         render json: @reviews.as_json(include: {
           user: { only: [:id, :name, :image] },
           game: { only: [:id, :bgg_id, :name, :japanese_name, :image_url, :min_players, :max_players, :play_time, :average_score] }
-        })
+        }).map do |review_json|
+          # ゲームのレビュー数を追加
+          review_json["game"]["reviews_count"] = reviews_count_by_game[review_json["game_id"]] || 0
+          review_json
+        end
       end
 
       def my
@@ -121,7 +131,6 @@ module Api
       def review_params
         params.require(:review).permit(
           :overall_score,
-          :play_time,
           :rule_complexity,
           :luck_factor,
           :interaction,
@@ -135,10 +144,12 @@ module Api
       end
 
       def review_with_details(review)
+        # ゲームのレビュー数を取得
+        reviews_count = Review.where(game_id: review.game_id).count
+
         {
           id: review.id,
           overall_score: review.overall_score,
-          play_time: review.play_time,
           rule_complexity: review.rule_complexity,
           luck_factor: review.luck_factor,
           interaction: review.interaction,
@@ -165,7 +176,8 @@ module Api
             min_players: review.game.min_players,
             max_players: review.game.max_players,
             play_time: review.game.play_time,
-            average_score: review.game.average_score
+            average_score: review.game.average_score,
+            reviews_count: reviews_count
           }
         }
       end

@@ -25,6 +25,11 @@ import GroupIcon from "@mui/icons-material/Group";
 import LikeButton from "@/components/LikeButton";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import { usePathname } from "next/navigation";
+import GameRating from "@/components/GameRating";
+import OverallScoreDisplay from "@/components/OverallScoreDisplay";
+import ReviewScoreDisplay from "@/components/ReviewScoreDisplay";
+import GameInfo from "@/components/GameInfo";
+import GameTags from "@/components/GameTags";
 
 type Review = {
   id: number;
@@ -57,6 +62,7 @@ type Review = {
     max_players: number;
     play_time: number;
     average_score: number;
+    reviews_count?: number;
   };
 };
 
@@ -331,59 +337,24 @@ export default function ReviewsPage() {
                         {review.game.japanese_name || review.game.name}
                       </Typography>
 
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 2,
-                          color: "text.secondary",
-                          "& .MuiSvgIcon-root": { fontSize: 16 },
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.5,
-                          }}
-                        >
-                          <GroupIcon />
-                          <Typography variant="body2">
-                            {review.game.min_players}-{review.game.max_players}
-                            人
-                          </Typography>
-                        </Box>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 0.5,
-                          }}
-                        >
-                          <AccessTimeIcon />
-                          <Typography variant="body2">
-                            {review.game.play_time}分
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 0.5,
-                          flexWrap: "wrap",
-                          mt: 1,
-                        }}
-                      >
-                        {review.tags.slice(0, 3).map((tag) => (
-                          <Chip
-                            key={tag}
-                            label={tag}
-                            size="small"
-                            variant="outlined"
+                      {/* ゲームの平均点と投票数を表示 */}
+                      {review.game.average_score > 0 && (
+                        <Box sx={{ mb: 1 }}>
+                          <OverallScoreDisplay
+                            score={review.game.average_score}
+                            reviewsCount={review.game.reviews_count || 0}
+                            variant="compact"
                           />
-                        ))}
-                      </Box>
+                        </Box>
+                      )}
+
+                      <GameInfo
+                        minPlayers={review.game.min_players}
+                        maxPlayers={review.game.max_players}
+                        playTime={review.game.play_time}
+                      />
+
+                      <GameTags tags={review.tags.slice(0, 3)} />
                     </CardContent>
                   </CardActionArea>
 
@@ -398,23 +369,11 @@ export default function ReviewsPage() {
                         mb: 1,
                       }}
                     >
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Rating
-                          value={Number(review.overall_score)}
-                          precision={0.5}
-                          size="small"
-                          readOnly
-                        />
-                        <Typography variant="body2" color="text.secondary">
-                          {Number(review.overall_score).toFixed(1)}
-                        </Typography>
-                      </Box>
+                      <ReviewScoreDisplay
+                        score={review.overall_score}
+                        userName={review.user.name}
+                        variant="default"
+                      />
                       <LikeButton
                         reviewId={review.id}
                         initialLikesCount={review.likes_count}
@@ -437,35 +396,6 @@ export default function ReviewsPage() {
                     >
                       {review.short_comment}
                     </Typography>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <Avatar
-                        src={review.user.image}
-                        alt={review.user.name}
-                        sx={{ width: 24, height: 24 }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        <Link
-                          href={`/users/${review.user.id}`}
-                          style={{ textDecoration: "none", color: "inherit" }}
-                        >
-                          <span
-                            style={{ cursor: "pointer" }}
-                            className="hover-underline"
-                          >
-                            {review.user.name}
-                          </span>
-                        </Link>
-                        {" ・ "}
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </Typography>
-                    </Box>
                   </CardContent>
                 </Card>
               </Grid>

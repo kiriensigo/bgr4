@@ -1,0 +1,72 @@
+# BGG API処理の概要
+
+BGG!
+
+## BoardGameGeek API概要
+
+BoardGameGeek (BGG) APIは、ボードゲーム情報を取得するための外部APIです。このプロジェクトでは、以下の目的でBGG APIを利用しています：
+
+1. ゲーム基本情報の取得（名前、説明、画像URL、プレイ人数、プレイ時間など）
+2. ゲームの評価情報の取得（平均評価、重さなど）
+3. 人気のゲーム（Hot Games）の取得
+4. 拡張ゲームとベースゲームの関係情報の取得
+
+## API呼び出しの実装
+
+### フロントエンド側の実装 (`bgr4-front/src/lib/bggApi.ts`)
+
+フロントエンド側では、以下の主要な関数を使用してBGG APIと通信しています：
+
+1. **getBGGGameDetails(id: string)**: 特定のゲームIDに基づいて詳細情報を取得
+2. **getHotGames()**: 人気のゲームリストを取得
+3. **getGameDetails(id: string)**: 単一ゲームの詳細を取得するためのヘルパー関数
+4. **getGamesDetails(ids: string)**: 複数ゲームの詳細を一度に取得するためのヘルパー関数
+
+XMLレスポンスの解析には `fast-xml-parser` ライブラリを使用しています。
+
+### バックエンド側の実装 (`bgr4-api/app/services/bgg_service.rb`)
+
+バックエンド側では、`BggService` クラスを通じてBGG APIと通信しています：
+
+1. **search_games(query)**: キーワードに基づいてゲームを検索
+2. **get_game_details(bgg_id)**: 特定のゲームIDに基づいて詳細情報を取得
+3. **get_popular_games(limit = 50)**: 人気のゲームリストを取得
+4. **get_hot_games()**: BGGのHot Gamesリストを取得
+5. **parse_hot_games(response)**: Hot Gamesレスポンスを解析
+
+XMLレスポンスの解析には `Nokogiri` ライブラリを使用しています。
+
+## データ処理の流れ
+
+1. BGG APIからXML形式でデータを取得
+2. XMLをパースして必要な情報を抽出
+3. 日本語名や日本語版の情報を特定（日本語の文字コード範囲でマッチングなど）
+4. 拡張ゲームとベースゲームの関係を解析
+   - `link[@type="boardgameexpansion" and @inbound="true"]`: このゲームの拡張
+   - `link[@type="boardgameexpansion" and not(@inbound="true")]`: このゲームのベースゲーム
+5. 取得したデータをアプリケーションのデータモデルに変換
+
+## 拡張情報とベースゲーム情報の処理
+
+BGG APIから取得した拡張情報とベースゲーム情報は、以下のように処理されます：
+
+1. XMLから拡張情報とベースゲーム情報を抽出
+2. データベースの `metadata` JSONカラムに保存（`store` アクセサを使用）
+3. フロントエンドでは `expansions` と `baseGame` プロパティとして利用可能
+4. ゲーム詳細ページで拡張ゲームとベースゲームへのリンクを表示
+
+## エラーハンドリングと再試行メカニズム
+
+BGG APIは時々レスポンスが遅れたり、「後でやり直してください」というメッセージを返すことがあります。これに対処するため：
+
+1. `fetchWithRetry` 関数を実装して、最大3回まで再試行
+2. 「Please try again later」メッセージを検出した場合、2秒待機して再試行
+3. エラーが発生した場合は適切なエラーメッセージをログに記録
+
+## キャッシュメカニズム
+
+パフォーマンス向上のため、フロントエンド側でゲーム情報をキャッシュする仕組みを実装しています：
+
+1. ゲーム詳細ページでは、取得したゲーム情報を `gameCache` オブジェクトに保存
+2. キャッシュの有効期限は5分（`CACHE_EXPIRY = 5 * 60 * 1000`）
+3. 有効なキャッシュがある場合は、APIリクエストを送信せずにキャッシュからデータを使用 

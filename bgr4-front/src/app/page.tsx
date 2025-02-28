@@ -3,18 +3,13 @@
 import { useEffect, useState } from "react";
 import { getHotGames } from "@/lib/bggApi";
 import {
-  Card,
-  CardContent,
-  CardMedia,
   Typography,
   Grid,
   Container,
   Box,
   CircularProgress,
-  Paper,
 } from "@mui/material";
 import Link from "next/link";
-import Image from "next/image";
 import GameCard from "@/components/GameCard";
 import { getGame, registerGame } from "@/lib/api";
 
@@ -25,7 +20,8 @@ interface BGGGame {
   image: string;
   minPlayers: number;
   maxPlayers: number;
-  playTime: number;
+  minPlayTime: number;
+  maxPlayTime: number;
   yearPublished?: number;
   averageRating?: number;
   mechanics?: string[];
@@ -50,16 +46,11 @@ interface GameWithReviews extends BGGGame {
 }
 
 // レビューの平均点を計算する関数
+// この関数はバックエンドから取得した平均点がない場合のフォールバックとして使用
 const calculateAverageScores = (reviews: Review[]) => {
   if (!reviews || reviews.length === 0) return null;
 
-  const validReviews = reviews.filter(
-    (review) =>
-      review.rule_complexity &&
-      review.luck_factor &&
-      review.interaction &&
-      review.downtime
-  );
+  const validReviews = reviews.filter((review) => review.overall_score);
 
   if (validReviews.length === 0) return null;
 
@@ -67,30 +58,6 @@ const calculateAverageScores = (reviews: Review[]) => {
     overall_score: Number(
       (
         validReviews.reduce((sum, r) => sum + r.overall_score, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    rule_complexity: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.rule_complexity, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    luck_factor: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.luck_factor, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    interaction: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.interaction, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    downtime: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.downtime, 0) /
         validReviews.length
       ).toFixed(1)
     ),
@@ -139,7 +106,8 @@ export default function Home() {
                     image: game.image,
                     minPlayers: game.minPlayers,
                     maxPlayers: game.maxPlayers,
-                    playTime: game.playTime,
+                    minPlayTime: game.minPlayTime,
+                    maxPlayTime: game.maxPlayTime,
                     averageRating: game.averageRating,
                     weight: game.weight,
                     bestPlayers: game.bestPlayers,
@@ -167,6 +135,14 @@ export default function Home() {
               gameData.reviews || []
             );
 
+            // デバッグ情報を出力
+            console.log(`Game ${game.id} data:`, {
+              backendScore: gameData.average_score,
+              calculatedScore: averageScores?.overall_score,
+              bggScore: game.averageRating,
+              reviewsCount: gameData.reviews ? gameData.reviews.length : 0,
+            });
+
             setHotGames((prevGames) =>
               prevGames.map((prevGame) =>
                 prevGame.id === game.id
@@ -181,6 +157,7 @@ export default function Home() {
                         ? gameData.reviews.length
                         : 0,
                       reviews: gameData.reviews || [],
+                      min_play_time: gameData.min_play_time || game.minPlayTime,
                     } as GameWithReviews)
                   : prevGame
               )
@@ -237,13 +214,17 @@ export default function Home() {
                 bgg_id: game.id,
                 name: game.name,
                 image_url: game.image,
-                average_score: game.average_score || game.averageRating,
+                average_score: game.average_score,
                 min_players: game.minPlayers,
                 max_players: game.maxPlayers,
-                play_time: game.playTime,
+                play_time: game.maxPlayTime,
+                min_play_time: game.minPlayTime,
                 reviews_count: game.reviews_count,
               }}
               type="game"
+              useOverallScoreDisplay={true}
+              showOverallScoreOverlay={true}
+              overallScoreVariant="compact"
             />
           </Grid>
         ))}

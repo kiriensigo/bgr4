@@ -9,6 +9,7 @@ class User < ApplicationRecord
          :confirmable, :omniauthable, omniauth_providers: [:google_oauth2, :twitter2]
   has_many :reviews
   has_many :game_edit_histories
+  has_many :wishlist_items, dependent: :destroy
 
   validates :name, presence: true
   validates :email, presence: true, 

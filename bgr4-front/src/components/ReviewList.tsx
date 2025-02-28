@@ -29,9 +29,38 @@ const formatScore = (score: number | string | null | undefined): string => {
 };
 
 export default function ReviewList({ reviews }: ReviewListProps) {
+  // レビューが配列でない場合は空の配列として扱う
+  const validReviews = Array.isArray(reviews) ? reviews : [];
+
+  // デバッグ情報を出力
+  console.log("ReviewList received reviews:", {
+    reviews,
+    validReviews,
+    isArray: Array.isArray(reviews),
+    length: validReviews.length,
+    type: typeof reviews,
+  });
+
+  // レビューが存在しない場合
+  if (!validReviews || validReviews.length === 0) {
+    return (
+      <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
+        <Typography variant="body1" color="text.secondary">
+          まだレビューがありません。最初のレビューを書いてみませんか？
+        </Typography>
+      </Paper>
+    );
+  }
+
   return (
     <Grid container spacing={2}>
-      {reviews.map((review) => {
+      {validReviews.map((review) => {
+        // レビューデータが不完全な場合はスキップ
+        if (!review || !review.user) {
+          console.warn("Incomplete review data:", review);
+          return null;
+        }
+
         const numScore =
           typeof review.overall_score === "string"
             ? parseFloat(review.overall_score)

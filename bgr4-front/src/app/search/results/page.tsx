@@ -15,10 +15,6 @@ import {
   CardActionArea,
   Chip,
   Tooltip,
-  Pagination,
-  Stack,
-  ToggleButtonGroup,
-  ToggleButton,
   Divider,
 } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,6 +25,7 @@ import ShareIcon from "@mui/icons-material/Share";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import Link from "next/link";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
+import SearchPagination from "@/components/SearchPagination";
 
 // 表示件数のオプション
 const PAGE_SIZE_OPTIONS = [12, 24, 36];
@@ -176,6 +173,11 @@ export default function SearchResultsPage() {
     page * pageSize
   );
 
+  // 現在のページの表示範囲を計算
+  const currentPageStart =
+    searchResults.length > 0 ? (page - 1) * pageSize + 1 : 0;
+  const currentPageEnd = Math.min(page * pageSize, searchResults.length);
+
   // 検索条件の表示用テキストを生成
   const getSearchCriteriaText = () => {
     const criteriaTexts = [];
@@ -243,59 +245,44 @@ export default function SearchResultsPage() {
           </Alert>
         ) : (
           <>
+            {/* 検索結果のヘッダー */}
             <Box
               sx={{
                 display: "flex",
                 flexDirection: { xs: "column", sm: "row" },
                 justifyContent: "space-between",
                 alignItems: { xs: "flex-start", sm: "center" },
-                mb: 2,
-                gap: 2,
+                mb: 3,
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {searchResults.length}件中 {(page - 1) * pageSize + 1}-
-                  {Math.min(page * pageSize, searchResults.length)}件を表示
-                </Typography>
-
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mr: 1 }}
-                  >
-                    表示件数:
-                  </Typography>
-                  <ToggleButtonGroup
-                    value={pageSize}
-                    exclusive
-                    onChange={handlePageSizeChange}
-                    aria-label="表示件数"
+              <Typography variant="h6" component="h2">
+                検索結果: {searchResults.length}件
+                <Tooltip title={copied ? "コピーしました！" : "URLをコピー"}>
+                  <Button
+                    startIcon={<ShareIcon />}
                     size="small"
+                    onClick={handleShareClick}
+                    color={copied ? "success" : "primary"}
+                    variant="outlined"
+                    sx={{ ml: 2 }}
                   >
-                    {PAGE_SIZE_OPTIONS.map((size) => (
-                      <ToggleButton
-                        key={size}
-                        value={size}
-                        aria-label={`${size}件表示`}
-                      >
-                        {size}
-                      </ToggleButton>
-                    ))}
-                  </ToggleButtonGroup>
-                </Box>
-              </Box>
+                    共有
+                  </Button>
+                </Tooltip>
+              </Typography>
 
-              {totalPages > 1 && (
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={handlePageChange}
-                  color="primary"
-                  size="medium"
-                />
-              )}
+              <SearchPagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                size="medium"
+                totalItems={searchResults.length}
+                currentPageStart={currentPageStart}
+                currentPageEnd={currentPageEnd}
+                pageSize={pageSize}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+                onPageSizeChange={handlePageSizeChange}
+              />
             </Box>
 
             <Divider sx={{ mb: 3 }} />
@@ -490,12 +477,12 @@ export default function SearchResultsPage() {
 
             {totalPages > 1 && (
               <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-                <Pagination
+                <SearchPagination
                   count={totalPages}
                   page={page}
                   onChange={handlePageChange}
-                  color="primary"
                   size="large"
+                  showPageSizeSelector={false}
                 />
               </Box>
             )}

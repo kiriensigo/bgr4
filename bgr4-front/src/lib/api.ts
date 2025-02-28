@@ -5,21 +5,63 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const API_BASE_URL = `${API_URL}/api/v1`;
 
 export interface Game {
-  id: string;
+  id: number;
   bgg_id: string;
   name: string;
-  description: string;
-  image_url: string;
-  min_players: number;
-  max_players: number;
-  play_time: number;
-  average_score: number;
-  reviews_count: number;
-  average_rule_complexity: number;
-  average_luck_factor: number;
-  average_interaction: number;
-  average_downtime: number;
-  reviews: any[];
+  japanese_name?: string;
+  description?: string;
+  japanese_description?: string;
+  image_url?: string;
+  japanese_image_url?: string;
+  min_players?: number;
+  max_players?: number;
+  play_time?: number;
+  min_play_time?: number;
+  average_score?: number;
+  weight?: number;
+  reviews?: Review[];
+  reviews_count?: number;
+  average_rule_complexity?: number;
+  average_luck_factor?: number;
+  average_interaction?: number;
+  average_downtime?: number;
+  popular_tags?: string[];
+  popular_mechanics?: string[];
+  site_recommended_players?: string[];
+  in_wishlist?: boolean;
+  bgg_url?: string;
+  publisher?: string;
+  designer?: string;
+  release_date?: string;
+  japanese_release_date?: string;
+  japanese_publisher?: string;
+  expansions?: Array<{ id: string; name: string }>;
+  baseGame?: { id: string; name: string };
+}
+
+export interface Review {
+  id: number;
+  user: {
+    id: number;
+    name: string;
+    avatar_url?: string;
+  };
+  game_id: string;
+  overall_score: number;
+  rule_complexity?: number;
+  luck_factor?: number;
+  interaction?: number;
+  downtime?: number;
+  play_time?: number;
+  recommended_players?: string[];
+  mechanics?: string[];
+  tags?: string[];
+  custom_tags?: string[];
+  short_comment: string;
+  created_at: string;
+  updated_at?: string;
+  likes_count: number;
+  liked_by_current_user: boolean;
 }
 
 export async function getGames(): Promise<Game[]> {
@@ -33,7 +75,9 @@ export async function getGames(): Promise<Game[]> {
     throw new Error("ゲーム情報の取得に失敗しました");
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log("API response for getGames:", data);
+  return data;
 }
 
 export interface SearchParams {
@@ -338,9 +382,11 @@ export async function registerGame(
           name: gameDetails.name,
           description: gameDetails.description,
           image_url: gameDetails.image,
+          japanese_image_url: gameDetails.japaneseImage,
           min_players: gameDetails.minPlayers,
           max_players: gameDetails.maxPlayers,
-          play_time: gameDetails.playTime,
+          min_play_time: gameDetails.minPlayTime,
+          play_time: gameDetails.maxPlayTime,
           average_score: gameDetails.averageRating,
           weight: gameDetails.weight,
           best_num_players: gameDetails.bestPlayers,
@@ -441,6 +487,102 @@ export async function getGameEditHistories(
     return response.json();
   } catch (error) {
     console.error("Error fetching edit histories:", error);
+    throw error;
+  }
+}
+
+// やりたいリスト関連の型定義
+export interface WishlistItem {
+  id: number;
+  game_id: string;
+  position: number;
+  created_at: string;
+  game: Game | null;
+}
+
+// やりたいリストを取得する
+export async function getWishlist(
+  authHeaders: Record<string, string>
+): Promise<WishlistItem[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/wishlist_items`, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...authHeaders,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "やりたいリストの取得に失敗しました");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching wishlist:", error);
+    throw error;
+  }
+}
+
+// やりたいリストにゲームを追加する
+export async function addToWishlist(
+  gameId: string,
+  authHeaders: Record<string, string>
+): Promise<{ id: number; message: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/wishlist_items`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({ game_id: gameId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error || "やりたいリストへの追加に失敗しました"
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error adding to wishlist:", error);
+    throw error;
+  }
+}
+
+// やりたいリストからゲームを削除する
+export async function removeFromWishlist(
+  wishlistItemId: number,
+  authHeaders: Record<string, string>
+): Promise<{ message: string }> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/wishlist_items/${wishlistItemId}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...authHeaders,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error || "やりたいリストからの削除に失敗しました"
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error removing from wishlist:", error);
     throw error;
   }
 }

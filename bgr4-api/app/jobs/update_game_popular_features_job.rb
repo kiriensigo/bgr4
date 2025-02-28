@@ -17,13 +17,16 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
 
     Rails.logger.info "Updating popular features for game #{game.name} (#{game_id}) with #{user_reviews_count} user reviews"
 
-    # 1. 人気タグの計算（上位6つ）- システムユーザー以外のレビューから
+    # 1. 平均スコアの計算 - すべてのレビューから
+    update_average_score(game)
+    
+    # 2. 人気タグの計算（上位6つ）- システムユーザー以外のレビューから
     update_popular_tags(game, user_reviews)
     
-    # 2. 人気メカニクスの計算（上位6つ）- システムユーザー以外のレビューから
+    # 3. 人気メカニクスの計算（上位6つ）- システムユーザー以外のレビューから
     update_popular_mechanics(game, user_reviews)
     
-    # 3. おすすめプレイ人数の計算（50%以上の支持があるもの）- すべてのレビューから（システムユーザー含む）
+    # 4. おすすめプレイ人数の計算（50%以上の支持があるもの）- すべてのレビューから（システムユーザー含む）
     all_reviews = game.reviews
     total_reviews_count = all_reviews.count
     update_recommended_players(game, all_reviews, total_reviews_count)
@@ -35,6 +38,17 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
   end
 
   private
+
+  # 平均スコアの計算
+  def update_average_score(game)
+    # レビューの平均スコアを計算（nilの値は除外）
+    average = game.reviews.where.not(overall_score: nil).average(:overall_score)&.round(1)
+    
+    # ゲームの平均スコアを更新
+    game.average_score = average
+    
+    Rails.logger.info "Updated average score for game #{game.name}: #{average}"
+  end
 
   # 人気タグの計算（上位6つ）
   def update_popular_tags(game, reviews)

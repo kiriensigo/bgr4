@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_01_000001) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_01_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -44,6 +44,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_01_000001) do
     t.string "popular_mechanics", default: [], array: true
     t.string "site_recommended_players", default: [], array: true
     t.text "japanese_description"
+    t.string "publisher"
+    t.string "designer"
+    t.date "release_date"
+    t.date "japanese_release_date"
+    t.string "japanese_image_url"
+    t.integer "min_play_time"
+    t.json "metadata"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
     t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin
     t.index ["popular_tags"], name: "index_games_on_popular_tags", using: :gin
@@ -63,7 +70,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_01_000001) do
     t.bigint "user_id", null: false
     t.string "game_id", null: false
     t.decimal "overall_score", precision: 3, scale: 1, null: false
-    t.integer "play_time"
     t.decimal "rule_complexity", precision: 2, scale: 1
     t.decimal "luck_factor", precision: 2, scale: 1
     t.decimal "interaction", precision: 2, scale: 1
@@ -111,9 +117,21 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_01_000001) do
     t.index ["uid", "provider"], name: "index_users_on_uid_and_provider", unique: true
   end
 
+  create_table "wishlist_items", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "game", null: false
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "game"], name: "index_wishlist_items_on_user_id_and_game", unique: true
+    t.index ["user_id", "position"], name: "index_wishlist_items_on_user_id_and_position"
+    t.index ["user_id"], name: "index_wishlist_items_on_user_id"
+  end
+
   add_foreign_key "game_edit_histories", "games"
   add_foreign_key "game_edit_histories", "users"
   add_foreign_key "likes", "reviews"
   add_foreign_key "likes", "users"
   add_foreign_key "reviews", "users"
+  add_foreign_key "wishlist_items", "users"
 end

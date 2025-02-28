@@ -1,8 +1,10 @@
 require 'net/http'
 require 'nokogiri'
+require 'httparty'
 
 class BggService
-  BASE_URL = 'https://boardgamegeek.com/xmlapi2'
+  include HTTParty
+  base_uri 'https://boardgamegeek.com/xmlapi2'
 
   def self.search_games(query)
     uri = URI("#{BASE_URL}/search?query=#{URI.encode_www_form_component(query)}&type=boardgame")
@@ -27,110 +29,96 @@ class BggService
     end
   end
 
-  def self.get_game_details(ids)
-    uri = URI("#{BASE_URL}/thing?id=#{Array(ids).join(',')}&stats=1&versions=1")
-    Rails.logger.debug "Fetching BGG details from: #{uri}"
+  def self.get_game_details(bgg_id)
+    response = get("/thing?id=#{bgg_id}&stats=1")
     
-    response = Net::HTTP.get(uri)
-    Rails.logger.debug "BGG API response received"
-    
-    # BGG APIは時々202を返すことがあるので、その場合は少し待って再試行
-    if response.include?("Please try again later")
-      Rails.logger.debug "BGG API returned 202, retrying after delay"
-      sleep(2)
-      response = Net::HTTP.get(uri)
-    end
-    
-    doc = Nokogiri::XML(response)
-    Rails.logger.debug "Parsed XML response"
-    
-    results = doc.xpath('//item[@type="boardgame"]').map do |item|
-      name = item.at_xpath('.//name[@type="primary"]/@value')&.value
+    if response.success?
+      xml = Nokogiri::XML(response.body)
       
-      # 日本語名を取得（優先順位: 1. バージョン情報から日本語版の名前、2. 代替名から日本語名、3. Amazonから検索）
-      japanese_name = find_japanese_name_from_versions(item) || 
-                      find_japanese_name_from_alternates(item) || 
-                      AmazonService.search_game_japanese_name(name)
+      # 基本情報を取得
+      item = xml.at_xpath('//item')
+      return nil unless item
       
-      description = item.at_xpath('.//description')&.text
+      # 名前を取得（プライマリー名を優先）
+      primary_name = item.xpath('.//name[@type="primary"]').first&.attr('value')
       
-      # 説明文が英語の場合、日本語に翻訳
-      japanese_description = nil
-      if description.present? && description.match?(/^[A-Za-z0-9\s\.\,\;\:\"\'\!\?\(\)\-\_\@\#\$\%\&\*\+\=\/\\\[\]\{\}\<\>\|]+$/)
-        Rails.logger.debug "Translating description for game: #{name}"
-        japanese_description = TranslationService.translate(description)
-        Rails.logger.debug "Translation completed"
+      # 日本語名を探す
+      japanese_name = item.xpath('.//name[@type="alternate"]').find do |name|
+        name.attr('value').match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+      end&.attr('value')
+      
+      # 出版社情報を取得
+      publishers = item.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
+      
+      # デザイナー情報を取得
+      designers = item.xpath('.//link[@type="boardgamedesigner"]').map { |link| link.attr('value') }
+      
+      # 日本語版の出版社を探す（日本の出版社名を含むものを探す）
+      japanese_publishers = publishers.select do |publisher|
+        publisher.match?(/Japan|Japanese|Japon|ホビージャパン|アークライト|グループSNE|テンデイズゲームズ|
+          ニューゲームズオーダー|Arclight|Hobby Japan|Group SNE|Ten Days Games|New Games Order|
+          Oink Games|Grounding|グラウンディング|BakaFire|バカファイア|
+          Shinojo|紫猫|Takoashi Games|タコアシゲームズ|Takuya Ono|小野卓也|
+          Yocto Games|ヨクト|Yuhodo|遊歩堂|Itten|いつつ|Jelly Jelly Games|
+          ジェリージェリーゲームズ|Kocchiya|こっちや|Kuuri|くうり|
+          Qvinta|クインタ|Route11|ルート11|Suki Games Mk2|スキゲームズMk2|
+          Taikikennai Games|耐気圏内ゲームズ|Team Saien|チーム彩園|
+          Tokyo Game Market|東京ゲームマーケット|Toshiki Sato|佐藤敏樹|
+          Yuuai Kikaku|遊愛企画|Capcom|カプコン|Bandai|バンダイ|Konami|コナミ/ix)
       end
       
+      japanese_publisher = japanese_publishers.first
+      
+      # 発売年を取得
+      release_date = item.at_xpath('.//yearpublished')&.attr('value')
+      release_date = "#{release_date}-01-01" if release_date
+      
+      # 日本語版の発売年は現状BGGから取得できないため、同じ値を使用
+      japanese_release_date = release_date if japanese_name
+      
+      # 拡張情報を取得
+      expansions = item.xpath('.//link[@type="boardgameexpansion" and @inbound="true"]').map do |link|
+        {
+          id: link.attr('id'),
+          name: link.attr('value')
+        }
+      end
+      
+      # ベースゲーム情報を取得
+      base_game_links = item.xpath('.//link[@type="boardgameexpansion" and not(@inbound="true")]')
+      base_game = nil
+      if base_game_links.any?
+        base_game = {
+          id: base_game_links.first.attr('id'),
+          name: base_game_links.first.attr('value')
+        }
+      end
+      
+      # ゲーム情報をハッシュで返す
       {
-        bgg_id: item['id'],
-        name: name,
+        bgg_id: bgg_id,
+        name: primary_name,
         japanese_name: japanese_name,
-        description: description,
-        japanese_description: japanese_description,
+        description: item.at_xpath('.//description')&.text,
         image_url: item.at_xpath('.//image')&.text,
-        min_players: item.at_xpath('.//minplayers/@value')&.value.to_i,
-        max_players: item.at_xpath('.//maxplayers/@value')&.value.to_i,
-        play_time: item.at_xpath('.//playingtime/@value')&.value.to_i,
-        average_score: item.at_xpath('.//statistics/ratings/average/@value')&.value.to_f
+        min_players: item.at_xpath('.//minplayers')&.attr('value')&.to_i,
+        max_players: item.at_xpath('.//maxplayers')&.attr('value')&.to_i,
+        play_time: item.at_xpath('.//maxplaytime')&.attr('value')&.to_i || item.at_xpath('.//playingtime')&.attr('value')&.to_i,
+        min_play_time: item.at_xpath('.//minplaytime')&.attr('value')&.to_i,
+        average_score: item.at_xpath('.//statistics/ratings/average')&.attr('value')&.to_f,
+        weight: item.at_xpath('.//statistics/ratings/averageweight')&.attr('value')&.to_f,
+        publisher: publishers.first,
+        designer: designers.first,
+        release_date: release_date,
+        japanese_publisher: japanese_publisher,
+        japanese_release_date: japanese_release_date,
+        expansions: expansions.presence,
+        base_game: base_game
       }
+    else
+      Rails.logger.error "BGG API error: #{response.code} - #{response.message}"
+      nil
     end
-
-    Rails.logger.debug "Processed #{results.length} games"
-    results
-  rescue StandardError => e
-    Rails.logger.error "Error in BggService#get_game_details: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    Rails.logger.error "Request URL: #{uri}"
-    []
-  end
-
-  # バージョン情報から日本語版の名前を取得
-  def self.find_japanese_name_from_versions(item)
-    # バージョン情報を取得
-    versions = item.xpath('.//versions/item')
-    
-    # 日本語版を探す
-    japanese_version = versions.find do |version|
-      # 言語が日本語のバージョンを探す
-      version.xpath('.//link[@type="language"]').any? { |link| link['value'] == 'Japanese' }
-    end
-    
-    if japanese_version
-      # 日本語版の名前を取得
-      japanese_name = japanese_version.at_xpath('.//name[@type="primary"]/@value')&.value
-      
-      # 「Japanese edition」という名前の場合は、元のゲーム名から日本語名を探す
-      if japanese_name == 'Japanese edition'
-        # 代替名から日本語名を探す
-        japanese_name = find_japanese_name_from_alternates(item)
-      end
-      
-      Rails.logger.debug "Found Japanese name from versions: #{japanese_name}" if japanese_name
-      return japanese_name
-    end
-    
-    nil
-  end
-
-  # 代替名から日本語名を探す
-  def self.find_japanese_name_from_alternates(item)
-    # 代替名を取得
-    alternate_names = item.xpath('.//name[@type="alternate"]')
-    
-    # 日本語の代替名を探す（日本語の文字が含まれているか確認）
-    japanese_alternate = alternate_names.find do |name|
-      name_value = name['value']
-      name_value && name_value.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-    end
-    
-    if japanese_alternate
-      japanese_name = japanese_alternate['value']
-      Rails.logger.debug "Found Japanese name from alternates: #{japanese_name}"
-      return japanese_name
-    end
-    
-    nil
   end
 
   def self.get_popular_games(limit = 50)

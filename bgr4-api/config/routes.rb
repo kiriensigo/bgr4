@@ -47,6 +47,13 @@ Rails.application.routes.draw do
         end
       end
 
+      # やりたいリスト関連のエンドポイント
+      resources :wishlist_items, only: [:index, :create, :destroy] do
+        collection do
+          put :reorder
+        end
+      end
+
       # ユーザープロフィール関連のエンドポイント
       resources :users, only: [:show] do
         collection do

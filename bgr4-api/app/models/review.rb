@@ -9,8 +9,6 @@ class Review < ApplicationRecord
   validates :game_id, presence: true
   validates :overall_score, presence: true, 
             numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: 10 }
-  validates :play_time, presence: true,
-            numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: 1000 }
   validates :rule_complexity, presence: true,
             numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: 5 },
             allow_nil: true

@@ -13,9 +13,11 @@ export interface BGGGameDetails {
   name: string;
   description: string;
   image: string;
+  japaneseImage?: string;
   minPlayers: number;
   maxPlayers: number;
-  playTime: number;
+  minPlayTime: number;
+  maxPlayTime: number;
   yearPublished?: number;
   averageRating?: number;
   mechanics?: string[];
@@ -23,6 +25,13 @@ export interface BGGGameDetails {
   weight: number;
   bestPlayers: string[];
   recommendedPlayers: string[];
+  publisher?: string;
+  designer?: string;
+  releaseDate?: string;
+  japanesePublisher?: string;
+  japaneseReleaseDate?: string;
+  expansions?: Array<{ id: string; name: string }>;
+  baseGame?: { id: string; name: string };
 }
 
 async function sleep(ms: number) {
@@ -106,18 +115,264 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
     console.log("Recommended Players:", recommendedPlayers);
 
     // 名前を取得（プライマリー名を優先）
-    const name = Array.isArray(item.name)
-      ? item.name.find((n: any) => n["@_type"] === "primary")["@_value"]
-      : item.name["@_value"];
+    const names = Array.isArray(item.name) ? item.name : [item.name];
+    const primaryName =
+      names.find((n: any) => n["@_type"] === "primary")?.["@_value"] ||
+      names[0]?.["@_value"] ||
+      "";
+
+    // 日本語名を探す
+    const japaneseName = names.find(
+      (n: any) =>
+        n["@_type"] === "alternate" &&
+        n["@_value"].match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+    )?.["@_value"];
+
+    // 日本語版の画像を探す
+    let japaneseImage: string | undefined = undefined;
+
+    // 画像バージョンを取得
+    const images = Array.isArray(item.image)
+      ? item.image
+      : item.image
+      ? [item.image]
+      : [];
+    const thumbnails = Array.isArray(item.thumbnail)
+      ? item.thumbnail
+      : item.thumbnail
+      ? [item.thumbnail]
+      : [];
+
+    // 日本語版の画像を探す（BGGでは通常、バージョン別の画像はXMLに直接含まれていない）
+    // 代わりに、日本語版が存在する場合は追加で画像を取得する
+    if (japaneseName && japanesePublishers.length > 0) {
+      try {
+        // 日本語版の画像を探すために、バージョン情報を取得
+        const versionsXml = await fetchWithRetry(
+          `${BGG_API_BASE}/thing?id=${id}&versions=1`
+        );
+        const versionsResult = parser.parse(versionsXml);
+
+        if (versionsResult.items?.item?.versions?.item) {
+          const versionItems = Array.isArray(
+            versionsResult.items.item.versions.item
+          )
+            ? versionsResult.items.item.versions.item
+            : [versionsResult.items.item.versions.item];
+
+          // 日本語版を探す
+          const japaneseVersion = versionItems.find((v: any) => {
+            const versionName = v.name?.["@_value"] || "";
+            return (
+              versionName.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/) ||
+              versionName.includes("Japanese") ||
+              versionName.includes("Japan")
+            );
+          });
+
+          if (japaneseVersion && japaneseVersion.image) {
+            japaneseImage = japaneseVersion.image;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching Japanese version image:", error);
+      }
+    }
+
+    // 出版社情報を取得
+    const publishers = (item.link || [])
+      .filter((link: any) => link["@_type"] === "boardgamepublisher")
+      .map((link: any) => link["@_value"]);
+
+    // デザイナー情報を取得
+    const designers = (item.link || [])
+      .filter((link: any) => link["@_type"] === "boardgamedesigner")
+      .map((link: any) => link["@_value"]);
+
+    // 日本語版の出版社を探す（日本の出版社名を含むものを探す）
+    const japanesePublishers = publishers.filter(
+      (publisher) =>
+        publisher.includes("Hobby Japan") ||
+        publisher.includes("アークライト") ||
+        publisher.includes("ホビージャパン") ||
+        publisher.includes("アークライト") ||
+        publisher.includes("Arclight") ||
+        publisher.includes("Japon Brand") ||
+        publisher.includes("Grounding") ||
+        publisher.includes("グラウンディング") ||
+        publisher.includes("Oink Games") ||
+        publisher.includes("オインクゲームズ") ||
+        publisher.includes("Sugorokuya") ||
+        publisher.includes("すごろくや") ||
+        publisher.includes("テンデイズゲームズ") ||
+        publisher.includes("Ten Days Games") ||
+        publisher.includes("COLON ARC") ||
+        publisher.includes("コロンアーク") ||
+        publisher.includes("Analog Lunchbox") ||
+        publisher.includes("アナログランチボックス") ||
+        publisher.includes("Domina Games") ||
+        publisher.includes("ドミナゲームズ") ||
+        publisher.includes("OKAZU Brand") ||
+        publisher.includes("おかず") ||
+        publisher.includes("Suki Games") ||
+        publisher.includes("スキゲームズ") ||
+        publisher.includes("Yanagisawa") ||
+        publisher.includes("柳澤") ||
+        publisher.includes("Ayatsurare Ningyoukan") ||
+        publisher.includes("あやつられ人形館") ||
+        publisher.includes("BakaFire") ||
+        publisher.includes("バカファイア") ||
+        publisher.includes("Manifest Destiny") ||
+        publisher.includes("マニフェストデスティニー") ||
+        publisher.includes("Saien") ||
+        publisher.includes("彩園") ||
+        publisher.includes("Sato Familie") ||
+        publisher.includes("佐藤ファミリー") ||
+        publisher.includes("Shinojo") ||
+        publisher.includes("紫猫") ||
+        publisher.includes("Takoashi Games") ||
+        publisher.includes("タコアシゲームズ") ||
+        publisher.includes("Takuya Ono") ||
+        publisher.includes("小野卓也") ||
+        publisher.includes("Yocto Games") ||
+        publisher.includes("ヨクト") ||
+        publisher.includes("Yuhodo") ||
+        publisher.includes("遊歩堂") ||
+        publisher.includes("Itten") ||
+        publisher.includes("いつつ") ||
+        publisher.includes("Jelly Jelly Games") ||
+        publisher.includes("ジェリージェリーゲームズ") ||
+        publisher.includes("Kocchiya") ||
+        publisher.includes("こっちや") ||
+        publisher.includes("Kuuri") ||
+        publisher.includes("くうり") ||
+        publisher.includes("New Games Order") ||
+        publisher.includes("ニューゲームズオーダー") ||
+        publisher.includes("Qvinta") ||
+        publisher.includes("クインタ") ||
+        publisher.includes("Route11") ||
+        publisher.includes("ルート11") ||
+        publisher.includes("Suki Games Mk2") ||
+        publisher.includes("スキゲームズMk2") ||
+        publisher.includes("Taikikennai Games") ||
+        publisher.includes("耐気圏内ゲームズ") ||
+        publisher.includes("Team Saien") ||
+        publisher.includes("チーム彩園") ||
+        publisher.includes("Tokyo Game Market") ||
+        publisher.includes("東京ゲームマーケット") ||
+        publisher.includes("Toshiki Sato") ||
+        publisher.includes("佐藤敏樹") ||
+        publisher.includes("Yuuai Kikaku") ||
+        publisher.includes("遊愛企画") ||
+        publisher.includes("Capcom") ||
+        publisher.includes("カプコン") ||
+        publisher.includes("Bandai") ||
+        publisher.includes("バンダイ") ||
+        publisher.includes("Konami") ||
+        publisher.includes("コナミ") ||
+        publisher.includes("Nintendo") ||
+        publisher.includes("任天堂") ||
+        publisher.includes("Sega") ||
+        publisher.includes("セガ") ||
+        publisher.includes("Square Enix") ||
+        publisher.includes("スクウェア・エニックス") ||
+        publisher.includes("Taito") ||
+        publisher.includes("タイトー") ||
+        publisher.includes("Takara Tomy") ||
+        publisher.includes("タカラトミー") ||
+        publisher.includes("Kadokawa") ||
+        publisher.includes("角川") ||
+        publisher.includes("Shogakukan") ||
+        publisher.includes("小学館") ||
+        publisher.includes("Shueisha") ||
+        publisher.includes("集英社") ||
+        publisher.includes("Kodansha") ||
+        publisher.includes("講談社") ||
+        publisher.includes("Gentosha") ||
+        publisher.includes("幻冬舎") ||
+        publisher.includes("Hayakawa") ||
+        publisher.includes("早川") ||
+        publisher.includes("Kawada") ||
+        publisher.includes("カワダ") ||
+        publisher.includes("Ensky") ||
+        publisher.includes("エンスカイ") ||
+        publisher.includes("Megahouse") ||
+        publisher.includes("メガハウス") ||
+        publisher.includes("Hanayama") ||
+        publisher.includes("ハナヤマ") ||
+        publisher.includes("Beverly") ||
+        publisher.includes("ビバリー") ||
+        publisher.includes("Tenyo") ||
+        publisher.includes("テンヨー") ||
+        publisher.includes("Epoch") ||
+        publisher.includes("エポック") ||
+        publisher.includes("Hasbro Japan") ||
+        publisher.includes("ハズブロジャパン") ||
+        publisher.includes("Asmodee Japan") ||
+        publisher.includes("アズモデージャパン") ||
+        publisher.includes("Gゲームズ") ||
+        publisher.includes("G Games") ||
+        publisher.includes("Engames") ||
+        publisher.includes("エンゲームズ") ||
+        publisher.includes("Mobius Games") ||
+        publisher.includes("メビウスゲームズ") ||
+        publisher.includes("Moaideas") ||
+        publisher.includes("モアイデアズ") ||
+        publisher.includes("Analog Game") ||
+        publisher.includes("アナログゲーム") ||
+        publisher.includes("Japan") ||
+        publisher.includes("日本") ||
+        publisher.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+    );
+
+    const japanesePublisher =
+      japanesePublishers.length > 0 ? japanesePublishers[0] : undefined;
+
+    // 発売年を取得
+    const releaseDate = item.yearpublished?.["@_value"]
+      ? `${item.yearpublished["@_value"]}-01-01`
+      : undefined;
+
+    // 日本語版の発売年は現状BGGから取得できないため、同じ値を使用
+    const japaneseReleaseDate =
+      japaneseName && releaseDate ? releaseDate : undefined;
+
+    // 拡張情報を取得
+    const expansions = (item.link || [])
+      .filter(
+        (link: any) =>
+          link["@_type"] === "boardgameexpansion" &&
+          link["@_inbound"] === "true"
+      )
+      .map((link: any) => ({
+        id: link["@_id"],
+        name: link["@_value"],
+      }));
+
+    // ベースゲーム情報を取得
+    const baseGameLinks = (item.link || []).filter(
+      (link: any) =>
+        link["@_type"] === "boardgameexpansion" && link["@_inbound"] !== "true"
+    );
+
+    const baseGame =
+      baseGameLinks.length > 0
+        ? { id: baseGameLinks[0]["@_id"], name: baseGameLinks[0]["@_value"] }
+        : undefined;
 
     return {
       id: item["@_id"],
-      name: name,
+      name: primaryName,
       description: item.description?.replace(/&#10;/g, "\n") || "",
       image: item.image || item.thumbnail || "",
+      japaneseImage,
       minPlayers: parseInt(item.minplayers?.["@_value"]) || 0,
       maxPlayers: parseInt(item.maxplayers?.["@_value"]) || 0,
-      playTime: parseInt(item.playingtime?.["@_value"]) || 0,
+      minPlayTime: parseInt(item.minplaytime?.["@_value"]) || 0,
+      maxPlayTime:
+        parseInt(item.maxplaytime?.["@_value"]) ||
+        parseInt(item.playingtime?.["@_value"]) ||
+        0,
       yearPublished: parseInt(item.yearpublished?.["@_value"]) || 0,
       averageRating:
         parseFloat(item.statistics?.ratings?.average?.["@_value"]) || 0,
@@ -130,6 +385,13 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       categories: (item.link || [])
         .filter((link: any) => link["@_type"] === "boardgamecategory")
         .map((link: any) => link["@_value"]),
+      publisher: publishers.length > 0 ? publishers[0] : undefined,
+      designer: designers.length > 0 ? designers[0] : undefined,
+      releaseDate,
+      japanesePublisher,
+      japaneseReleaseDate,
+      expansions: expansions.length > 0 ? expansions : undefined,
+      baseGame,
     };
   } catch (error) {
     console.error("Error fetching BGG game details:", error);
@@ -168,26 +430,65 @@ export async function getHotGames(): Promise<BGGGameDetails[]> {
       ? gamesResult.items.item
       : [gamesResult.items.item];
 
-    return items.map((item: any) => ({
-      id: item["@_id"],
-      name: Array.isArray(item.name)
-        ? item.name.find((n: any) => n["@_type"] === "primary")["@_value"]
-        : item.name["@_value"],
-      description: item.description?.replace(/&#10;/g, "\n") || "",
-      image: item.image || "",
-      minPlayers: parseInt(item.minplayers?.["@_value"]) || 0,
-      maxPlayers: parseInt(item.maxplayers?.["@_value"]) || 0,
-      playTime: parseInt(item.playingtime?.["@_value"]) || 0,
-      yearPublished: parseInt(item.yearpublished?.["@_value"]) || 0,
-      averageRating:
-        parseFloat(item.statistics?.ratings?.average?.["@_value"]) || 0,
-      mechanics: (item.link || [])
-        .filter((link: any) => link["@_type"] === "boardgamemechanic")
-        .map((link: any) => link["@_value"]),
-      categories: (item.link || [])
-        .filter((link: any) => link["@_type"] === "boardgamecategory")
-        .map((link: any) => link["@_value"]),
-    }));
+    return items.map((item: any) => {
+      const minPlayTime = parseInt(item.minplaytime?.["@_value"]) || 0;
+      const maxPlayTime =
+        parseInt(item.maxplaytime?.["@_value"]) ||
+        parseInt(item.playingtime?.["@_value"]) ||
+        0;
+
+      // 拡張情報を取得
+      const expansions = (item.link || [])
+        .filter(
+          (link: any) =>
+            link["@_type"] === "boardgameexpansion" &&
+            link["@_inbound"] === "true"
+        )
+        .map((link: any) => ({
+          id: link["@_id"],
+          name: link["@_value"],
+        }));
+
+      // ベースゲーム情報を取得
+      const baseGameLinks = (item.link || []).filter(
+        (link: any) =>
+          link["@_type"] === "boardgameexpansion" &&
+          link["@_inbound"] !== "true"
+      );
+
+      const baseGame =
+        baseGameLinks.length > 0
+          ? { id: baseGameLinks[0]["@_id"], name: baseGameLinks[0]["@_value"] }
+          : undefined;
+
+      return {
+        id: item["@_id"],
+        name: Array.isArray(item.name)
+          ? item.name.find((n: any) => n["@_type"] === "primary")["@_value"]
+          : item.name["@_value"],
+        description: item.description?.replace(/&#10;/g, "\n") || "",
+        image: item.image || "",
+        minPlayers: parseInt(item.minplayers?.["@_value"]) || 0,
+        maxPlayers: parseInt(item.maxplayers?.["@_value"]) || 0,
+        minPlayTime,
+        maxPlayTime,
+        yearPublished: parseInt(item.yearpublished?.["@_value"]) || 0,
+        averageRating:
+          parseFloat(item.statistics?.ratings?.average?.["@_value"]) || 0,
+        mechanics: (item.link || [])
+          .filter((link: any) => link["@_type"] === "boardgamemechanic")
+          .map((link: any) => link["@_value"]),
+        categories: (item.link || [])
+          .filter((link: any) => link["@_type"] === "boardgamecategory")
+          .map((link: any) => link["@_value"]),
+        weight:
+          parseFloat(item.statistics?.ratings?.averageweight?.["@_value"]) || 0,
+        bestPlayers: [],
+        recommendedPlayers: [],
+        expansions: expansions.length > 0 ? expansions : undefined,
+        baseGame,
+      };
+    });
   } catch (error) {
     console.error("Error fetching hot games:", error);
     return [];
@@ -226,6 +527,33 @@ async function getGamesDetails(ids: string): Promise<BGGGameDetails[]> {
     return items
       .map((item: any) => {
         try {
+          // 拡張情報を取得
+          const expansions = (item.link || [])
+            .filter(
+              (link: any) =>
+                link["@_type"] === "boardgameexpansion" &&
+                link["@_inbound"] === "true"
+            )
+            .map((link: any) => ({
+              id: link["@_id"],
+              name: link["@_value"],
+            }));
+
+          // ベースゲーム情報を取得
+          const baseGameLinks = (item.link || []).filter(
+            (link: any) =>
+              link["@_type"] === "boardgameexpansion" &&
+              link["@_inbound"] !== "true"
+          );
+
+          const baseGame =
+            baseGameLinks.length > 0
+              ? {
+                  id: baseGameLinks[0]["@_id"],
+                  name: baseGameLinks[0]["@_value"],
+                }
+              : undefined;
+
           return {
             id: item["@_id"],
             name: Array.isArray(item.name)
@@ -235,7 +563,11 @@ async function getGamesDetails(ids: string): Promise<BGGGameDetails[]> {
             image: item.image || "",
             minPlayers: parseInt(item.minplayers?.["@_value"]) || 0,
             maxPlayers: parseInt(item.maxplayers?.["@_value"]) || 0,
-            playTime: parseInt(item.playingtime?.["@_value"]) || 0,
+            minPlayTime: parseInt(item.minplaytime?.["@_value"]) || 0,
+            maxPlayTime:
+              parseInt(item.maxplaytime?.["@_value"]) ||
+              parseInt(item.playingtime?.["@_value"]) ||
+              0,
             yearPublished: parseInt(item.yearpublished?.["@_value"]) || 0,
             averageRating:
               parseFloat(item.statistics?.ratings?.average?.["@_value"]) || 0,
@@ -245,6 +577,14 @@ async function getGamesDetails(ids: string): Promise<BGGGameDetails[]> {
             categories: (item.link || [])
               .filter((link: any) => link["@_type"] === "boardgamecategory")
               .map((link: any) => link["@_value"]),
+            weight:
+              parseFloat(
+                item.statistics?.ratings?.averageweight?.["@_value"]
+              ) || 0,
+            bestPlayers: [],
+            recommendedPlayers: [],
+            expansions: expansions.length > 0 ? expansions : undefined,
+            baseGame,
           };
         } catch (error) {
           console.error("Error parsing game item:", error, item);

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { fetchBGGData, parseXMLResponse } from "@/lib/bggApi";
 import { postReview, getGame } from "@/lib/api";
 import { FlashMessage } from "@/components/FlashMessage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,20 +12,12 @@ import {
   Typography,
   Box,
   Paper,
-  Slider,
-  Checkbox,
-  FormControlLabel,
   TextField,
   Button,
   Grid,
-  FormGroup,
-  Divider,
   CircularProgress,
   Chip,
-  Rating,
-  Alert,
   Snackbar,
-  Stack,
 } from "@mui/material";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import { CustomSlider } from "@/components/GameEvaluationForm/CustomSlider";
@@ -55,7 +46,6 @@ interface GameDetails {
 
 interface Review {
   overall_score: number;
-  play_time: number;
   rule_complexity: number;
   luck_factor: number;
   interaction: number;
@@ -117,7 +107,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const [review, setReview] = useState<Review>({
     overall_score: 7.5,
-    play_time: 3,
     rule_complexity: 3,
     luck_factor: 3,
     interaction: 3,
@@ -128,14 +117,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     custom_tags: "",
     short_comment: "",
   });
-
-  const playTimeMarks = [
-    { value: 1, label: "30分以内" },
-    { value: 2, label: "60分" },
-    { value: 3, label: "90分" },
-    { value: 4, label: "120分" },
-    { value: 5, label: "120分以上" },
-  ];
 
   // ページロード時の認証チェック
   useEffect(() => {
@@ -201,9 +182,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             setExistingReview(userReview);
             // 既存のレビューデータでフォームを初期化
             setReview({
-              ...review,
               overall_score: userReview.overall_score,
-              play_time: userReview.play_time || 3,
               rule_complexity: userReview.rule_complexity || 3,
               luck_factor: userReview.luck_factor || 3,
               interaction: userReview.interaction || 3,
@@ -234,36 +213,34 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
     if (name === "custom_tags") {
       const normalizedValue = value.replace(/　/g, " ").replace(/\s+/g, " ");
-      setReview((prev: Review) => ({
+      setReview((prev) => ({
         ...prev,
         [name]: normalizedValue,
       }));
     } else if (type === "checkbox") {
       const target = e.target as HTMLInputElement;
-      setReview((prev: Review) => ({
+      setReview((prev) => ({
         ...prev,
         [name]: target.checked
-          ? [...(prev[name] as string[]), value]
-          : (prev[name] as string[]).filter((item: string) => item !== value),
+          ? [...(prev[name as keyof Review] as string[]), value]
+          : (prev[name as keyof Review] as string[]).filter(
+              (item: string) => item !== value
+            ),
       }));
     } else {
-      setReview((prev: Review) => ({
+      setReview((prev) => ({
         ...prev,
         [name]: type === "number" ? Number(value) : value,
       }));
     }
   };
 
-  // @ts-ignore
   const handleSliderChange =
-    (name: string) => (_event: Event, value: number | number[]) => {
-      if (typeof value === "number") {
-        // @ts-ignore
-        setReview((prev) => ({
-          ...prev,
-          [name]: value,
-        }));
-      }
+    (name: keyof Review) => (_event: Event, value: number | number[]) => {
+      setReview((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
     };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -311,7 +288,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
       const reviewData = {
         overall_score: review.overall_score,
-        play_time: review.play_time,
         rule_complexity: review.rule_complexity,
         luck_factor: review.luck_factor,
         interaction: review.interaction,
@@ -461,31 +437,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   >
                     （5点以上から選択可能)
                   </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" gutterBottom>
-                    プレイ時間:{" "}
-                    {
-                      playTimeMarks.find(
-                        (mark) => mark.value === review.play_time
-                      )?.label
-                    }
-                  </Typography>
-                  <CustomSlider
-                    value={review.play_time}
-                    onChange={handleSliderChange("play_time")}
-                    min={1}
-                    max={5}
-                    step={1}
-                    marks={playTimeMarks}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(value) =>
-                      playTimeMarks.find((mark) => mark.value === value)
-                        ?.label || ""
-                    }
-                  />
                 </Box>
               </Grid>
               <Grid item xs={12} md={6}>

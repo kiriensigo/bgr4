@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getGame, updateJapaneseName } from "@/lib/api";
+import {
+  getGame,
+  updateJapaneseName,
+  addToWishlist,
+  removeFromWishlist,
+  getWishlist,
+  type Game,
+} from "@/lib/api";
 import {
   Container,
   Typography,
@@ -20,6 +27,7 @@ import {
   TextField,
   Snackbar,
   Alert,
+  Tooltip,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,35 +37,14 @@ import StarIcon from "@mui/icons-material/Star";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import TranslateIcon from "@mui/icons-material/Translate";
+import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
+import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
 import GameCard from "@/components/GameCard";
 import ReviewList from "@/components/ReviewList";
 import GameRating from "@/components/GameRating";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
-
-interface APIGame {
-  id: number;
-  bgg_id: string;
-  name: string;
-  japanese_name?: string;
-  image_url: string;
-  min_players: number;
-  max_players: number;
-  play_time: number;
-  description: string;
-  reviews: Review[];
-  reviews_count: number;
-  average_score: number | null | undefined;
-  average_rule_complexity: number | null;
-  average_luck_factor: number | null;
-  average_interaction: number | null;
-  average_downtime: number | null;
-  recommended_players: string[];
-  popular_tags: string[];
-  popular_mechanics: string[];
-}
-
-type Game = APIGame;
+import { formatDate } from "@/lib/utils";
 
 interface Review {
   id: number;
@@ -82,7 +69,25 @@ interface Review {
   liked_by_current_user: boolean;
 }
 
+interface GamePageProps {
+  params: {
+    id: string;
+  };
+}
+
+// Gameインターフェースを拡張
+interface ExtendedGame extends Game {
+  publisher?: string;
+  designer?: string;
+  release_date?: string;
+  japanese_release_date?: string;
+  japanese_publisher?: string;
+  expansions?: Array<{ id: string; name: string }>;
+  baseGame?: { id: string; name: string };
+}
+
 // レビューの平均点を計算する関数
+// この関数はバックエンドから取得した平均点がない場合のフォールバックとして使用
 const calculateAverageScores = (reviews: Review[]) => {
   if (!reviews || reviews.length === 0) return null;
 
@@ -125,13 +130,22 @@ const calculateAverageScores = (reviews: Review[]) => {
 };
 
 // 人気のタグを集計する関数
-const getPopularTags = (reviews: Review[]) => {
+const getPopularTags = (reviews: any[]) => {
   if (!reviews || reviews.length === 0) return [];
 
   const tagCount = new Map<string, number>();
   reviews.forEach((review) => {
-    [...review.tags, ...review.custom_tags].forEach((tag) => {
-      tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+    // tagsとcustom_tagsが配列であることを確認し、そうでない場合は空配列を使用
+    const tags = Array.isArray(review.tags) ? review.tags : [];
+    const customTags = Array.isArray(review.custom_tags)
+      ? review.custom_tags
+      : [];
+
+    [...tags, ...customTags].forEach((tag) => {
+      if (tag) {
+        // tagがnullやundefinedでないことを確認
+        tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+      }
     });
   });
 
@@ -155,14 +169,14 @@ const getNumericScore = (score: number | string | null | undefined): number => {
 };
 
 // キャッシュ用のオブジェクト
-const gameCache: Record<string, { data: any; timestamp: number }> = {};
+const gameCache: Record<string, { data: ExtendedGame; timestamp: number }> = {};
 // キャッシュの有効期限（5分）
 const CACHE_EXPIRY = 5 * 60 * 1000;
 
-export default function GamePage({ params }: { params: { id: string } }) {
+export default function GamePage({ params }: GamePageProps) {
   const { user, getAuthHeaders } = useAuth();
   const pathname = usePathname();
-  const [game, setGame] = useState<Game | null>(null);
+  const [game, setGame] = useState<ExtendedGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -172,6 +186,27 @@ export default function GamePage({ params }: { params: { id: string } }) {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
+  );
+  const [wishlistItemId, setWishlistItemId] = useState<number | null>(null);
+  const [addingToWishlist, setAddingToWishlist] = useState(false);
+
+  // やりたいリストからゲームのIDを取得する
+  const fetchWishlistItemId = useCallback(
+    async (gameId: string) => {
+      if (!user) return;
+
+      try {
+        const authHeaders = getAuthHeaders();
+        const wishlistItems = await getWishlist(authHeaders);
+        const item = wishlistItems.find((item) => item.game_id === gameId);
+        if (item) {
+          setWishlistItemId(item.id);
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist item ID:", error);
+      }
+    },
+    [user, getAuthHeaders]
   );
 
   const fetchGameData = useCallback(async () => {
@@ -187,19 +222,32 @@ export default function GamePage({ params }: { params: { id: string } }) {
       // 有効なキャッシュがある場合はそれを使用
       if (cachedData && now - cachedData.timestamp < CACHE_EXPIRY) {
         console.log("Using cached game data");
-        setGame(cachedData.data);
+        setGame(cachedData.data as ExtendedGame);
         if (cachedData.data.japanese_name) {
           setJapaneseName(cachedData.data.japanese_name);
+        }
+        if (cachedData.data.in_wishlist) {
+          // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
+          fetchWishlistItemId(params.id);
         }
         setLoading(false);
         return;
       }
 
-      const data: APIGame = await getGame(params.id);
-      console.log("Fetched game data:", data);
+      const headers = user ? getAuthHeaders() : {};
+      const data = (await getGame(params.id, headers)) as ExtendedGame;
+      console.log("Fetched game data:", {
+        ...data,
+        reviews: data.reviews ? `${data.reviews.length} reviews` : "no reviews",
+        hasReviews: data.reviews && data.reviews.length > 0,
+      });
       setGame(data);
       if (data.japanese_name) {
         setJapaneseName(data.japanese_name);
+      }
+      if (data.in_wishlist) {
+        // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
+        fetchWishlistItemId(params.id);
       }
 
       // キャッシュに保存
@@ -215,7 +263,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [params.id, user, getAuthHeaders, fetchWishlistItemId]);
 
   useEffect(() => {
     fetchGameData();
@@ -257,6 +305,66 @@ export default function GamePage({ params }: { params: { id: string } }) {
     }
   };
 
+  // やりたいリストに追加する
+  const handleAddToWishlist = async () => {
+    if (!user || !game) return;
+
+    setAddingToWishlist(true);
+    try {
+      const authHeaders = getAuthHeaders();
+      const result = await addToWishlist(game.bgg_id, authHeaders);
+      setWishlistItemId(result.id);
+      setGame({
+        ...game,
+        in_wishlist: true,
+      });
+      setSnackbarMessage("やりたいリストに追加しました");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+      setSnackbarMessage(
+        error instanceof Error
+          ? error.message
+          : "やりたいリストへの追加に失敗しました"
+      );
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setAddingToWishlist(false);
+    }
+  };
+
+  // やりたいリストから削除する
+  const handleRemoveFromWishlist = async () => {
+    if (!user || !game || wishlistItemId === null) return;
+
+    setAddingToWishlist(true);
+    try {
+      const authHeaders = getAuthHeaders();
+      await removeFromWishlist(wishlistItemId, authHeaders);
+      setWishlistItemId(null);
+      setGame({
+        ...game,
+        in_wishlist: false,
+      });
+      setSnackbarMessage("やりたいリストから削除しました");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
+      setSnackbarMessage(
+        error instanceof Error
+          ? error.message
+          : "やりたいリストからの削除に失敗しました"
+      );
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setAddingToWishlist(false);
+    }
+  };
+
   if (loading) {
     return (
       <Container sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -293,8 +401,8 @@ export default function GamePage({ params }: { params: { id: string } }) {
         <Grid container spacing={4}>
           <Grid item xs={12} md={4}>
             <Image
-              src={game.image_url}
-              alt={game.name}
+              src={game.japanese_image_url || game.image_url || ""}
+              alt={game.japanese_name || game.name || ""}
               width={500}
               height={500}
               style={{ width: "100%", height: "auto" }}
@@ -327,6 +435,38 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </Button>
             )}
 
+            {/* やりたいリストボタン */}
+            {user && (
+              <Tooltip
+                title={
+                  game.in_wishlist
+                    ? "やりたいリストから削除"
+                    : "やりたいリストに追加"
+                }
+              >
+                <Button
+                  variant="outlined"
+                  color={game.in_wishlist ? "error" : "primary"}
+                  startIcon={
+                    game.in_wishlist ? (
+                      <BookmarkRemoveIcon />
+                    ) : (
+                      <BookmarkAddIcon />
+                    )
+                  }
+                  onClick={
+                    game.in_wishlist
+                      ? handleRemoveFromWishlist
+                      : handleAddToWishlist
+                  }
+                  disabled={addingToWishlist}
+                  sx={{ mb: 2, mr: 2 }}
+                >
+                  {game.in_wishlist ? "やりたい解除" : "やりたい！"}
+                </Button>
+              </Tooltip>
+            )}
+
             {/* BGGリンク */}
             <Button
               variant="outlined"
@@ -354,9 +494,75 @@ export default function GamePage({ params }: { params: { id: string } }) {
                 <Grid item xs={12} sm={6}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <AccessTimeIcon color="primary" />
-                    <Typography>{game.play_time}分</Typography>
+                    <Typography>
+                      {game.min_play_time &&
+                      game.play_time &&
+                      game.min_play_time !== game.play_time
+                        ? `${game.min_play_time}〜${game.play_time}分`
+                        : `${game.play_time}分`}
+                    </Typography>
                   </Box>
                 </Grid>
+
+                {/* 出版社情報を追加 */}
+                {(game.publisher || game.japanese_publisher) && (
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        sx={{ minWidth: "80px" }}
+                      >
+                        出版社:
+                      </Typography>
+                      <Typography>
+                        {game.japanese_publisher || game.publisher}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* デザイナー情報を追加 */}
+                {game.designer && (
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        sx={{ minWidth: "80px" }}
+                      >
+                        デザイナー:
+                      </Typography>
+                      <Typography>{game.designer}</Typography>
+                    </Box>
+                  </Grid>
+                )}
+
+                {/* 発売日情報を追加 */}
+                {(game.release_date || game.japanese_release_date) && (
+                  <Grid item xs={12} sm={6}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        sx={{ minWidth: "80px" }}
+                      >
+                        発売日:
+                      </Typography>
+                      <Typography>
+                        {game.japanese_release_date
+                          ? formatDate(game.japanese_release_date)
+                          : formatDate(game.release_date)}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                )}
               </Grid>
             </Paper>
 
@@ -375,14 +581,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
             </Box>
 
             {/* おすすめプレイ人数 */}
-            {game.recommended_players &&
-              game.recommended_players.length > 0 && (
+            {game.site_recommended_players &&
+              game.site_recommended_players.length > 0 && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" gutterBottom>
                     おすすめプレイ人数
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {game.recommended_players.map((count) => (
+                    {game.site_recommended_players.map((count: string) => (
                       <Chip
                         key={count}
                         label={`${count}人`}
@@ -503,6 +709,53 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </Box>
             )}
 
+            {/* 拡張情報 */}
+            {game.expansions && game.expansions.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  拡張
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {game.expansions.map((expansion) => (
+                    <Link
+                      key={expansion.id}
+                      href={`/games/${expansion.id}`}
+                      style={{ textDecoration: "none" }}
+                    >
+                      <Chip
+                        label={expansion.name}
+                        color="primary"
+                        variant="outlined"
+                        sx={{ m: 0.5 }}
+                        clickable
+                      />
+                    </Link>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* ベースゲーム情報 */}
+            {game.baseGame && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  ベースゲーム
+                </Typography>
+                <Link
+                  href={`/games/${game.baseGame.id}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <Chip
+                    label={game.baseGame.name}
+                    color="secondary"
+                    variant="outlined"
+                    sx={{ m: 0.5 }}
+                    clickable
+                  />
+                </Link>
+              </Box>
+            )}
+
             <Divider sx={{ my: 4 }} />
 
             {/* レビューセクション */}
@@ -529,23 +782,20 @@ export default function GamePage({ params }: { params: { id: string } }) {
               </Link>
             </Box>
 
-            {Array.isArray(game.reviews) ? (
-              game.reviews.length > 0 ? (
-                <ReviewList reviews={game.reviews} />
-              ) : (
-                <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
-                  <Typography variant="body1" color="text.secondary">
-                    まだレビューがありません。最初のレビューを書いてみませんか？
-                  </Typography>
-                </Paper>
-              )
-            ) : (
-              <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
-                <Typography variant="body1" color="text.secondary">
-                  レビューを読み込み中...
+            {/* レビューデータのデバッグ情報 */}
+            {process.env.NODE_ENV === "development" && (
+              <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+                <Typography
+                  variant="caption"
+                  component="pre"
+                  sx={{ whiteSpace: "pre-wrap" }}
+                >
+                  {`レビュー数: ${game.reviews ? game.reviews.length : 0}`}
                 </Typography>
-              </Paper>
+              </Box>
             )}
+
+            <ReviewList reviews={game.reviews || []} />
           </Grid>
         </Grid>
       </Paper>
