@@ -12,19 +12,19 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     user_reviews = game.reviews.where.not(user: system_user)
     user_reviews_count = user_reviews.count
     
-    # レビューがない場合は更新しない
+    # ユーザーレビューがない場合は更新しない
     return if user_reviews_count == 0
 
     Rails.logger.info "Updating popular features for game #{game.name} (#{game_id}) with #{user_reviews_count} user reviews"
 
-    # 1. 平均スコアの計算 - すべてのレビューから
+    # 1. 平均スコアの計算 - すべてのレビューから（システムユーザー含む）
     update_average_score(game)
     
-    # 2. 人気タグの計算（上位6つ）- システムユーザー以外のレビューから
-    update_popular_tags(game, user_reviews)
+    # 2. 人気タグの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
+    update_popular_tags(game, game.reviews)
     
-    # 3. 人気メカニクスの計算（上位6つ）- システムユーザー以外のレビューから
-    update_popular_mechanics(game, user_reviews)
+    # 3. 人気メカニクスの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
+    update_popular_mechanics(game, game.reviews)
     
     # 4. おすすめプレイ人数の計算（50%以上の支持があるもの）- すべてのレビューから（システムユーザー含む）
     all_reviews = game.reviews

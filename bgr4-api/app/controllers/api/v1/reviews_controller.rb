@@ -46,9 +46,18 @@ module Api
       end
 
       def index
-        system_user = User.find_by(email: 'system@boardgamereview.com')
-        @reviews = @game.reviews.includes(:user).where.not(user: system_user)
-        render json: @reviews.as_json(include: { user: { only: [:id, :name] } })
+        @reviews = @game.reviews.exclude_system_user.includes(:user)
+        
+        # ユーザー情報を含めて返す
+        render json: @reviews.map { |review|
+          review_json = review.as_json
+          review_json['user'] = {
+            id: review.user.id,
+            name: review.user.name,
+            image: review.user.image
+          }
+          review_json
+        }
       end
 
       def update
@@ -65,26 +74,40 @@ module Api
         per_page = (params[:per_page] || 12).to_i
         page = (params[:page] || 1).to_i
         
-        @reviews = Review.includes(:user, :game)
-                        .where.not(user: User.find_by(email: 'system@boardgamereview.com'))
+        @reviews = Review.exclude_system_user.includes(:user, :game)
                         .order(created_at: :desc)
                         .offset((page - 1) * per_page)
                         .limit(per_page)
 
         # ゲームごとのレビュー数を取得
         game_ids = @reviews.map { |review| review.game_id }.uniq
-        reviews_count_by_game = Review.where(game_id: game_ids)
+        reviews_count_by_game = Review.exclude_system_user
+                                     .where(game_id: game_ids)
                                      .group(:game_id)
                                      .count
 
-        render json: @reviews.as_json(include: {
-          user: { only: [:id, :name, :image] },
-          game: { only: [:id, :bgg_id, :name, :japanese_name, :image_url, :min_players, :max_players, :play_time, :average_score] }
-        }).map do |review_json|
-          # ゲームのレビュー数を追加
-          review_json["game"]["reviews_count"] = reviews_count_by_game[review_json["game_id"]] || 0
+        # ユーザー情報を含めて返す
+        render json: @reviews.map { |review|
+          review_json = review.as_json
+          review_json['user'] = {
+            id: review.user.id,
+            name: review.user.name,
+            image: review.user.image
+          }
+          review_json['game'] = {
+            id: review.game.id,
+            bgg_id: review.game.bgg_id,
+            name: review.game.name,
+            japanese_name: review.game.japanese_name,
+            image_url: review.game.image_url,
+            min_players: review.game.min_players,
+            max_players: review.game.max_players,
+            play_time: review.game.play_time,
+            average_score: review.game.average_score,
+            reviews_count: reviews_count_by_game[review.game_id] || 0
+          }
           review_json
-        end
+        }
       end
 
       def my

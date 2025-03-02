@@ -174,6 +174,55 @@ const gameCache: Record<string, { data: ExtendedGame; timestamp: number }> = {};
 // キャッシュの有効期限（5分）
 const CACHE_EXPIRY = 5 * 60 * 1000;
 
+// 出版社情報
+const PublisherInfo = ({ game }: { game: Game }) => {
+  const publisher = game.publisher || "不明";
+  const japanesePublisher = game.japanese_publisher;
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" color="text.secondary">
+        出版社:
+      </Typography>
+      <Typography variant="body2">
+        <Link href={`/games/publisher/${encodeURIComponent(publisher)}`} passHref>
+          {publisher}
+        </Link>
+      </Typography>
+      {japanesePublisher && (
+        <>
+          <Typography variant="subtitle2" color="text.secondary" mt={1}>
+            日本語版出版社:
+          </Typography>
+          <Typography variant="body2">
+            <Link href={`/games/publisher/${encodeURIComponent(japanesePublisher)}`} passHref>
+              {japanesePublisher}
+            </Link>
+          </Typography>
+        </>
+      )}
+    </Box>
+  );
+};
+
+// デザイナー情報
+const DesignerInfo = ({ game }: { game: Game }) => {
+  const designer = game.designer || "不明";
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" color="text.secondary">
+        デザイナー:
+      </Typography>
+      <Typography variant="body2">
+        <Link href={`/games/designer/${encodeURIComponent(designer)}`} passHref>
+          {designer}
+        </Link>
+      </Typography>
+    </Box>
+  );
+};
+
 export default function GamePage({ params }: GamePageProps) {
   const { user, getAuthHeaders } = useAuth();
   const pathname = usePathname();
@@ -514,42 +563,14 @@ export default function GamePage({ params }: GamePageProps) {
                 </Grid>
 
                 {/* 出版社情報を追加 */}
-                {(game.publisher || game.japanese_publisher) && (
-                  <Grid item xs={12} sm={6}>
-                    <Box
-                      sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}
-                    >
-                      <Typography
-                        variant="subtitle2"
-                        color="text.secondary"
-                        sx={{ minWidth: "80px" }}
-                      >
-                        出版社:
-                      </Typography>
-                      <Typography>
-                        {game.japanese_publisher || game.publisher}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                )}
+                <Grid item xs={12} sm={6}>
+                  <PublisherInfo game={game} />
+                </Grid>
 
                 {/* デザイナー情報を追加 */}
-                {game.designer && (
-                  <Grid item xs={12} sm={6}>
-                    <Box
-                      sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}
-                    >
-                      <Typography
-                        variant="subtitle2"
-                        color="text.secondary"
-                        sx={{ minWidth: "80px" }}
-                      >
-                        デザイナー:
-                      </Typography>
-                      <Typography>{game.designer}</Typography>
-                    </Box>
-                  </Grid>
-                )}
+                <Grid item xs={12} sm={6}>
+                  <DesignerInfo game={game} />
+                </Grid>
 
                 {/* 発売日情報を追加 */}
                 {(game.release_date || game.japanese_release_date) && (

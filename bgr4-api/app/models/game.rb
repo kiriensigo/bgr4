@@ -17,7 +17,7 @@ class Game < ApplicationRecord
   }
 
   # 拡張情報とベースゲーム情報を保存するためのJSONカラム
-  store :metadata, accessors: [:expansions, :base_game], coder: JSON
+  store :metadata, accessors: [:expansions, :best_num_players, :recommended_num_players], coder: JSON
 
   def bgg_id
     self[:bgg_id] || id.to_s
@@ -42,7 +42,8 @@ class Game < ApplicationRecord
       json['release_date'] = release_date
       json['japanese_release_date'] = japanese_release_date
       json['expansions'] = expansions
-      json['baseGame'] = base_game
+      json['best_num_players'] = best_num_players
+      json['recommended_num_players'] = recommended_num_players
     end
   end
 
@@ -126,6 +127,8 @@ class Game < ApplicationRecord
     self.publisher = bgg_data[:publisher]
     self.designer = bgg_data[:designer]
     self.release_date = bgg_data[:release_date]
+    self.best_num_players = bgg_data[:best_num_players]
+    self.recommended_num_players = bgg_data[:recommended_num_players]
     
     # 日本語情報がある場合は更新
     self.japanese_name = bgg_data[:japanese_name] if bgg_data[:japanese_name].present?

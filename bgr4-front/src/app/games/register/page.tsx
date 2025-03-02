@@ -13,17 +13,16 @@ import {
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBGGGameDetails } from "@/lib/bggApi";
-import { getGame } from "@/lib/api";
-import { getAuthHeaders } from "@/lib/auth";
-import { registerGame } from "@/lib/api";
+import { getBGGGameDetails, type BGGGameDetails } from "@/lib/bggApi";
+import { getGame, registerGame } from "@/lib/api";
+import Link from "next/link";
 
 export default function RegisterGamePage() {
   const [bggUrl, setBggUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, getAuthHeaders } = useAuth();
 
   // BGGのURLからIDを抽出する関数
   const extractBggId = (url: string): string | null => {
@@ -92,9 +91,32 @@ export default function RegisterGamePage() {
         "Recommended players from BGG:",
         gameDetails.recommendedPlayers
       );
+      console.log("Japanese name from BGG:", gameDetails.japaneseName);
+      console.log(
+        "Japanese publisher from BGG:",
+        gameDetails.japanesePublisher
+      );
+      console.log(
+        "Japanese release date from BGG:",
+        gameDetails.japaneseReleaseDate
+      );
 
-      const authHeaders = user ? await getAuthHeaders() : {};
-      const data = await registerGame(gameDetails, authHeaders);
+      // AuthContextのgetAuthHeaders関数を使用
+      const authHeaders = user ? getAuthHeaders() : {};
+      console.log("Auth headers:", authHeaders);
+
+      // ゲーム登録前にデータを整形
+      const gameData = {
+        ...gameDetails,
+        id: gameDetails.id.toString(), // 文字列に変換
+        // 日本語名が存在する場合は明示的に設定
+        japaneseName: gameDetails.japaneseName || null,
+        japanesePublisher: gameDetails.japanesePublisher || null,
+        japaneseReleaseDate: gameDetails.japaneseReleaseDate || null,
+      };
+      console.log("Formatted game data:", gameData);
+
+      const data = await registerGame(gameData, authHeaders);
       console.log("Registered game data:", data);
 
       router.push(`/games/${gameDetails.id}`);
@@ -112,9 +134,30 @@ export default function RegisterGamePage() {
     return (
       <Container maxWidth="md">
         <Box sx={{ py: 4 }}>
-          <Alert severity="warning">
-            ゲームを登録するにはログインが必要です
-          </Alert>
+          <Paper elevation={3} sx={{ p: 4, textAlign: "center" }}>
+            <Typography variant="h5" color="error" gutterBottom>
+              ゲームを登録するにはログインが必要です
+            </Typography>
+            <Typography variant="body1" paragraph>
+              ゲームの登録は、ログインしたユーザーのみが行えます。
+              まだアカウントをお持ちでない場合は、新規登録してください。
+            </Typography>
+            <Box
+              sx={{ mt: 3, display: "flex", justifyContent: "center", gap: 2 }}
+            >
+              <Button
+                variant="contained"
+                color="primary"
+                component={Link}
+                href="/login?redirect=/games/register"
+              >
+                ログイン
+              </Button>
+              <Button variant="outlined" onClick={() => router.back()}>
+                戻る
+              </Button>
+            </Box>
+          </Paper>
         </Box>
       </Container>
     );

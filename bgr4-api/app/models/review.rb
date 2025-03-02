@@ -5,6 +5,12 @@ class Review < ApplicationRecord
   has_many :likes, dependent: :destroy
   has_many :liked_users, through: :likes, source: :user
 
+  # システムユーザーを除外するスコープ
+  scope :exclude_system_user, -> {
+    system_user = User.find_by(email: 'system@boardgamereview.com')
+    where.not(user: system_user) if system_user
+  }
+
   validates :user_id, presence: true
   validates :game_id, presence: true
   validates :overall_score, presence: true, 
@@ -52,9 +58,9 @@ class Review < ApplicationRecord
 
   # ゲームの人気タグ、メカニクス、おすすめプレイ人数を更新
   def update_game_popular_features
-    # システムユーザーのレビューは集計から除外
-    system_user = User.find_by(email: 'system@boardgamereview.com')
-    return if user == system_user
+    # システムユーザーのレビューも集計に含める（コメントアウト）
+    # system_user = User.find_by(email: 'system@boardgamereview.com')
+    # return if user == system_user
 
     # 非同期で更新処理を実行（パフォーマンス向上のため）
     UpdateGamePopularFeaturesJob.perform_later(game_id)

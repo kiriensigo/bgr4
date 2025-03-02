@@ -23,11 +23,12 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
-      resources :games, only: [:index, :show, :create] do
+      resources :games, only: [:index, :show, :create, :update, :destroy] do
         collection do
           get 'search'
-          get 'popular'
-          get 'edit_histories'
+          get 'hot'
+          get 'search_by_publisher'
+          get 'search_by_designer'
         end
         member do
           patch 'update_japanese_name'
@@ -37,33 +38,37 @@ Rails.application.routes.draw do
       end
       
       resources :reviews, only: [] do
-        collection do
-          get :all
-          get :my
-        end
         member do
-          post :like
-          delete :unlike
+          post 'like'
+          delete 'unlike'
+        end
+        collection do
+          get 'all'
+          get 'my'
         end
       end
-
-      # やりたいリスト関連のエンドポイント
+      
       resources :wishlist_items, only: [:index, :create, :destroy] do
         collection do
-          put :reorder
+          put 'reorder'
         end
       end
-
-      # ユーザープロフィール関連のエンドポイント
+      
+      resources :game_edit_histories, only: [:index]
+      
+      # ユーザー関連
       resources :users, only: [:show] do
         collection do
-          get :profile
-          put :profile
+          get 'profile'
+          put 'profile'
         end
         member do
-          get :reviews
+          get 'reviews'
         end
       end
+      
+      # BGG関連
+      get 'bgg/version_image', to: 'games#version_image'
     end
   end
 

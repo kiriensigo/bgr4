@@ -36,7 +36,6 @@ export interface Game {
   japanese_release_date?: string;
   japanese_publisher?: string;
   expansions?: Array<{ id: string; name: string }>;
-  baseGame?: { id: string; name: string };
 }
 
 export interface Review {
@@ -105,7 +104,7 @@ export async function searchGames(params: SearchParams): Promise<Game[]> {
   const queryParams = new URLSearchParams();
 
   // パラメータを追加
-  if (params.keyword) queryParams.append("keyword", params.keyword);
+  if (params.keyword) queryParams.append("query", params.keyword);
   if (params.min_players !== null && params.min_players !== undefined)
     queryParams.append("min_players", params.min_players.toString());
   if (params.max_players !== null && params.max_players !== undefined)
@@ -158,6 +157,60 @@ export async function searchGames(params: SearchParams): Promise<Game[]> {
   }
 
   return response.json();
+}
+
+// 出版社で検索する関数
+export async function searchGamesByPublisher(
+  publisher: string
+): Promise<Game[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games/search_by_publisher?publisher=${encodeURIComponent(
+        publisher
+      )}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "出版社での検索に失敗しました");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error searching games by publisher:", error);
+    throw error;
+  }
+}
+
+// デザイナーで検索する関数
+export async function searchGamesByDesigner(designer: string): Promise<Game[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games/search_by_designer?designer=${encodeURIComponent(
+        designer
+      )}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "デザイナーでの検索に失敗しました");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error searching games by designer:", error);
+    throw error;
+  }
 }
 
 async function createGame(bggGame: BGGGameDetails): Promise<Game> {
@@ -368,6 +421,48 @@ export async function registerGame(
   autoRegister: boolean = false
 ) {
   try {
+    console.log("Sending game details to API:", gameDetails);
+    console.log("Japanese name being sent:", gameDetails.japaneseName);
+    console.log(
+      "Japanese publisher being sent:",
+      gameDetails.japanesePublisher
+    );
+    console.log(
+      "Japanese release date being sent:",
+      gameDetails.japaneseReleaseDate
+    );
+    console.log("Best players being sent:", gameDetails.bestPlayers);
+    console.log(
+      "Recommended players being sent:",
+      gameDetails.recommendedPlayers
+    );
+
+    // ゲームデータを整形
+    const gameData = {
+      bgg_id: gameDetails.id,
+      name: gameDetails.name,
+      japanese_name: gameDetails.japaneseName,
+      description: gameDetails.description,
+      image_url: gameDetails.image,
+      japanese_image_url: gameDetails.japaneseImage,
+      min_players: gameDetails.minPlayers,
+      max_players: gameDetails.maxPlayers,
+      min_play_time: gameDetails.minPlayTime,
+      play_time: gameDetails.maxPlayTime,
+      average_score: gameDetails.averageRating,
+      weight: gameDetails.weight,
+      publisher: gameDetails.publisher,
+      designer: gameDetails.designer,
+      release_date: gameDetails.releaseDate,
+      japanese_release_date: gameDetails.japaneseReleaseDate,
+      japanese_publisher: gameDetails.japanesePublisher,
+      expansions: gameDetails.expansions,
+      best_num_players: gameDetails.bestPlayers,
+      recommended_num_players: gameDetails.recommendedPlayers,
+    };
+
+    console.log("Formatted game data for API:", gameData);
+
     const response = await fetch(`${API_BASE_URL}/games`, {
       method: "POST",
       headers: {
@@ -377,27 +472,16 @@ export async function registerGame(
       },
       credentials: "include",
       body: JSON.stringify({
-        game: {
-          bgg_id: gameDetails.id,
-          name: gameDetails.name,
-          description: gameDetails.description,
-          image_url: gameDetails.image,
-          japanese_image_url: gameDetails.japaneseImage,
-          min_players: gameDetails.minPlayers,
-          max_players: gameDetails.maxPlayers,
-          min_play_time: gameDetails.minPlayTime,
-          play_time: gameDetails.maxPlayTime,
-          average_score: gameDetails.averageRating,
-          weight: gameDetails.weight,
-          best_num_players: gameDetails.bestPlayers,
-          recommended_num_players: gameDetails.recommendedPlayers,
-        },
+        game: gameData,
         auto_register: autoRegister,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: "Unknown error" }));
+      console.error("Error response from API:", errorData);
       throw new Error(errorData.error || "ゲームの登録に失敗しました");
     }
 

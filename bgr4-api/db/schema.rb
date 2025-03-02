@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_01_000007) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_01_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -51,6 +51,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_01_000007) do
     t.string "japanese_image_url"
     t.integer "min_play_time"
     t.json "metadata"
+    t.string "japanese_publisher"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
     t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin
     t.index ["popular_tags"], name: "index_games_on_popular_tags", using: :gin
