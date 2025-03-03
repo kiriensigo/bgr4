@@ -24,7 +24,7 @@ export default function GameRating({
       <Rating value={numericScore / 2} precision={0.5} readOnly size={size} />
       <Typography variant="body2">
         {numericScore.toFixed(1)}
-        {reviewsCount !== undefined && ` (${reviewsCount}件)`}
+        {reviewsCount !== undefined && ` (${reviewsCount}件のユーザーレビュー)`}
       </Typography>
     </Box>
   );

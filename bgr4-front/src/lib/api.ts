@@ -80,22 +80,35 @@ export async function getGames(
   per_page: number = 24,
   sort_by: string = "review_date"
 ): Promise<GamesResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/games?page=${page}&per_page=${per_page}&sort_by=${sort_by}`,
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games?page=${page}&per_page=${per_page}&sort_by=${sort_by}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("ゲーム情報の取得に失敗しました");
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("ゲーム情報の取得に失敗しました");
+    const data = await response.json();
+    console.log("API response for getGames:", data);
+
+    // 空の結果が返ってきた場合でも、ページネーション情報は正しく設定する
+    if (data.games.length === 0 && page > 1) {
+      console.warn(
+        `ページ ${page} のデータが空です。バックエンドのページネーションに問題がある可能性があります。`
+      );
+    }
+
+    return data;
+  } catch (error) {
+    console.error("API error in getGames:", error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log("API response for getGames:", data);
-  return data;
 }
 
 export interface SearchParams {
@@ -118,9 +131,14 @@ export interface SearchParams {
   tags?: string[];
   recommended_players?: string[];
   publisher?: string;
+  page?: number;
+  per_page?: number;
+  sort_by?: string;
 }
 
-export async function searchGames(params: SearchParams): Promise<Game[]> {
+export async function searchGames(
+  params: SearchParams
+): Promise<GamesResponse> {
   const queryParams = new URLSearchParams();
 
   // パラメータを追加
@@ -162,6 +180,12 @@ export async function searchGames(params: SearchParams): Promise<Game[]> {
       params.recommended_players.join(",")
     );
   if (params.publisher) queryParams.append("publisher", params.publisher);
+
+  // ページネーションとソートのパラメータを追加
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.per_page)
+    queryParams.append("per_page", params.per_page.toString());
+  if (params.sort_by) queryParams.append("sort_by", params.sort_by);
 
   const response = await fetch(
     `${API_BASE_URL}/games/search?${queryParams.toString()}`,

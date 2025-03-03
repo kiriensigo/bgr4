@@ -181,6 +181,11 @@ class Game < ApplicationRecord
   
   # レビュー数を取得（システムユーザーを除く）
   def review_count
+    reviews.count
+  end
+  
+  # システムユーザーを除いたレビュー数を取得
+  def user_review_count
     reviews.exclude_system_user.count
   end
   

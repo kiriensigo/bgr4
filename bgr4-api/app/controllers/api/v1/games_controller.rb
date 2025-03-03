@@ -33,11 +33,14 @@ module Api
                       .order('average_score_value DESC NULLS LAST')
         when 'review_date'
           # 最新レビュー日時でソート
+          system_user_id = User.find_by(email: 'system@boardgamereview.com')&.id
+          
+          # システムユーザーのレビューを除外するが、レビューがないゲームも含める
           query = Game.left_joins(:reviews)
-                      .where.not(reviews: { user_id: User.find_by(email: 'system@boardgamereview.com')&.id })
+                      .where("reviews.id IS NULL OR reviews.user_id != ?", system_user_id)
                       .group('games.id')
                       .select('games.*, MAX(reviews.created_at) as latest_review_date')
-                      .order('latest_review_date DESC NULLS LAST')
+                      .order('latest_review_date DESC NULLS LAST, games.created_at DESC')
         else
           # デフォルトは登録日時順（新しい順）
           query = query.order(created_at: :desc)
@@ -49,7 +52,7 @@ module Api
         # ゲーム一覧にレビュー数とレビュー情報を含める
         games_with_reviews = @games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.review_count
+          game_json['reviews_count'] = game.user_review_count
           
           # レビュー情報を含める（システムユーザーを除外）
           reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
@@ -98,7 +101,7 @@ module Api
         game_json['popular_tags'] = @game.popular_tags
         game_json['popular_mechanics'] = @game.popular_mechanics
         game_json['recommended_players'] = @game.recommended_players
-        game_json['review_count'] = @game.review_count
+        game_json['review_count'] = @game.user_review_count
         
         render json: game_json
       end
@@ -205,19 +208,25 @@ module Api
         play_time_min = params[:play_time_min]
         play_time_max = params[:play_time_max]
         
-        # 検索条件が何もない場合はエラーを返す
-        if query.blank? && publisher.blank? && min_players.blank? && max_players.blank? && 
-           play_time_min.blank? && play_time_max.blank?
-          render json: { error: "検索条件が必要です" }, status: :bad_request
-          return
-        end
+        # レビュー関連のパラメータ
+        use_reviews_tags = params[:use_reviews_tags] == 'true'
+        use_reviews_mechanics = params[:use_reviews_mechanics] == 'true'
+        use_reviews_recommended_players = params[:use_reviews_recommended_players] == 'true'
         
+        # ページネーションパラメータを取得
+        page = params[:page].present? ? params[:page].to_i : 1
+        per_page = params[:per_page].present? ? params[:per_page].to_i : 24
+        
+        # ソートパラメータを取得（デフォルトはレビュー新着順）
+        sort_by = params[:sort_by].present? ? params[:sort_by] : 'review_date'
+        
+        # 検索条件が何もない場合でもすべてのゲームを返す
         # 検索条件を構築
-        games_query = Game.all
+        base_query = Game.all
         
         # キーワード検索
         if query.present?
-          games_query = games_query.where("name ILIKE ? OR japanese_name ILIKE ? OR publisher ILIKE ? OR designer ILIKE ?", 
+          base_query = base_query.where("name ILIKE ? OR japanese_name ILIKE ? OR publisher ILIKE ? OR designer ILIKE ?", 
                                          "%#{query}%", "%#{query}%", "%#{query}%", "%#{query}%")
         end
         
@@ -234,22 +243,22 @@ module Api
             ["%#{pub}%", "%#{pub}%"]
           end
           
-          games_query = games_query.where(publisher_conditions, *publisher_values)
+          base_query = base_query.where(publisher_conditions, *publisher_values)
         end
         
         # プレイ人数検索
         if min_players.present?
-          games_query = games_query.where("min_players <= ?", min_players.to_i)
+          base_query = base_query.where("min_players <= ?", min_players.to_i)
         end
         
         if max_players.present?
-          games_query = games_query.where("max_players >= ?", max_players.to_i)
+          base_query = base_query.where("max_players >= ?", max_players.to_i)
         end
         
         # プレイ時間検索
         if play_time_min.present?
           play_time_min_value = play_time_min.to_i
-          games_query = games_query.where("play_time >= ?", play_time_min_value)
+          base_query = base_query.where("play_time >= ?", play_time_min_value)
         end
         
         if play_time_max.present?
@@ -258,14 +267,91 @@ module Api
           if play_time_max_value >= 180
             # 上限なし（何もしない）
           else
-            games_query = games_query.where("play_time <= ?", play_time_max_value)
+            base_query = base_query.where("play_time <= ?", play_time_max_value)
           end
         end
         
-        # 結果を取得
-        @games = games_query.order(created_at: :desc)
+        # レビュー関連のパラメータを処理
+        # システムユーザーのレビューがあるゲームも含める
+        if use_reviews_tags || use_reviews_mechanics || use_reviews_recommended_players
+          # システムユーザーを取得
+          system_user = User.find_by(email: 'system@boardgamereview.com')
+          
+          # システムユーザーのレビューがあるゲームのIDを取得
+          if system_user
+            system_reviewed_game_ids = Review.where(user_id: system_user.id).pluck(:game_id).uniq
+            
+            # システムユーザーのレビューがあるゲームも含める
+            if system_reviewed_game_ids.present?
+              base_query = base_query.or(Game.where(bgg_id: system_reviewed_game_ids))
+            end
+          end
+        end
         
-        render json: @games
+        # 総数を取得
+        total_count = base_query.count
+        
+        # ソート順に応じてクエリを構築
+        query = base_query
+        
+        case sort_by
+        when 'reviews_count'
+          # レビュー数でソート（多い順）
+          query = base_query.left_joins(:reviews)
+                      .group('games.id')
+                      .select('games.*, COUNT(reviews.id) as reviews_count_value')
+                      .order('reviews_count_value DESC')
+        when 'average_score'
+          # 平均スコアでソート（高い順）
+          query = base_query.left_joins(:reviews)
+                      .group('games.id')
+                      .select('games.*, AVG(reviews.overall_score) as average_score_value')
+                      .order('average_score_value DESC NULLS LAST')
+        when 'review_date'
+          # 最新レビュー日時でソート（システムユーザーのレビューも含める）
+          query = base_query.left_joins(:reviews)
+                      .group('games.id')
+                      .select('games.*, MAX(reviews.created_at) as latest_review_date')
+                      .order('latest_review_date DESC NULLS LAST')
+        else
+          # デフォルトは登録日時順（新しい順）
+          query = query.order(created_at: :desc)
+        end
+        
+        # ページネーションを適用
+        games = query.limit(per_page).offset((page - 1) * per_page)
+        
+        # レビュー数とレビュー情報を含める
+        games_with_reviews = games.map do |game|
+          game_json = game.as_json
+          game_json['reviews_count'] = game.user_review_count
+          
+          # レビュー情報を含める（すべてのレビューを含む）
+          reviews = game.reviews.order(created_at: :desc).limit(5).map do |review|
+            {
+              created_at: review.created_at,
+              user: {
+                id: review.user.id,
+                name: review.user.name,
+                email: review.user.email
+              }
+            }
+          end
+          
+          game_json['reviews'] = reviews
+          game_json
+        end
+        
+        # ページネーション情報を含めたレスポンスを返す
+        render json: {
+          games: games_with_reviews,
+          pagination: {
+            total_count: total_count,
+            total_pages: (total_count.to_f / per_page).ceil,
+            current_page: page,
+            per_page: per_page
+          }
+        }
       end
 
       def search_by_publisher
@@ -327,7 +413,7 @@ module Api
         # レビュー数とレビュー情報を含める
         games_with_reviews = games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.review_count
+          game_json['reviews_count'] = game.user_review_count
           
           # レビュー情報を含める（システムユーザーを除外）
           reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
@@ -415,7 +501,7 @@ module Api
         # レビュー数とレビュー情報を含める
         games_with_reviews = games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.review_count
+          game_json['reviews_count'] = game.user_review_count
           
           # レビュー情報を含める（システムユーザーを除外）
           reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
@@ -446,13 +532,24 @@ module Api
       end
 
       def hot
-        # 人気のゲームを取得（レビュー数が多い順）
+        # システムユーザーを取得
+        system_user = User.find_by(email: 'system@boardgamereview.com')
+        
+        # 人気のゲームを取得（システムユーザー以外のレビュー数が多い順）
         @games = Game.left_joins(:reviews)
+                     .where.not(reviews: { user_id: system_user&.id })
                      .group(:id)
                      .order('COUNT(reviews.id) DESC, games.average_score DESC')
                      .limit(10)
         
-        render json: @games
+        # レビュー数を含めたレスポンスを返す
+        games_with_reviews = @games.map do |game|
+          game_json = game.as_json
+          game_json['reviews_count'] = game.user_review_count
+          game_json
+        end
+        
+        render json: games_with_reviews
       end
 
       # バージョン画像を取得するエンドポイント

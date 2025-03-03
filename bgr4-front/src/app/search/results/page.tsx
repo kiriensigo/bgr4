@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Box,
@@ -16,25 +16,81 @@ import {
   Chip,
   Tooltip,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
 } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { searchGames } from "@/lib/api";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
 import ShareIcon from "@mui/icons-material/Share";
-import ViewModuleIcon from "@mui/icons-material/ViewModule";
+import SortIcon from "@mui/icons-material/Sort";
 import Link from "next/link";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import SearchPagination from "@/components/SearchPagination";
 
 // 表示件数のオプション
-const PAGE_SIZE_OPTIONS = [12, 24, 36];
+const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 60, 72];
+const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0];
+
+// ソートオプション
+export const SORT_OPTIONS = [
+  { value: "review_date", label: "レビュー新着順" },
+  { value: "reviews_count", label: "レビュー投稿数順" },
+  { value: "average_score", label: "総合得点順" },
+  { value: "created_at", label: "ゲーム登録順" },
+];
 
 // 数値を安全にフォーマットする関数
 const formatNumber = (value: any, decimals = 1): string => {
   if (value === null || value === undefined) return "0";
   const num = typeof value === "string" ? parseFloat(value) : value;
   return isNaN(num) ? "0" : num.toFixed(decimals);
+};
+
+// 人数別のおすすめ表示
+const renderRecommendedPlayers = (counts: any[]) => {
+  if (!counts || !Array.isArray(counts)) return null;
+
+  return counts.map((count, index) => {
+    // countがオブジェクトの場合の処理
+    let displayText;
+
+    if (typeof count === "object" && count !== null) {
+      // nameプロパティがある場合はそれを使用
+      if (count.name) {
+        displayText = count.name;
+      }
+      // countプロパティがある場合はそれを使用
+      else if (count.count) {
+        displayText = `${count.count}人`;
+      }
+      // どちらもない場合はJSONを文字列化
+      else {
+        displayText = JSON.stringify(count);
+      }
+    } else {
+      // プリミティブ値の場合はそのまま使用
+      displayText = `${count}人`;
+    }
+
+    // 一意のキーを生成
+    const key = `player-${index}`;
+
+    return (
+      <Chip
+        key={key}
+        label={displayText}
+        size="small"
+        color="info"
+        variant="outlined"
+        sx={{ mr: 0.5, mb: 0.5 }}
+      />
+    );
+  });
 };
 
 export default function SearchResultsPage() {
@@ -49,9 +105,30 @@ export default function SearchResultsPage() {
   const [copied, setCopied] = useState(false);
 
   // ページネーション用の状態
-  const [page, setPage] = useState(1);
+  const urlPage = parseInt(searchParams.get("page") || "1", 10);
+  const urlPageSize = parseInt(
+    searchParams.get("pageSize") || String(DEFAULT_PAGE_SIZE),
+    10
+  );
+  const urlSortBy = searchParams.get("sortBy") || SORT_OPTIONS[0].value;
+
+  const [page, setPage] = useState(urlPage);
+  const [pageSize, setPageSize] = useState(urlPageSize);
+  const [sortBy, setSortBy] = useState(urlSortBy);
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // URLを更新する関数をメモ化
+  const updateUrl = useCallback(
+    (newPage: number, newPageSize: number, newSortBy: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("page", newPage.toString());
+      params.set("pageSize", newPageSize.toString());
+      params.set("sortBy", newSortBy);
+      router.push(`/search/results?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
 
   // URLパラメータから検索条件を取得して検索を実行
   useEffect(() => {
@@ -70,7 +147,7 @@ export default function SearchResultsPage() {
         setSearchCriteria(params);
 
         // 配列パラメータを処理
-        const apiParams = { ...params };
+        const apiParams: any = { ...params };
         if (params.mechanics) apiParams.mechanics = params.mechanics.split(",");
         if (params.tags) apiParams.tags = params.tags.split(",");
         if (params.recommended_players)
@@ -96,39 +173,84 @@ export default function SearchResultsPage() {
           if (apiParams[key]) apiParams[key] = Number(apiParams[key]);
         });
 
+        // ページネーションとソートのパラメータを設定
+        apiParams.page = page;
+        apiParams.per_page = pageSize;
+        apiParams.sort_by = sortBy;
+
         console.log("検索パラメータ:", apiParams);
-        const results = await searchGames(apiParams);
-        setSearchResults(results);
+        const response = await searchGames(apiParams);
 
-        // 総ページ数を計算
-        setTotalPages(Math.ceil(results.length / pageSize));
+        // APIレスポンスからデータを設定
+        setSearchResults(response.games);
+        setTotalItems(response.pagination.total_count);
+        setTotalPages(response.pagination.total_pages);
 
-        // ページを1に戻す
-        setPage(1);
+        // バックエンドから返されたcurrent_pageと実際のページ番号が異なる場合の処理
+        if (response.pagination.current_page !== page) {
+          console.warn(
+            `警告: バックエンドから返されたページ番号(${response.pagination.current_page})と要求したページ番号(${page})が一致しません。`
+          );
+          // バックエンドから返されたページ番号を信頼する
+          if (response.pagination.current_page !== 0) {
+            console.log(
+              `ページ番号を修正: ${page} -> ${response.pagination.current_page}`
+            );
+            setPage(response.pagination.current_page);
+            // URLも更新するが、無限ループを防ぐためにuseEffectは再実行しない
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("page", response.pagination.current_page.toString());
+            params.set("pageSize", pageSize.toString());
+            params.set("sortBy", sortBy);
+            router.push(`/search/results?${params.toString()}`, {
+              scroll: false,
+            });
+          }
+        }
+
+        // 現在のページが総ページ数を超えている場合は、最後のページに移動
+        if (
+          page > response.pagination.total_pages &&
+          response.pagination.total_pages > 0
+        ) {
+          console.log(
+            `ページ番号(${page})が総ページ数(${response.pagination.total_pages})を超えています。最後のページに移動します。`
+          );
+          setPage(response.pagination.total_pages);
+          updateUrl(response.pagination.total_pages, pageSize, sortBy);
+          return; // 再度useEffectが実行されるので、ここで終了
+        }
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
             : "検索結果の取得中にエラーが発生しました"
         );
+        // エラーが発生した場合は1ページ目に戻る
+        if (page > 1) {
+          console.log("エラーが発生したため1ページ目に戻ります");
+          setPage(1);
+          updateUrl(1, pageSize, sortBy);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchResults();
-  }, [searchParams]);
+  }, [page, pageSize, sortBy, searchParams, updateUrl]);
 
-  // 表示件数が変更されたときに総ページ数を再計算
+  // 現在のページの表示範囲を計算
+  const currentPageStart =
+    searchResults.length > 0 ? (page - 1) * pageSize + 1 : 0;
+  const currentPageEnd = Math.min(page * pageSize, totalItems);
+
+  // ページが変わったときにスクロールを上部に戻す
   useEffect(() => {
-    if (searchResults.length > 0) {
-      setTotalPages(Math.ceil(searchResults.length / pageSize));
-      // 現在のページが新しい総ページ数を超えている場合は、最後のページに設定
-      if (page > Math.ceil(searchResults.length / pageSize)) {
-        setPage(Math.ceil(searchResults.length / pageSize));
-      }
+    if (!loading) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [pageSize, searchResults.length]);
+  }, [page, loading]);
 
   // URLをクリップボードにコピー
   const handleShareClick = () => {
@@ -148,9 +270,15 @@ export default function SearchResultsPage() {
     event: React.ChangeEvent<unknown>,
     value: number
   ) => {
+    // 無効なページ番号の場合は処理しない
+    if (value < 1 || (totalPages > 0 && value > totalPages)) {
+      console.warn(`無効なページ番号: ${value}、処理をスキップします`);
+      return;
+    }
+
+    console.log(`ページを変更: ${page} -> ${value}`);
     setPage(value);
-    // ページ変更時に画面上部にスクロール
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    updateUrl(value, pageSize, sortBy);
   };
 
   // 表示件数変更ハンドラー
@@ -159,24 +287,39 @@ export default function SearchResultsPage() {
     newPageSize: number | null
   ) => {
     if (newPageSize !== null) {
+      console.log(`表示件数を変更: ${pageSize} -> ${newPageSize}`);
+
+      // 新しい表示件数に基づいて総ページ数を計算
+      const newTotalPages = Math.ceil(totalItems / newPageSize);
+      console.log(
+        `新しい総ページ数の計算: ${totalItems} / ${newPageSize} = ${newTotalPages}`
+      );
+
+      // 現在のページが新しい総ページ数を超える場合は調整する
+      let newPage = page;
+      if (page > newTotalPages && newTotalPages > 0) {
+        console.log(
+          `現在のページ(${page})が新しい総ページ数(${newTotalPages})を超えています。最後のページに調整します。`
+        );
+        newPage = newTotalPages;
+      }
+
       setPageSize(newPageSize);
-      // ページを1に戻す
-      setPage(1);
-      // 画面上部にスクロール
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setPage(newPage);
+      updateUrl(newPage, newPageSize, sortBy);
     }
   };
 
-  // 現在のページに表示する検索結果
-  const paginatedResults = searchResults.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
-
-  // 現在のページの表示範囲を計算
-  const currentPageStart =
-    searchResults.length > 0 ? (page - 1) * pageSize + 1 : 0;
-  const currentPageEnd = Math.min(page * pageSize, searchResults.length);
+  // ソート順変更ハンドラー
+  const handleSortChange = (event: SelectChangeEvent) => {
+    const newSortBy = event.target.value;
+    setSortBy(newSortBy);
+    // ページを1に戻す
+    setPage(1);
+    updateUrl(1, pageSize, newSortBy);
+    // 画面上部にスクロール
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // 検索条件の表示用テキストを生成
   const getSearchCriteriaText = () => {
@@ -245,50 +388,55 @@ export default function SearchResultsPage() {
           </Alert>
         ) : (
           <>
-            {/* 検索結果のヘッダー */}
+            {/* ソート機能 */}
             <Box
               sx={{
-                display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                justifyContent: "space-between",
-                alignItems: { xs: "flex-start", sm: "center" },
                 mb: 3,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              <Typography variant="h6" component="h2">
-                検索結果: {searchResults.length}件
-                <Tooltip title={copied ? "コピーしました！" : "URLをコピー"}>
-                  <Button
-                    startIcon={<ShareIcon />}
-                    size="small"
-                    onClick={handleShareClick}
-                    color={copied ? "success" : "primary"}
-                    variant="outlined"
-                    sx={{ ml: 2 }}
-                  >
-                    共有
-                  </Button>
-                </Tooltip>
-              </Typography>
-
-              <SearchPagination
-                count={totalPages}
-                page={page}
-                onChange={handlePageChange}
-                size="medium"
-                totalItems={searchResults.length}
-                currentPageStart={currentPageStart}
-                currentPageEnd={currentPageEnd}
-                pageSize={pageSize}
-                pageSizeOptions={PAGE_SIZE_OPTIONS}
-                onPageSizeChange={handlePageSizeChange}
-              />
+              <FormControl sx={{ minWidth: 250 }}>
+                <InputLabel id="sort-select-label">並び替え</InputLabel>
+                <Select
+                  labelId="sort-select-label"
+                  id="sort-select"
+                  value={sortBy}
+                  label="並び替え"
+                  onChange={handleSortChange}
+                  startAdornment={
+                    <SortIcon sx={{ mr: 1, color: "action.active" }} />
+                  }
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
+
+            {/* 表示件数とページネーション */}
+            <SearchPagination
+              count={totalPages}
+              page={page}
+              onChange={handlePageChange}
+              size="medium"
+              totalItems={totalItems}
+              currentPageStart={currentPageStart}
+              currentPageEnd={currentPageEnd}
+              pageSize={pageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              onPageSizeChange={handlePageSizeChange}
+              showIfSinglePage={true}
+            />
 
             <Divider sx={{ mb: 3 }} />
 
             <Grid container spacing={LAYOUT_CONFIG.gridSpacing}>
-              {paginatedResults.map((game) => (
+              {searchResults.map((game) => (
                 <Grid item xs={12} sm={6} md={4} key={game.id}>
                   <Card
                     sx={{
@@ -374,100 +522,6 @@ export default function SearchResultsPage() {
                             </Typography>
                           </Box>
                         </Box>
-
-                        {/* 評価とレビュー数 */}
-                        <Box sx={{ mb: 1 }}>
-                          {game.average_score > 0 && (
-                            <Chip
-                              label={`評価: ${formatNumber(
-                                game.average_score
-                              )}/10`}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                              sx={{ mr: 1, mb: 0.5 }}
-                            />
-                          )}
-                          {game.reviews_count > 0 && (
-                            <Chip
-                              label={`レビュー: ${game.reviews_count}件`}
-                              size="small"
-                              color="secondary"
-                              variant="outlined"
-                              sx={{ mr: 1, mb: 0.5 }}
-                            />
-                          )}
-                        </Box>
-
-                        {/* 人気タグ */}
-                        {game.popular_tags && game.popular_tags.length > 0 && (
-                          <Box sx={{ mb: 1 }}>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ display: "block", mb: 0.5 }}
-                            >
-                              人気タグ:
-                            </Typography>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: 0.5,
-                              }}
-                            >
-                              {game.popular_tags.slice(0, 3).map((tag) => (
-                                <Chip
-                                  key={tag}
-                                  label={tag}
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{ mr: 0.5, mb: 0.5 }}
-                                />
-                              ))}
-                              {game.popular_tags.length > 3 && (
-                                <Chip
-                                  label={`+${game.popular_tags.length - 3}`}
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{ mr: 0.5, mb: 0.5 }}
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                        )}
-
-                        {/* おすすめプレイ人数 */}
-                        {game.recommended_players &&
-                          game.recommended_players.length > 0 && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ display: "block", mb: 0.5 }}
-                              >
-                                おすすめ人数:
-                              </Typography>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 0.5,
-                                }}
-                              >
-                                {game.recommended_players.map((count) => (
-                                  <Chip
-                                    key={count}
-                                    label={`${count}人`}
-                                    size="small"
-                                    color="info"
-                                    variant="outlined"
-                                    sx={{ mr: 0.5, mb: 0.5 }}
-                                  />
-                                ))}
-                              </Box>
-                            </Box>
-                          )}
                       </CardContent>
                     </CardActionArea>
                   </Card>
@@ -482,7 +536,13 @@ export default function SearchResultsPage() {
                   page={page}
                   onChange={handlePageChange}
                   size="large"
+                  totalItems={totalItems}
+                  currentPageStart={currentPageStart}
+                  currentPageEnd={currentPageEnd}
+                  pageSize={pageSize}
+                  onPageSizeChange={handlePageSizeChange}
                   showPageSizeSelector={false}
+                  showIfSinglePage={true}
                 />
               </Box>
             )}
