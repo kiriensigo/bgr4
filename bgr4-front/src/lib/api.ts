@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const API_BASE_URL = `${API_URL}/api/v1`;
 
 export interface Game {
-  id: number;
+  id: string | number;
   bgg_id: string;
   name: string;
   japanese_name?: string;
@@ -19,7 +19,12 @@ export interface Game {
   min_play_time?: number;
   average_score?: number;
   weight?: number;
-  reviews?: Review[];
+  publisher?: string;
+  designer?: string;
+  release_date?: string;
+  japanese_publisher?: string;
+  japanese_release_date?: string;
+  reviews?: any[];
   reviews_count?: number;
   average_rule_complexity?: number;
   average_luck_factor?: number;
@@ -30,11 +35,6 @@ export interface Game {
   site_recommended_players?: string[];
   in_wishlist?: boolean;
   bgg_url?: string;
-  publisher?: string;
-  designer?: string;
-  release_date?: string;
-  japanese_release_date?: string;
-  japanese_publisher?: string;
   expansions?: Array<{ id: string; name: string }>;
 }
 
@@ -63,12 +63,31 @@ export interface Review {
   liked_by_current_user: boolean;
 }
 
-export async function getGames(): Promise<Game[]> {
-  const response = await fetch(`${API_BASE_URL}/games`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+export interface PaginationInfo {
+  total_count: number;
+  total_pages: number;
+  current_page: number;
+  per_page: number;
+}
+
+export interface GamesResponse {
+  games: Game[];
+  pagination: PaginationInfo;
+}
+
+export async function getGames(
+  page: number = 1,
+  per_page: number = 24,
+  sort_by: string = "review_date"
+): Promise<GamesResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/games?page=${page}&per_page=${per_page}&sort_by=${sort_by}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error("ゲーム情報の取得に失敗しました");
@@ -98,6 +117,7 @@ export interface SearchParams {
   mechanics?: string[];
   tags?: string[];
   recommended_players?: string[];
+  publisher?: string;
 }
 
 export async function searchGames(params: SearchParams): Promise<Game[]> {
@@ -141,6 +161,7 @@ export async function searchGames(params: SearchParams): Promise<Game[]> {
       "recommended_players",
       params.recommended_players.join(",")
     );
+  if (params.publisher) queryParams.append("publisher", params.publisher);
 
   const response = await fetch(
     `${API_BASE_URL}/games/search?${queryParams.toString()}`,
@@ -161,56 +182,54 @@ export async function searchGames(params: SearchParams): Promise<Game[]> {
 
 // 出版社で検索する関数
 export async function searchGamesByPublisher(
-  publisher: string
-): Promise<Game[]> {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/games/search_by_publisher?publisher=${encodeURIComponent(
-        publisher
-      )}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || "出版社での検索に失敗しました");
+  publisher: string,
+  page: number = 1,
+  per_page: number = 24,
+  sort_by: string = "review_date"
+): Promise<GamesResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/games/search_by_publisher?publisher=${encodeURIComponent(
+      publisher
+    )}&page=${page}&per_page=${per_page}&sort_by=${sort_by}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
     }
+  );
 
-    return response.json();
-  } catch (error) {
-    console.error("Error searching games by publisher:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error("出版社による検索に失敗しました");
   }
+
+  const data = await response.json();
+  return data;
 }
 
 // デザイナーで検索する関数
-export async function searchGamesByDesigner(designer: string): Promise<Game[]> {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/games/search_by_designer?designer=${encodeURIComponent(
-        designer
-      )}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || "デザイナーでの検索に失敗しました");
+export async function searchGamesByDesigner(
+  designer: string,
+  page: number = 1,
+  per_page: number = 24,
+  sort_by: string = "review_date"
+): Promise<GamesResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/games/search_by_designer?designer=${encodeURIComponent(
+      designer
+    )}&page=${page}&per_page=${per_page}&sort_by=${sort_by}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
     }
+  );
 
-    return response.json();
-  } catch (error) {
-    console.error("Error searching games by designer:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error("デザイナーによる検索に失敗しました");
   }
+
+  const data = await response.json();
+  return data;
 }
 
 async function createGame(bggGame: BGGGameDetails): Promise<Game> {

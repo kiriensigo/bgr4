@@ -40,4 +40,45 @@ namespace :games do
     
     puts "日本語名の更新が完了しました"
   end
+
+  desc "既存のゲームデータに対して日本語の説明文を追加"
+  task add_japanese_descriptions: :environment do
+    puts "日本語の説明文を追加中..."
+    
+    # 日本語の説明文がないゲームを取得
+    games = Game.where(japanese_description: nil).where.not(description: nil)
+    total = games.count
+    
+    puts "処理対象ゲーム数: #{total}"
+    
+    games.each_with_index do |game, index|
+      puts "処理中: #{index + 1}/#{total} - #{game.name} (#{game.bgg_id})"
+      
+      begin
+        # 説明文に日本語が含まれているかチェック
+        if game.description.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+          # 既に日本語が含まれている場合はそのまま使用
+          game.update(japanese_description: game.description)
+          puts "  既に日本語の説明文が含まれています。そのまま使用します。"
+        else
+          # 日本語が含まれていない場合は翻訳を試みる
+          japanese_description = TranslationService.translate_game_description(game.description)
+          
+          if japanese_description.present?
+            game.update(japanese_description: japanese_description)
+            puts "  翻訳完了"
+          else
+            puts "  翻訳に失敗しました"
+          end
+        end
+      rescue => e
+        puts "  エラー: #{e.message}"
+      end
+      
+      # APIの制限を考慮して少し待機
+      sleep(1)
+    end
+    
+    puts "完了しました！"
+  end
 end 

@@ -16,6 +16,11 @@ import {
   CardActionArea,
   FormControlLabel,
   Checkbox,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  ListSubheader,
 } from "@mui/material";
 import { useRouter, usePathname } from "next/navigation";
 import { searchGames } from "@/lib/api";
@@ -50,6 +55,7 @@ interface LocalSearchParams {
   useReviewsMechanics: boolean;
   useReviewsTags: boolean;
   useReviewsRecommendedPlayers: boolean;
+  publisher?: string;
 }
 
 // 検索結果とパラメータのキャッシュ
@@ -288,14 +294,8 @@ export default function SearchPage() {
           use_reviews_tags: searchParams.useReviewsTags ? "true" : undefined,
           use_reviews_recommended_players:
             searchParams.useReviewsRecommendedPlayers ? "true" : undefined,
+          publisher: searchParams.publisher || undefined,
         };
-
-        // 値がundefinedのパラメータを除外
-        const filteredParams = Object.fromEntries(
-          Object.entries(apiParams).filter(([_, value]) => value !== undefined)
-        );
-
-        console.log("Filtered search params:", filteredParams);
 
         // プレイ時間の値を実際の分数に変換
         const playTimeMapping = {
@@ -313,6 +313,76 @@ export default function SearchPage() {
           12: "165",
           13: "180以上",
         };
+
+        // プレイ時間の値を実際の分数に変換
+        if (apiParams.play_time_min) {
+          const minValue = parseInt(apiParams.play_time_min.toString());
+          if (minValue === 1) {
+            apiParams.play_time_min = 0;
+          } else if (minValue === 2) {
+            apiParams.play_time_min = 15;
+          } else if (minValue === 3) {
+            apiParams.play_time_min = 30;
+          } else if (minValue === 4) {
+            apiParams.play_time_min = 45;
+          } else if (minValue === 5) {
+            apiParams.play_time_min = 60;
+          } else if (minValue === 6) {
+            apiParams.play_time_min = 75;
+          } else if (minValue === 7) {
+            apiParams.play_time_min = 90;
+          } else if (minValue === 8) {
+            apiParams.play_time_min = 105;
+          } else if (minValue === 9) {
+            apiParams.play_time_min = 120;
+          } else if (minValue === 10) {
+            apiParams.play_time_min = 135;
+          } else if (minValue === 11) {
+            apiParams.play_time_min = 150;
+          } else if (minValue === 12) {
+            apiParams.play_time_min = 165;
+          } else if (minValue === 13) {
+            apiParams.play_time_min = 180;
+          }
+        }
+
+        if (apiParams.play_time_max) {
+          const maxValue = parseInt(apiParams.play_time_max.toString());
+          if (maxValue === 1) {
+            apiParams.play_time_max = 0;
+          } else if (maxValue === 2) {
+            apiParams.play_time_max = 15;
+          } else if (maxValue === 3) {
+            apiParams.play_time_max = 30;
+          } else if (maxValue === 4) {
+            apiParams.play_time_max = 45;
+          } else if (maxValue === 5) {
+            apiParams.play_time_max = 60;
+          } else if (maxValue === 6) {
+            apiParams.play_time_max = 75;
+          } else if (maxValue === 7) {
+            apiParams.play_time_max = 90;
+          } else if (maxValue === 8) {
+            apiParams.play_time_max = 105;
+          } else if (maxValue === 9) {
+            apiParams.play_time_max = 120;
+          } else if (maxValue === 10) {
+            apiParams.play_time_max = 135;
+          } else if (maxValue === 11) {
+            apiParams.play_time_max = 150;
+          } else if (maxValue === 12) {
+            apiParams.play_time_max = 165;
+          } else if (maxValue === 13) {
+            apiParams.play_time_max = 999; // 180以上は999分として扱う
+          }
+        }
+
+        // 値がundefinedのパラメータを除外
+        const filteredParams = Object.fromEntries(
+          Object.entries(apiParams).filter(([_, value]) => value !== undefined)
+        );
+
+        console.log("Filtered search params:", filteredParams);
 
         // 検索結果ページにリダイレクト
         const queryString = new URLSearchParams(
@@ -426,6 +496,83 @@ export default function SearchPage() {
                   >
                     ※ゲームのルールで定められた人数範囲で検索します
                   </Typography>
+                </Grid>
+
+                {/* 出版社 */}
+                <Grid item xs={12}>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight="medium"
+                    gutterBottom
+                  >
+                    出版社
+                  </Typography>
+                  <FormControl fullWidth>
+                    <InputLabel id="publisher-select-label">
+                      出版社を選択
+                    </InputLabel>
+                    <Select
+                      labelId="publisher-select-label"
+                      id="publisher-select"
+                      value={searchParams.publisher || ""}
+                      onChange={(e) =>
+                        setSearchParams({
+                          ...searchParams,
+                          publisher: e.target.value,
+                        })
+                      }
+                      label="出版社を選択"
+                    >
+                      <MenuItem value="">
+                        <em>指定なし</em>
+                      </MenuItem>
+                      {/* 日本の出版社 */}
+                      <MenuItem value="ホビージャパン (Hobby Japan)">
+                        ホビージャパン
+                      </MenuItem>
+                      <MenuItem value="アークライト (Arclight)">
+                        アークライト
+                      </MenuItem>
+                      <MenuItem value="数寄ゲームズ (Suki Games)">
+                        数寄ゲームズ
+                      </MenuItem>
+                      <MenuItem value="オインクゲームズ (Oink Games)">
+                        オインクゲームズ
+                      </MenuItem>
+                      <MenuItem value="グラウンディング (Grounding Inc.)">
+                        グラウンディング
+                      </MenuItem>
+                      <MenuItem value="アズモデージャパン (Asmodee Japan)">
+                        アズモデージャパン
+                      </MenuItem>
+                      <MenuItem value="テンデイズゲームズ">
+                        テンデイズゲームズ
+                      </MenuItem>
+                      <MenuItem value="ニューゲームズオーダー">
+                        ニューゲームズオーダー
+                      </MenuItem>
+                      <MenuItem value="すごろくや">すごろくや</MenuItem>
+                      <MenuItem value="コロンアーク">コロンアーク</MenuItem>
+                      <MenuItem value="アナログランチボックス">
+                        アナログランチボックス
+                      </MenuItem>
+                      <MenuItem value="ドミナゲームズ">ドミナゲームズ</MenuItem>
+                      <MenuItem value="おかずブランド">おかずブランド</MenuItem>
+                      <MenuItem value="ジェリージェリーゲームズ">
+                        ジェリージェリーゲームズ
+                      </MenuItem>
+                      <MenuItem value="いつつ">いつつ</MenuItem>
+                      <MenuItem value="遊歩堂">遊歩堂</MenuItem>
+                      <MenuItem value="ヨクトゲームズ">ヨクトゲームズ</MenuItem>
+                      <MenuItem value="タコアシゲームズ">
+                        タコアシゲームズ
+                      </MenuItem>
+                      <MenuItem value="耐気圏内ゲームズ">
+                        耐気圏内ゲームズ
+                      </MenuItem>
+                      <MenuItem value="チーム彩園">チーム彩園</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Grid>
 
                 {/* 検索モード設定 */}

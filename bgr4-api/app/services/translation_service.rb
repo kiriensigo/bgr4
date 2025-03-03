@@ -1,6 +1,12 @@
 require "google/cloud/translate"
+require 'net/http'
+require 'uri'
+require 'json'
 
 class TranslationService
+  # DeepL APIのエンドポイント
+  DEEPL_API_URL = 'https://api-free.deepl.com/v2/translate'
+  
   def self.translate_text(text, target_language = "ja", source_language = "en")
     return nil if text.blank?
 
@@ -23,6 +29,68 @@ class TranslationService
       Rails.logger.error "Translation error: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       nil
+    end
+  end
+
+  # DeepL APIを使用してテキストを翻訳するメソッド
+  def self.translate_text(text, source_lang = 'EN', target_lang = 'JA')
+    return nil if text.blank?
+    
+    # 環境変数からAPIキーを取得
+    api_key = ENV['DEEPL_API_KEY']
+    
+    # APIキーが設定されていない場合はエラーログを出力して終了
+    unless api_key
+      Rails.logger.error "DeepL API key is not set. Please set DEEPL_API_KEY environment variable."
+      return nil
+    end
+    
+    begin
+      # リクエストパラメータを設定
+      uri = URI.parse(DEEPL_API_URL)
+      request = Net::HTTP::Post.new(uri)
+      request.set_form_data({
+        'auth_key' => api_key,
+        'text' => text,
+        'source_lang' => source_lang,
+        'target_lang' => target_lang
+      })
+      
+      # リクエストを送信
+      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+        http.request(request)
+      end
+      
+      # レスポンスを解析
+      if response.is_a?(Net::HTTPSuccess)
+        result = JSON.parse(response.body)
+        if result['translations'] && result['translations'].first
+          return result['translations'].first['text']
+        end
+      else
+        Rails.logger.error "DeepL API error: #{response.code} - #{response.message}"
+        Rails.logger.error "Response body: #{response.body}"
+      end
+    rescue => e
+      Rails.logger.error "Error translating text: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+    end
+    
+    nil
+  end
+
+  # ゲーム説明文を翻訳するメソッド
+  def self.translate_game_description(description)
+    return nil if description.blank?
+    
+    # 長いテキストを分割して翻訳する（DeepL APIの制限に対応）
+    if description.length > 5000
+      # 5000文字ごとに分割
+      chunks = description.scan(/.{1,5000}/m)
+      translated_chunks = chunks.map { |chunk| translate_text(chunk) }
+      translated_chunks.join
+    else
+      translate_text(description)
     end
   end
 
@@ -55,7 +123,7 @@ class TranslationService
 
   # 翻訳を試みる（Google APIが失敗した場合は簡易翻訳にフォールバック）
   def self.translate(text, target_language = "ja", source_language = "en")
-    result = translate_text(text, target_language, source_language)
+    result = translate_text(text, source_language.upcase, target_language.upcase)
     result || simple_translate(text)
   end
 end 

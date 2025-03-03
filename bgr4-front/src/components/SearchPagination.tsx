@@ -1,9 +1,17 @@
 "use client";
 
-import { Box, Pagination, PaginationProps, ToggleButtonGroup, ToggleButton, Typography } from "@mui/material";
+import {
+  Box,
+  Pagination,
+  PaginationProps,
+  ToggleButtonGroup,
+  ToggleButton,
+  Typography,
+} from "@mui/material";
 import { ReactNode } from "react";
 
-export interface SearchPaginationProps extends Omit<PaginationProps, "onChange"> {
+export interface SearchPaginationProps
+  extends Omit<PaginationProps, "onChange"> {
   count: number;
   page: number;
   onChange: (event: React.ChangeEvent<unknown>, value: number) => void;
@@ -14,29 +22,35 @@ export interface SearchPaginationProps extends Omit<PaginationProps, "onChange">
   currentPageEnd?: number;
   pageSize?: number;
   pageSizeOptions?: number[];
-  onPageSizeChange?: (event: React.MouseEvent<HTMLElement>, newPageSize: number | null) => void;
+  onPageSizeChange?: (
+    event: React.MouseEvent<HTMLElement>,
+    newPageSize: number | null
+  ) => void;
   showPageSizeSelector?: boolean;
   children?: ReactNode;
 }
+
+// ページサイズの選択肢
+const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 60, 72];
 
 export default function SearchPagination({
   count,
   page,
   onChange,
   size = "medium",
-  showIfSinglePage = false,
+  showIfSinglePage = true,
   totalItems,
   currentPageStart,
   currentPageEnd,
   pageSize,
-  pageSizeOptions = [12, 24, 36],
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
   onPageSizeChange,
   showPageSizeSelector = true,
   children,
   ...props
 }: SearchPaginationProps) {
-  // 1ページしかない場合は表示しない（オプションで変更可能）
-  if (count <= 1 && !showIfSinglePage) {
+  // ページ数が0または1の場合でも表示する
+  if (count <= 0) {
     return null;
   }
 
@@ -52,11 +66,13 @@ export default function SearchPagination({
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        {totalItems !== undefined && currentPageStart !== undefined && currentPageEnd !== undefined && (
-          <Typography variant="body2" color="text.secondary">
-            {totalItems}件中 {currentPageStart}-{currentPageEnd}件を表示
-          </Typography>
-        )}
+        {totalItems !== undefined &&
+          currentPageStart !== undefined &&
+          currentPageEnd !== undefined && (
+            <Typography variant="body2" color="text.secondary">
+              {totalItems}件中 {currentPageStart}-{currentPageEnd}件を表示
+            </Typography>
+          )}
 
         {showPageSizeSelector && pageSize !== undefined && onPageSizeChange && (
           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -71,7 +87,11 @@ export default function SearchPagination({
               size="small"
             >
               {pageSizeOptions.map((size) => (
-                <ToggleButton key={size} value={size} aria-label={`${size}件表示`}>
+                <ToggleButton
+                  key={size}
+                  value={size}
+                  aria-label={`${size}件表示`}
+                >
                   {size}
                 </ToggleButton>
               ))}
@@ -92,4 +112,4 @@ export default function SearchPagination({
       />
     </Box>
   );
-} 
+}

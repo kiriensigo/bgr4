@@ -28,6 +28,9 @@ import {
   Snackbar,
   Alert,
   Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -46,6 +49,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { getAuthHeaders } from "@/lib/auth";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 interface Review {
   id: number;
@@ -185,7 +189,10 @@ const PublisherInfo = ({ game }: { game: Game }) => {
         出版社:
       </Typography>
       <Typography variant="body2">
-        <Link href={`/games/publisher/${encodeURIComponent(publisher)}`} passHref>
+        <Link
+          href={`/games/publisher/${encodeURIComponent(publisher)}`}
+          passHref
+        >
           {publisher}
         </Link>
       </Typography>
@@ -195,7 +202,10 @@ const PublisherInfo = ({ game }: { game: Game }) => {
             日本語版出版社:
           </Typography>
           <Typography variant="body2">
-            <Link href={`/games/publisher/${encodeURIComponent(japanesePublisher)}`} passHref>
+            <Link
+              href={`/games/publisher/${encodeURIComponent(japanesePublisher)}`}
+              passHref
+            >
               {japanesePublisher}
             </Link>
           </Typography>
@@ -610,6 +620,47 @@ export default function GamePage({ params }: GamePageProps) {
               </Box>
             </Box>
 
+            {/* レビュー評価の平均 */}
+            <Box sx={{ mt: 3, mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                レビュー評価の平均
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    ルールの複雑さ
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_rule_complexity)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    運要素
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_luck_factor)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    相互作用
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_interaction)}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    ダウンタイム
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatScore(game.average_downtime)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+
             {/* おすすめプレイ人数 */}
             {game.site_recommended_players &&
               game.site_recommended_players.length > 0 && (
@@ -679,46 +730,71 @@ export default function GamePage({ params }: GamePageProps) {
               </Box>
             )}
 
-            {/* レビュー評価の平均 */}
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                レビュー評価の平均
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    ルールの複雑さ
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatScore(game.average_rule_complexity)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    運要素
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatScore(game.average_luck_factor)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    相互作用
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatScore(game.average_interaction)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    ダウンタイム
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatScore(game.average_downtime)}
-                  </Typography>
-                </Grid>
-              </Grid>
+            <Divider sx={{ my: 4 }} />
+
+            {/* レビューセクション */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6">レビュー</Typography>
+              <Link
+                href={`/games/${game.bgg_id}/review`}
+                style={{ textDecoration: "none" }}
+              >
+                <Button
+                  variant="outlined"
+                  startIcon={<RateReviewIcon />}
+                  size="small"
+                >
+                  レビューを書く
+                </Button>
+              </Link>
             </Box>
+
+            {/* レビューデータのデバッグ情報 */}
+            {process.env.NODE_ENV === "development" && (
+              <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+                <Typography
+                  variant="caption"
+                  component="pre"
+                  sx={{ whiteSpace: "pre-wrap" }}
+                >
+                  {`レビュー数: ${game.reviews ? game.reviews.length : 0}`}
+                </Typography>
+              </Box>
+            )}
+
+            <ReviewList reviews={game.reviews || []} />
+
+            {/* ゲーム説明文（クリックで表示/非表示） */}
+            {game.japanese_description && (
+              <Box sx={{ mt: 4 }}>
+                <Accordion>
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    aria-controls="game-description-content"
+                    id="game-description-header"
+                  >
+                    <Typography variant="h6">ゲーム説明</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Paper sx={{ p: 3, bgcolor: "grey.50" }}>
+                      <Typography
+                        variant="body1"
+                        sx={{ whiteSpace: "pre-wrap" }}
+                      >
+                        {game.japanese_description}
+                      </Typography>
+                    </Paper>
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+            )}
 
             {/* 人気のタグを追加 */}
             {game.reviews && game.reviews.length > 0 && (
@@ -785,47 +861,6 @@ export default function GamePage({ params }: GamePageProps) {
                 </Link>
               </Box>
             )}
-
-            <Divider sx={{ my: 4 }} />
-
-            {/* レビューセクション */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
-              }}
-            >
-              <Typography variant="h6">レビュー</Typography>
-              <Link
-                href={`/games/${game.bgg_id}/review`}
-                style={{ textDecoration: "none" }}
-              >
-                <Button
-                  variant="outlined"
-                  startIcon={<RateReviewIcon />}
-                  size="small"
-                >
-                  レビューを書く
-                </Button>
-              </Link>
-            </Box>
-
-            {/* レビューデータのデバッグ情報 */}
-            {process.env.NODE_ENV === "development" && (
-              <Box sx={{ mb: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
-                <Typography
-                  variant="caption"
-                  component="pre"
-                  sx={{ whiteSpace: "pre-wrap" }}
-                >
-                  {`レビュー数: ${game.reviews ? game.reviews.length : 0}`}
-                </Typography>
-              </Box>
-            )}
-
-            <ReviewList reviews={game.reviews || []} />
           </Grid>
         </Grid>
       </Paper>

@@ -135,6 +135,7 @@ class Game < ApplicationRecord
     self.japanese_publisher = bgg_data[:japanese_publisher] if bgg_data[:japanese_publisher].present?
     self.japanese_release_date = bgg_data[:japanese_release_date] if bgg_data[:japanese_release_date].present?
     self.japanese_image_url = bgg_data[:japanese_image_url] if bgg_data[:japanese_image_url].present?
+    self.japanese_description = bgg_data[:japanese_description] if bgg_data[:japanese_description].present?
     
     # 変更があった場合のみ保存
     if changed?
