@@ -84,7 +84,7 @@ export default function SearchPage() {
     min_players: null,
     max_players: null,
     playTimeMin: 1,
-    playTimeMax: 5,
+    playTimeMax: 13,
     complexityMin: 1,
     complexityMax: 5,
     mechanics: [],
@@ -296,6 +296,23 @@ export default function SearchPage() {
         );
 
         console.log("Filtered search params:", filteredParams);
+
+        // プレイ時間の値を実際の分数に変換
+        const playTimeMapping = {
+          1: "0",
+          2: "15",
+          3: "30",
+          4: "45",
+          5: "60",
+          6: "75",
+          7: "90",
+          8: "105",
+          9: "120",
+          10: "135",
+          11: "150",
+          12: "165",
+          13: "180以上",
+        };
 
         // 検索結果ページにリダイレクト
         const queryString = new URLSearchParams(

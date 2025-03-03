@@ -95,8 +95,14 @@ export const EvaluationSection = ({
             }
             onChange={handleSliderChange("playTime")}
             valueLabelDisplay="auto"
+            valueLabelFormat={(value) => {
+              const mark = PLAY_TIME_MARKS.find((mark) => mark.value === value);
+              return mark?.label === "180以上"
+                ? mark.label
+                : `${mark?.label}分`;
+            }}
             min={1}
-            max={5}
+            max={13}
             step={1}
             marks={PLAY_TIME_MARKS}
           />
