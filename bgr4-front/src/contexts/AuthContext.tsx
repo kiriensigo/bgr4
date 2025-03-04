@@ -182,6 +182,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const uid = Cookies.get("uid");
     const expiry = Cookies.get("expiry");
 
+    console.log("Cookie values:", {
+      accessToken,
+      client,
+      uid,
+      expiry,
+    });
+
     if (accessToken && client && uid) {
       headers["access-token"] = accessToken;
       headers["token-type"] = "Bearer";

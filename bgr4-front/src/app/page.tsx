@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import GameCard from "@/components/GameCard";
 import { getGame, registerGame } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BGGGame {
   id: string;
@@ -68,6 +69,7 @@ export default function Home() {
   const [hotGames, setHotGames] = useState<GameWithReviews[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getAuthHeaders, user } = useAuth();
 
   useEffect(() => {
     const fetchGames = async () => {
@@ -84,6 +86,11 @@ export default function Home() {
         );
         setLoading(false);
 
+        // 認証ヘッダーを取得
+        const authHeaders = getAuthHeaders();
+        console.log("認証ヘッダー:", authHeaders);
+        console.log("ユーザー情報:", user);
+
         // その後、レビュー情報を順次取得して更新
         for (const game of bggGames) {
           try {
@@ -96,8 +103,26 @@ export default function Home() {
               console.log(
                 `Game ${game.id} not found in database, registering...`
               );
+
+              // ユーザーがログインしていない場合は登録をスキップ
+              if (!user) {
+                console.log(
+                  `Skipping registration for game ${game.id} - user not logged in`
+                );
+                gameData = {
+                  reviews: [],
+                  average_score: null,
+                  reviews_count: 0,
+                };
+                continue;
+              }
+
               try {
-                // ゲームを登録
+                // ゲームを登録（認証ヘッダーを渡す）
+                console.log(
+                  `Registering game ${game.id} with auth headers:`,
+                  authHeaders
+                );
                 gameData = await registerGame(
                   {
                     id: game.id,
@@ -113,7 +138,7 @@ export default function Home() {
                     bestPlayers: game.bestPlayers,
                     recommendedPlayers: game.recommendedPlayers,
                   },
-                  undefined,
+                  authHeaders,
                   true
                 );
                 console.log(`Game ${game.id} registered successfully`);

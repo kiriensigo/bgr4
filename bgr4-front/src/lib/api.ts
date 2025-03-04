@@ -465,6 +465,7 @@ export async function registerGame(
 ) {
   try {
     console.log("Sending game details to API:", gameDetails);
+    console.log("Auth headers for game registration:", authHeaders);
     console.log("Japanese name being sent:", gameDetails.japaneseName);
     console.log(
       "Japanese publisher being sent:",
@@ -506,13 +507,18 @@ export async function registerGame(
 
     console.log("Formatted game data for API:", gameData);
 
+    // リクエストヘッダーを作成
+    const headers = {
+      "Content-Type": "application/json",
+      Referer: `${window.location.origin}/games/register`,
+      ...(authHeaders || {}),
+    };
+
+    console.log("Final request headers:", headers);
+
     const response = await fetch(`${API_BASE_URL}/games`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Referer: `${window.location.origin}/games/register`,
-        ...(authHeaders || {}),
-      },
+      headers,
       credentials: "include",
       body: JSON.stringify({
         game: gameData,

@@ -1,3 +1,7 @@
+---
+description: 
+globs: 
+---
 # Git LFS (Large File Storage) の使用方法
 
 ## 概要
@@ -9,7 +13,7 @@ Git LFSは、大きなファイルをGitリポジトリで効率的に管理す�
 
 ### Windows
 
-1. [Git LFSのダウンロードページ](https://git-lfs.github.com/)からインストーラーをダウンロード
+1. [Git LFSのダウンロードページ](mdc:https:/git-lfs.github.com)からインストーラーをダウンロード
 2. インストーラーを実行
 3. コマンドプロンプトまたはPowerShellで初期化:
    ```
@@ -110,5 +114,5 @@ BGReviewsプロジェクトでは、以下のファイルタイプをLFSで管�
 
 ## 参考リンク
 
-- [Git LFS公式ドキュメント](https://git-lfs.github.com/)
-- [GitHub LFSドキュメント](https://docs.github.com/ja/repositories/working-with-files/managing-large-files/about-git-large-file-storage) 
+- [Git LFS公式ドキュメント](mdc:https:/git-lfs.github.com)
+- [GitHub LFSドキュメント](mdc:https:/docs.github.com/ja/repositories/working-with-files/managing-large-files/about-git-large-file-storage) 

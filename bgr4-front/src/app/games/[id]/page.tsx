@@ -157,7 +157,30 @@ const getPopularTags = (reviews: any[]) => {
   return Array.from(tagCount.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([tag]) => tag);
+    .map(([name, count]) => ({ name, count }));
+};
+
+// 人気のメカニクスを集計する関数
+const getPopularMechanics = (reviews: any[]) => {
+  if (!reviews || reviews.length === 0) return [];
+
+  const mechanicsCount = new Map<string, number>();
+  reviews.forEach((review) => {
+    // mechanicsが配列であることを確認し、そうでない場合は空配列を使用
+    const mechanics = Array.isArray(review.mechanics) ? review.mechanics : [];
+
+    mechanics.forEach((mechanic) => {
+      if (mechanic) {
+        // mechanicがnullやundefinedでないことを確認
+        mechanicsCount.set(mechanic, (mechanicsCount.get(mechanic) || 0) + 1);
+      }
+    });
+  });
+
+  return Array.from(mechanicsCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }));
 };
 
 // スコアを表示するためのヘルパー関数を修正
@@ -669,14 +692,47 @@ export default function GamePage({ params }: GamePageProps) {
                     おすすめプレイ人数
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {game.site_recommended_players.map((count: string) => (
-                      <Chip
-                        key={count}
-                        label={`${count}人`}
-                        color="primary"
-                        sx={{ m: 0.5 }}
-                      />
-                    ))}
+                    {game.site_recommended_players.map(
+                      (count: any, index: number) => {
+                        // countがオブジェクトの場合の処理
+                        let displayText;
+                        let key = `player-${index}`;
+
+                        if (typeof count === "object" && count !== null) {
+                          // nameプロパティがある場合はそれを使用
+                          if (count.name) {
+                            displayText = count.name;
+                            key = `player-name-${count.name}-${index}`;
+                          }
+                          // countプロパティがある場合はそれを使用
+                          else if (count.count) {
+                            displayText = `${count.count}人`;
+                            key = `player-count-${count.count}-${index}`;
+                          }
+                          // どちらもない場合はJSONを文字列化
+                          else {
+                            try {
+                              displayText = JSON.stringify(count);
+                            } catch (e) {
+                              displayText = "不明";
+                            }
+                          }
+                        } else {
+                          // プリミティブ値の場合はそのまま使用
+                          displayText = `${count}人`;
+                          key = `player-${count}-${index}`;
+                        }
+
+                        return (
+                          <Chip
+                            key={key}
+                            label={displayText}
+                            color="primary"
+                            sx={{ m: 0.5 }}
+                          />
+                        );
+                      }
+                    )}
                   </Box>
                   <Typography variant="caption" color="text.secondary">
                     ※ レビュー投稿者の50%以上が推奨したプレイ人数です
@@ -691,15 +747,46 @@ export default function GamePage({ params }: GamePageProps) {
                   人気タグ
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {game.popular_tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      color="secondary"
-                      variant="outlined"
-                      sx={{ m: 0.5 }}
-                    />
-                  ))}
+                  {game.popular_tags.map((tag, index) => {
+                    // tagがオブジェクトの場合の処理
+                    let displayText;
+                    let key = `tag-${index}`;
+
+                    if (typeof tag === "object" && tag !== null) {
+                      // nameプロパティがある場合はそれを使用
+                      if (tag.name) {
+                        displayText = tag.name;
+                        key = `tag-name-${tag.name}-${index}`;
+                      }
+                      // countプロパティがある場合はそれを使用
+                      else if (tag.count) {
+                        displayText = tag.count;
+                        key = `tag-count-${tag.count}-${index}`;
+                      }
+                      // どちらもない場合はJSONを文字列化
+                      else {
+                        try {
+                          displayText = JSON.stringify(tag);
+                        } catch (e) {
+                          displayText = "不明";
+                        }
+                      }
+                    } else {
+                      // プリミティブ値の場合はそのまま使用
+                      displayText = tag;
+                      key = `tag-${tag}-${index}`;
+                    }
+
+                    return (
+                      <Chip
+                        key={key}
+                        label={displayText}
+                        color="secondary"
+                        variant="outlined"
+                        sx={{ m: 0.5 }}
+                      />
+                    );
+                  })}
                 </Box>
                 <Typography variant="caption" color="text.secondary">
                   ※ レビュー投稿者が最も多く選択したタグです
@@ -714,15 +801,46 @@ export default function GamePage({ params }: GamePageProps) {
                   人気メカニクス
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {game.popular_mechanics.map((mechanic) => (
-                    <Chip
-                      key={mechanic}
-                      label={mechanic}
-                      color="info"
-                      variant="outlined"
-                      sx={{ m: 0.5 }}
-                    />
-                  ))}
+                  {game.popular_mechanics.map((mechanic, index) => {
+                    // mechanicがオブジェクトの場合の処理
+                    let displayText;
+                    let key = `mechanic-${index}`;
+
+                    if (typeof mechanic === "object" && mechanic !== null) {
+                      // nameプロパティがある場合はそれを使用
+                      if (mechanic.name) {
+                        displayText = mechanic.name;
+                        key = `mechanic-name-${mechanic.name}-${index}`;
+                      }
+                      // countプロパティがある場合はそれを使用
+                      else if (mechanic.count) {
+                        displayText = mechanic.count;
+                        key = `mechanic-count-${mechanic.count}-${index}`;
+                      }
+                      // どちらもない場合はJSONを文字列化
+                      else {
+                        try {
+                          displayText = JSON.stringify(mechanic);
+                        } catch (e) {
+                          displayText = "不明";
+                        }
+                      }
+                    } else {
+                      // プリミティブ値の場合はそのまま使用
+                      displayText = mechanic;
+                      key = `mechanic-${mechanic}-${index}`;
+                    }
+
+                    return (
+                      <Chip
+                        key={key}
+                        label={displayText}
+                        color="info"
+                        variant="outlined"
+                        sx={{ m: 0.5 }}
+                      />
+                    );
+                  })}
                 </Box>
                 <Typography variant="caption" color="text.secondary">
                   ※ レビュー投稿者が最も多く選択したメカニクスです
@@ -805,8 +923,8 @@ export default function GamePage({ params }: GamePageProps) {
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                   {getPopularTags(game.reviews).map((tag) => (
                     <Chip
-                      key={tag}
-                      label={tag}
+                      key={tag.name}
+                      label={tag.name}
                       variant="outlined"
                       size="small"
                     />

@@ -57,7 +57,7 @@ const renderRecommendedPlayers = (counts: any[]) => {
 
   return counts.map((count, index) => {
     // countがオブジェクトの場合の処理
-    let displayText;
+    let displayText = "";
 
     if (typeof count === "object" && count !== null) {
       // nameプロパティがある場合はそれを使用
@@ -70,7 +70,11 @@ const renderRecommendedPlayers = (counts: any[]) => {
       }
       // どちらもない場合はJSONを文字列化
       else {
-        displayText = JSON.stringify(count);
+        try {
+          displayText = JSON.stringify(count);
+        } catch (e) {
+          displayText = "不明";
+        }
       }
     } else {
       // プリミティブ値の場合はそのまま使用
@@ -522,6 +526,72 @@ export default function SearchResultsPage() {
                             </Typography>
                           </Box>
                         </Box>
+
+                        {/* おすすめプレイ人数を表示 */}
+                        {game.site_recommended_players &&
+                          game.site_recommended_players.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ mb: 0.5 }}
+                              >
+                                おすすめ:
+                              </Typography>
+                              <Box sx={{ display: "flex", flexWrap: "wrap" }}>
+                                {game.site_recommended_players.map(
+                                  (count: any, index: number) => {
+                                    // countがオブジェクトの場合の処理
+                                    let displayText = "";
+                                    let key = `player-${index}`;
+
+                                    try {
+                                      if (
+                                        typeof count === "object" &&
+                                        count !== null
+                                      ) {
+                                        // nameプロパティがある場合はそれを使用
+                                        if (count.name) {
+                                          displayText = String(count.name);
+                                          key = `player-name-${index}`;
+                                        }
+                                        // countプロパティがある場合はそれを使用
+                                        else if (count.count) {
+                                          displayText = `${count.count}人`;
+                                          key = `player-count-${index}`;
+                                        }
+                                        // どちらもない場合はJSONを文字列化
+                                        else {
+                                          displayText = JSON.stringify(count);
+                                        }
+                                      } else {
+                                        // プリミティブ値の場合はそのまま使用
+                                        displayText = `${count}人`;
+                                        key = `player-${index}`;
+                                      }
+                                    } catch (e) {
+                                      console.error(
+                                        "Error processing player count:",
+                                        e
+                                      );
+                                      displayText = "不明";
+                                    }
+
+                                    return (
+                                      <Chip
+                                        key={key}
+                                        label={displayText}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                        sx={{ mr: 0.5, mb: 0.5 }}
+                                      />
+                                    );
+                                  }
+                                )}
+                              </Box>
+                            </Box>
+                          )}
                       </CardContent>
                     </CardActionArea>
                   </Card>
