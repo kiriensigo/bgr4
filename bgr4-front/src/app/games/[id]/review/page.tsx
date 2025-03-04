@@ -52,42 +52,53 @@ interface Review {
   downtime: number;
   recommended_players: string[];
   mechanics: string[];
-  tags: string[];
+  categories: string[];
   custom_tags: string;
   short_comment: string;
 }
 
 const MECHANICS = [
-  "オークション",
+  "エリア支配",
   "ダイスロール",
-  "タイル/カード配置",
-  "ブラフ",
-  "エリアマジョリティ",
-  "ワーカープレイスメント",
-  "正体隠匿系",
-  "モジュラーボード",
-  "チキンレース",
-  "ドラフト",
-  "デッキ/バッグビルディング",
-  "トリックテイキング",
+  "オークション",
+  "デッキ/バッグビルド",
   "拡大再生産",
+  "エンジンビルド",
+  "正体隠匿",
+  "モジュラーボード",
+  "ルート構築",
+  "ドラフト",
+  "バースト",
+  "同時手番",
+  "タイル配置",
+  "プレイヤー別能力",
+  "ワカプレ",
+  "賭け",
 ];
 
-const TAGS = [
-  "子どもと大人が遊べる",
-  "子どもにおすすめ",
-  "大人におすすめ",
-  "二人におすすめ",
-  "ソロにおすすめ",
-  "デザイン性が高い",
-  "リプレイ性が高い",
-  "パーティ向き",
-  "謎解き",
-  "チーム戦",
+const CATEGORIES = [
   "協力",
-  "パズル",
-  "レガシー（ストーリー）",
+  "チーム戦",
+  "子供",
+  "ソロ向き",
+  "ペア向き",
+  "多人数向き",
+  "推理",
+  "ブラフ",
+  "記憶",
+  "交渉",
+  "演技",
+  "紙ペン",
   "動物",
+  "かわいい",
+  "映え",
+  "カードゲーム",
+  "トリテ",
+  "パーティー",
+  "パズル",
+  "ウォーゲーム",
+  "ワードゲーム",
+  "レガシー・キャンペーン",
 ];
 
 type NumericReviewKey = {
@@ -113,7 +124,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     downtime: 3,
     recommended_players: [],
     mechanics: [],
-    tags: [],
+    categories: [],
     custom_tags: "",
     short_comment: "",
   });
@@ -151,7 +162,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         setGame({
           id: params.id,
           name: gameData.name,
-          image: gameData.image_url,
+          image: gameData.image_url || "",
           bggLink: `https://boardgamegeek.com/boardgame/${params.id}`,
           amazonLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(
             gameData.name
@@ -189,7 +200,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               downtime: userReview.downtime || 3,
               recommended_players: userReview.recommended_players || [],
               mechanics: userReview.mechanics || [],
-              tags: userReview.tags || [],
+              categories: userReview.tags || [],
               custom_tags: (userReview.custom_tags || []).join(" "),
               short_comment: userReview.short_comment || "",
             });
@@ -204,35 +215,16 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     }
 
     fetchGameDetails();
-  }, [params.id, user, router, getAuthHeaders]);
+  }, [user, getAuthHeaders, params.id, router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value, type } = e.target;
-
-    if (name === "custom_tags") {
-      const normalizedValue = value.replace(/　/g, " ").replace(/\s+/g, " ");
-      setReview((prev) => ({
-        ...prev,
-        [name]: normalizedValue,
-      }));
-    } else if (type === "checkbox") {
-      const target = e.target as HTMLInputElement;
-      setReview((prev) => ({
-        ...prev,
-        [name]: target.checked
-          ? [...(prev[name as keyof Review] as string[]), value]
-          : (prev[name as keyof Review] as string[]).filter(
-              (item: string) => item !== value
-            ),
-      }));
-    } else {
-      setReview((prev) => ({
-        ...prev,
-        [name]: type === "number" ? Number(value) : value,
-      }));
-    }
+    const { name, value } = e.target;
+    setReview((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSliderChange =
@@ -245,47 +237,22 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      router.push(
-        `/login?redirect=${encodeURIComponent(`/games/${params.id}/review`)}`
-      );
+    if (submitting) return;
+
+    if (review.recommended_players.length === 0) {
+      setFlashMessage("おすすめプレイ人数を選択してください");
       return;
     }
 
-    // おすすめプレイ人数のバリデーション
-    if (review.recommended_players.length === 0) {
-      setFlashMessage("おすすめのプレイ人数をできるだけ選択してください");
+    if (!review.short_comment) {
+      setFlashMessage("コメントを入力してください");
       return;
     }
 
     setSubmitting(true);
+
     try {
-      const headers = getAuthHeaders();
-      console.log("Auth headers for review submission:", headers);
-
-      if (!headers["access-token"] || !headers["client"] || !headers["uid"]) {
-        console.error("Missing auth headers in handleSubmit:", headers);
-        throw new Error("ログインが必要です");
-      }
-
-      // Cookieの値を直接確認
-      console.log("Cookies in handleSubmit:", {
-        accessToken: Cookies.get("access-token"),
-        client: Cookies.get("client"),
-        uid: Cookies.get("uid"),
-      });
-
-      // 認証ヘッダーを手動で構築（バックアップとして）
-      const manualHeaders = {
-        "access-token": Cookies.get("access-token") || "",
-        client: Cookies.get("client") || "",
-        uid: Cookies.get("uid") || "",
-        expiry: Cookies.get("expiry") || "",
-      };
-
-      // getAuthHeadersの結果とCookieから直接取得した値を比較
-      const finalHeaders = headers["access-token"] ? headers : manualHeaders;
-
+      const finalHeaders = getAuthHeaders();
       const reviewData = {
         overall_score: review.overall_score,
         rule_complexity: review.rule_complexity,
@@ -294,7 +261,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         downtime: review.downtime,
         recommended_players: review.recommended_players,
         mechanics: review.mechanics,
-        tags: review.tags,
+        tags: review.categories,
         custom_tags: review.custom_tags
           .split(/\s+/)
           .filter((tag) => tag.length > 0),
@@ -566,6 +533,35 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               <Grid item xs={12} md={6}>
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom>
+                    カテゴリー
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {CATEGORIES.map((category) => (
+                      <Chip
+                        key={category}
+                        label={category}
+                        onClick={() => {
+                          setReview((prev) => ({
+                            ...prev,
+                            categories: prev.categories.includes(category)
+                              ? prev.categories.filter((c) => c !== category)
+                              : [...prev.categories, category],
+                          }));
+                        }}
+                        color={
+                          review.categories.includes(category)
+                            ? "primary"
+                            : "default"
+                        }
+                        sx={{ m: 0.5 }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" gutterBottom>
                     メカニクス
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
@@ -585,33 +581,6 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                           review.mechanics.includes(mechanic)
                             ? "primary"
                             : "default"
-                        }
-                        sx={{ m: 0.5 }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" gutterBottom>
-                    タグ
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {TAGS.map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        onClick={() => {
-                          setReview((prev) => ({
-                            ...prev,
-                            tags: prev.tags.includes(tag)
-                              ? prev.tags.filter((t) => t !== tag)
-                              : [...prev.tags, tag],
-                          }));
-                        }}
-                        color={
-                          review.tags.includes(tag) ? "primary" : "default"
                         }
                         sx={{ m: 0.5 }}
                       />

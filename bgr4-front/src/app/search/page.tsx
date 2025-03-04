@@ -41,7 +41,7 @@ interface LocalSearchParams {
   complexityMin: number;
   complexityMax: number;
   mechanics: string[];
-  tags: string[];
+  categories: string[];
   totalScoreMin: number;
   totalScoreMax: number;
   interactionMin: number;
@@ -53,7 +53,7 @@ interface LocalSearchParams {
   recommendedPlayers: string[];
   // 検索モードの設定
   useReviewsMechanics: boolean;
-  useReviewsTags: boolean;
+  useReviewsCategories: boolean;
   useReviewsRecommendedPlayers: boolean;
   publisher?: string;
 }
@@ -94,7 +94,7 @@ export default function SearchPage() {
     complexityMin: 1,
     complexityMax: 5,
     mechanics: [],
-    tags: [],
+    categories: [],
     totalScoreMin: 0,
     totalScoreMax: 10,
     interactionMin: 1,
@@ -106,7 +106,7 @@ export default function SearchPage() {
     recommendedPlayers: [],
     // デフォルトでは人気ベースの検索を使用
     useReviewsMechanics: false,
-    useReviewsTags: false,
+    useReviewsCategories: false,
     useReviewsRecommendedPlayers: false,
   });
 
@@ -277,24 +277,22 @@ export default function SearchPage() {
             : searchParams.downtimeMax,
           mechanics:
             searchParams.mechanics.length > 0
-              ? searchParams.mechanics.join(",")
+              ? searchParams.mechanics
               : undefined,
           tags:
-            searchParams.tags.length > 0
-              ? searchParams.tags.join(",")
+            searchParams.categories.length > 0
+              ? searchParams.categories
               : undefined,
           recommended_players:
             searchParams.recommendedPlayers.length > 0
-              ? searchParams.recommendedPlayers.join(",")
+              ? searchParams.recommendedPlayers
               : undefined,
-          // 検索モードの設定
-          use_reviews_mechanics: searchParams.useReviewsMechanics
-            ? "true"
-            : undefined,
-          use_reviews_tags: searchParams.useReviewsTags ? "true" : undefined,
+          publisher: searchParams.publisher,
+          // 検索モード設定
+          use_reviews_mechanics: searchParams.useReviewsMechanics || undefined,
+          use_reviews_tags: searchParams.useReviewsCategories || undefined,
           use_reviews_recommended_players:
-            searchParams.useReviewsRecommendedPlayers ? "true" : undefined,
-          publisher: searchParams.publisher || undefined,
+            searchParams.useReviewsRecommendedPlayers || undefined,
         };
 
         // プレイ時間の値を実際の分数に変換
@@ -590,16 +588,16 @@ export default function SearchPage() {
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={searchParams.useReviewsTags}
+                          checked={searchParams.useReviewsCategories}
                           onChange={(e) =>
                             handleSearchModeChange(
-                              "useReviewsTags",
+                              "useReviewsCategories",
                               e.target.checked
                             )
                           }
                         />
                       }
-                      label="タグ検索で全レビューから検索（チェックなしの場合は人気タグから検索）"
+                      label="カテゴリー検索で全レビューから検索（チェックなしの場合は人気カテゴリーから検索）"
                     />
                     <FormControlLabel
                       control={

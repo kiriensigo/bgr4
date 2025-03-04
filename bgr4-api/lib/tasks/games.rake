@@ -81,4 +81,118 @@ namespace :games do
     
     puts "完了しました！"
   end
+
+  desc "BGGからゲームのカテゴリとメカニクスを取得して更新する"
+  task update_categories_and_mechanics: :environment do
+    puts "BGGからゲームのカテゴリとメカニクスを取得して更新します..."
+    
+    # 全ゲームを取得
+    games = Game.all
+    total = games.count
+    updated = 0
+    failed = 0
+    
+    games.each_with_index do |game, index|
+      begin
+        puts "#{index + 1}/#{total}: #{game.name} (BGG ID: #{game.bgg_id}) を処理中..."
+        
+        # BGGからゲーム情報を取得
+        bgg_game_info = BggService.get_game_details(game.bgg_id)
+        
+        if bgg_game_info.nil?
+          puts "  BGGからゲーム情報を取得できませんでした"
+          failed += 1
+          next
+        end
+        
+        # カテゴリとメカニクスを更新
+        game.categories = bgg_game_info[:categories]
+        game.mechanics = bgg_game_info[:mechanics]
+        
+        if game.save
+          puts "  更新成功: カテゴリ #{game.categories&.size || 0}件, メカニクス #{game.mechanics&.size || 0}件"
+          updated += 1
+        else
+          puts "  更新失敗: #{game.errors.full_messages.join(', ')}"
+          failed += 1
+        end
+        
+        # BGGのAPIに負荷をかけないよう少し待機
+        sleep 1
+      rescue => e
+        puts "  エラー: #{e.message}"
+        failed += 1
+      end
+    end
+    
+    puts "処理完了: 全#{total}件中、#{updated}件更新成功、#{failed}件失敗"
+  end
+
+  desc "既存のゲーム情報をBGGから再取得して更新する"
+  task refresh_from_bgg: :environment do
+    puts "既存のゲーム情報をBGGから再取得して更新します..."
+    
+    games = Game.all
+    total = games.count
+    
+    games.each_with_index do |game, index|
+      puts "#{index+1}/#{total}: #{game.name} (BGG ID: #{game.bgg_id}) を処理中..."
+      
+      begin
+        # BGGからゲーム情報を取得
+        game_details = BggService.get_game_details(game.bgg_id)
+        
+        if game_details
+          # 更新するフィールドを準備
+          update_attrs = {
+            description: game_details[:description],
+            min_play_time: game_details[:min_play_time],
+            weight: game_details[:weight],
+            publisher: game_details[:publisher],
+            designer: game_details[:designer],
+            release_date: game_details[:release_date],
+            best_num_players: game_details[:best_num_players],
+            recommended_num_players: game_details[:recommended_num_players],
+            categories: game_details[:categories],
+            mechanics: game_details[:mechanics]
+          }
+          
+          # 更新前の値を保存
+          old_values = {}
+          update_attrs.each do |key, value|
+            old_values[key] = game.send(key) if game.respond_to?(key)
+          end
+          
+          # 更新を実行
+          if game.update(update_attrs)
+            # 変更があったフィールドを表示
+            changes = []
+            update_attrs.each do |key, new_value|
+              old_value = old_values[key]
+              if old_value != new_value && !new_value.nil?
+                changes << "#{key}: #{old_value.inspect} → #{new_value.inspect}"
+              end
+            end
+            
+            if changes.any?
+              puts "  更新成功: #{changes.join(', ')}"
+            else
+              puts "  変更なし"
+            end
+          else
+            puts "  更新失敗: #{game.errors.full_messages.join(', ')}"
+          end
+        else
+          puts "  BGGからの情報取得に失敗しました"
+        end
+        
+        # APIリクエスト間の間隔を空ける（BGG APIの制限を考慮）
+        sleep 1
+      rescue => e
+        puts "  エラー発生: #{e.message}"
+      end
+    end
+    
+    puts "処理完了: 全#{total}件"
+  end
 end 

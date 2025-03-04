@@ -32,88 +32,66 @@ class BggService
   end
 
   def self.get_game_details(bgg_id)
-    response = get("/thing?id=#{bgg_id}&stats=1")
+    uri = URI("#{BASE_URL}/thing?id=#{bgg_id}&stats=1")
+    response = Net::HTTP.get_response(uri)
     
-    if response.success?
-      xml = Nokogiri::XML(response.body)
+    if response.is_a?(Net::HTTPSuccess)
+      doc = Nokogiri::XML(response.body)
+      item = doc.at_xpath('//item')
       
-      # 基本情報を取得
-      item = xml.at_xpath('//item')
-      return nil unless item
+      # 名前の取得
+      primary_name = item.at_xpath('.//name[@type="primary"]')&.attr('value')
       
-      # 名前を取得（プライマリー名を優先）
-      primary_name = item.xpath('.//name[@type="primary"]').first&.attr('value')
-      
-      # 日本語名を探す
-      japanese_name = item.xpath('.//name[@type="alternate"]').find do |name|
-        name.attr('value').match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
-      end&.attr('value')
-      
-      # 出版社情報を取得
-      publishers = item.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
-      
-      # デザイナー情報を取得
-      designers = item.xpath('.//link[@type="boardgamedesigner"]').map { |link| link.attr('value') }
-      
-      # 日本語版の出版社を探す（日本の出版社名を含むものを探す）
-      japanese_publishers = publishers.select do |publisher|
-        publisher.match?(/Japan|Japanese|Japon|ホビージャパン|アークライト|グループSNE|テンデイズゲームズ|
-          ニューゲームズオーダー|Arclight|Hobby Japan|Group SNE|Ten Days Games|New Games Order|
-          Oink Games|Grounding|グラウンディング|BakaFire|バカファイア|
-          Shinojo|紫猫|Takoashi Games|タコアシゲームズ|Takuya Ono|小野卓也|
-          Yocto Games|ヨクト|Yuhodo|遊歩堂|Itten|いつつ|Jelly Jelly Games|
-          ジェリージェリーゲームズ|Kocchiya|こっちや|Kuuri|くうり|
-          Qvinta|クインタ|Route11|ルート11|Suki Games Mk2|スキゲームズMk2|
-          Taikikennai Games|耐気圏内ゲームズ|Team Saien|チーム彩園|
-          Tokyo Game Market|東京ゲームマーケット|Toshiki Sato|佐藤敏樹|
-          Yuuai Kikaku|遊愛企画|Capcom|カプコン|Bandai|バンダイ|Konami|コナミ|
-          Suki Games|数寄ゲームズ/ix)
+      # 日本語名の取得
+      japanese_name = nil
+      item.xpath('.//name').each do |name|
+        if name.attr('value').match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          japanese_name = name.attr('value')
+          break
+        end
       end
       
-      # 日本語版の出版社
-      japanese_publisher = japanese_publishers.first
+      # 出版社の取得
+      publisher = nil
+      item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
+        publisher_name = pub.attr('value')
+        publisher = publisher_name
+        break
+      end
       
-      # 発売年を取得
+      # 日本語版出版社の取得
+      japanese_publisher = nil
+      item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
+        publisher_name = pub.attr('value')
+        if publisher_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) || 
+           publisher_name.include?('Hobby Japan') || 
+           publisher_name.include?('Arclight') ||
+           publisher_name.include?('Ten Days Games')
+          japanese_publisher = publisher_name
+          break
+        end
+      end
+      
+      # デザイナーの取得
+      designer = nil
+      item.xpath('.//link[@type="boardgamedesigner"]').each do |des|
+        designer_name = des.attr('value')
+        designer = designer_name
+        break
+      end
+      
+      # 発売日の取得
       release_date = item.at_xpath('.//yearpublished')&.attr('value')
-      release_date = "#{release_date}-01-01" if release_date
       
-      # 日本語版の情報を取得
-      japanese_version_info = get_japanese_version_info(bgg_id)
+      # 日本語版発売日は現状取得できないのでnilにしておく
+      japanese_release_date = nil
       
-      # 日本語版の情報があれば、それを優先して使用
-      if japanese_version_info
-        Rails.logger.info "Found Japanese version info: #{japanese_version_info.inspect}"
-        japanese_name ||= japanese_version_info[:name]
-        japanese_publisher ||= japanese_version_info[:publisher]
-        # 日本語版の発売日が存在する場合は、それを優先して使用
-        japanese_release_date = japanese_version_info[:release_date] if japanese_version_info[:release_date].present?
-        japanese_image_url = japanese_version_info[:image_url]
-        
-        # 日本語版の情報をログに出力
-        Rails.logger.info "Using Japanese version info - Name: #{japanese_name}, Publisher: #{japanese_publisher}, Release Date: #{japanese_release_date}, Image URL: #{japanese_image_url}"
-      else
-        # 日本語版の発売年は現状BGGから取得できないため、同じ値を使用
-        japanese_release_date = release_date if japanese_name
-      end
-      
-      # 日本語版の画像URLが見つからない場合で、日本語名がある場合は直接検索
-      if japanese_image_url.blank? && japanese_name.present?
-        Rails.logger.info "Japanese image URL not found from version info, searching with alternate name: #{japanese_name}"
-        japanese_image_url = search_japanese_version_image(bgg_id, japanese_name)
-        Rails.logger.info "Found Japanese version image using alternate name: #{japanese_image_url}" if japanese_image_url.present?
-      end
-      
-      # 出版社名とデザイナー名を正規化
-      normalized_publisher = normalize_publisher_name(publishers.first) if publishers.any?
-      normalized_designer = normalize_designer_name(designers.first) if designers.any?
-      normalized_japanese_publisher = normalize_publisher_name(japanese_publisher) if japanese_publisher.present?
-      
-      # 拡張情報を取得
-      expansions = item.xpath('.//link[@type="boardgameexpansion" and @inbound="true"]').map do |link|
-        {
-          id: link.attr('id'),
-          name: link.attr('value')
-        }
+      # 拡張情報の取得
+      expansions = []
+      item.xpath('.//link[@type="boardgameexpansion"]').each do |exp|
+        if exp.attr('inbound') != "true"  # 拡張→ベースゲームの関係ではなく、ベースゲーム→拡張の関係のみ取得
+          expansions << { id: exp.attr('id'), name: exp.attr('value') }
+        end
       end
       
       # プレイ人数の投票データを解析
@@ -135,21 +113,41 @@ class BggService
         
         if total_votes > 0
           # ベストプレイ人数の判定（最も多い投票を獲得）
-          if best_votes > recommended_votes && best_votes > not_recommended_votes
+          if best_votes > recommended_votes && best_votes > not_recommended_votes && best_votes > 0
             best_num_players << num_players
           end
           
           # 推奨プレイ人数の判定（Best + Recommendedの投票がNotRecommendedより多い）
-          if best_votes + recommended_votes > not_recommended_votes
+          if best_votes + recommended_votes > not_recommended_votes && (best_votes + recommended_votes) > 0
             recommended_num_players << num_players
           end
         end
       end
       
-      Rails.logger.info "Best num players: #{best_num_players.inspect}"
-      Rails.logger.info "Recommended num players: #{recommended_num_players.inspect}"
+      # カテゴリの取得
+      categories = []
+      item.xpath('.//link[@type="boardgamecategory"]').each do |category|
+        categories << category.attr('value')
+      end
       
-      # ゲーム情報をハッシュで返す
+      # メカニクスの取得
+      mechanics = []
+      item.xpath('.//link[@type="boardgamemechanic"]').each do |mechanic|
+        mechanics << mechanic.attr('value')
+      end
+      
+      # 日本語版画像URLは現状取得できないのでnilにしておく
+      japanese_image_url = nil
+      
+      # 正規化された出版社名
+      normalized_publisher = publisher
+      
+      # 正規化された日本語版出版社名
+      normalized_japanese_publisher = japanese_publisher
+      
+      # 正規化されたデザイナー名
+      normalized_designer = designer
+      
       {
         bgg_id: bgg_id,
         name: primary_name,
@@ -169,8 +167,10 @@ class BggService
         japanese_publisher: normalized_japanese_publisher,
         japanese_release_date: japanese_release_date,
         expansions: expansions.presence,
-        best_num_players: best_num_players,
-        recommended_num_players: recommended_num_players
+        best_num_players: best_num_players.presence,
+        recommended_num_players: recommended_num_players.presence,
+        categories: categories.presence,
+        mechanics: mechanics.presence
       }
     else
       Rails.logger.error "BGG API error: #{response.code} - #{response.message}"

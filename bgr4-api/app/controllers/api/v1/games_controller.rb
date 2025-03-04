@@ -132,58 +132,63 @@ module Api
           return
         end
         
-        begin
-          # フロントエンドから送信されたデータを使用してゲームを作成
-          @game = Game.new(
-            bgg_id: bgg_id,
-            name: game_params[:name],
-            japanese_name: game_params[:japanese_name],
-            description: game_params[:description],
-            image_url: game_params[:image_url],
-            min_players: game_params[:min_players],
-            max_players: game_params[:max_players],
-            play_time: game_params[:play_time],
-            min_play_time: game_params[:min_play_time],
-            average_score: game_params[:average_score],
-            weight: game_params[:weight],
-            publisher: game_params[:publisher],
-            designer: game_params[:designer],
-            release_date: game_params[:release_date],
-            japanese_release_date: game_params[:japanese_release_date],
-            japanese_publisher: game_params[:japanese_publisher],
-            japanese_image_url: game_params[:japanese_image_url],
-            expansions: game_params[:expansions],
-            best_num_players: game_params[:best_num_players],
-            recommended_num_players: game_params[:recommended_num_players]
-          )
+        # BGGからゲーム情報を取得
+        bgg_game_info = BggService.get_game_details(bgg_id)
+        
+        if bgg_game_info.nil?
+          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :unprocessable_entity
+          return
+        end
+        
+        # ゲームを作成
+        @game = Game.new(
+          bgg_id: bgg_id,
+          name: game_params[:name],
+          japanese_name: game_params[:japanese_name],
+          description: game_params[:description],
+          japanese_description: game_params[:japanese_description],
+          image_url: game_params[:image_url],
+          japanese_image_url: game_params[:japanese_image_url],
+          min_players: game_params[:min_players],
+          max_players: game_params[:max_players],
+          play_time: game_params[:play_time],
+          min_play_time: game_params[:min_play_time],
+          average_score: game_params[:average_score],
+          weight: game_params[:weight],
+          publisher: game_params[:publisher] || bgg_game_info[:publisher],
+          designer: game_params[:designer] || bgg_game_info[:designer],
+          release_date: game_params[:release_date] || bgg_game_info[:release_date],
+          japanese_publisher: game_params[:japanese_publisher] || bgg_game_info[:japanese_publisher],
+          japanese_release_date: game_params[:japanese_release_date] || bgg_game_info[:japanese_release_date],
+          expansions: game_params[:expansions] || bgg_game_info[:expansions],
+          best_num_players: game_params[:best_num_players] || bgg_game_info[:best_num_players],
+          recommended_num_players: game_params[:recommended_num_players] || bgg_game_info[:recommended_num_players],
+          categories: game_params[:categories] || bgg_game_info[:categories],
+          mechanics: game_params[:mechanics] || bgg_game_info[:mechanics]
+        )
+        
+        # 日本語バージョン情報を取得して追加
+        japanese_version_info = BggService.get_japanese_version_info(bgg_id)
+        if japanese_version_info
+          Rails.logger.info "Found Japanese version info: #{japanese_version_info.inspect}"
           
-          # 日本語バージョン情報を取得して追加
-          japanese_version_info = BggService.get_japanese_version_info(bgg_id)
-          if japanese_version_info
-            Rails.logger.info "Found Japanese version info: #{japanese_version_info.inspect}"
-            
-            # 日本語名が送信されていない場合は、日本語バージョンの名前を使用
-            @game.japanese_name ||= japanese_version_info[:name]
-            
-            # 日本語版の出版社が送信されていない場合は、日本語バージョンの出版社を使用
-            @game.japanese_publisher ||= japanese_version_info[:publisher]
-            
-            # 日本語版の発売日が送信されていない場合は、日本語バージョンの発売日を使用
-            @game.japanese_release_date ||= japanese_version_info[:release_date]
-            
-            # 日本語版の画像URLが送信されていない場合は、日本語バージョンの画像URLを使用
-            @game.japanese_image_url ||= japanese_version_info[:image_url]
-          end
+          # 日本語名が送信されていない場合は、日本語バージョンの名前を使用
+          @game.japanese_name ||= japanese_version_info[:name]
           
-          if @game.save
-            render json: @game, status: :created
-          else
-            render json: @game.errors, status: :unprocessable_entity
-          end
-        rescue => e
-          Rails.logger.error "Error creating game: #{e.message}"
-          Rails.logger.error e.backtrace.join("\n")
-          render json: { error: e.message }, status: :internal_server_error
+          # 日本語版の出版社が送信されていない場合は、日本語バージョンの出版社を使用
+          @game.japanese_publisher ||= japanese_version_info[:publisher]
+          
+          # 日本語版の発売日が送信されていない場合は、日本語バージョンの発売日を使用
+          @game.japanese_release_date ||= japanese_version_info[:release_date]
+          
+          # 日本語版の画像URLが送信されていない場合は、日本語バージョンの画像URLを使用
+          @game.japanese_image_url ||= japanese_version_info[:image_url]
+        end
+        
+        if @game.save
+          render json: @game, status: :created
+        else
+          render json: @game.errors, status: :unprocessable_entity
         end
       end
 
@@ -586,7 +591,8 @@ module Api
           :min_players, :max_players, :play_time, :min_play_time,
           :average_score, :weight, :publisher, :designer, :release_date,
           :japanese_publisher, :japanese_release_date, :japanese_image_url,
-          best_num_players: [], recommended_num_players: [], expansions: []
+          best_num_players: [], recommended_num_players: [], expansions: [],
+          categories: [], mechanics: []
         )
       end
       

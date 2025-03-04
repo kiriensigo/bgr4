@@ -3,7 +3,7 @@ import { CustomSlider } from "./CustomSlider";
 import { CustomToggleButton } from "./CustomToggleButton";
 import {
   MECHANICS,
-  TAGS,
+  CATEGORIES,
   PLAYER_COUNT_OPTIONS,
   PLAY_TIME_MARKS,
   COMPLEXITY_MARKS,
@@ -27,7 +27,7 @@ interface EvaluationSectionProps {
     downtimeMax: number;
     recommendedPlayers: string[];
     mechanics: string[];
-    tags: string[];
+    categories: string[];
   };
   onChange: (name: string, value: any) => void;
   isSearchMode?: boolean;
@@ -241,18 +241,18 @@ export const EvaluationSection = ({
       <Grid item xs={12}>
         <Stack spacing={2}>
           <Typography variant="subtitle1" fontWeight="medium">
-            タグ
+            カテゴリー
           </Typography>
           <ToggleButtonGroup
-            value={values.tags}
-            onChange={handleArrayChange("tags")}
-            aria-label="タグ"
+            value={values.categories}
+            onChange={handleArrayChange("categories")}
+            aria-label="カテゴリー"
             multiple
             sx={{ flexWrap: "wrap", gap: 1 }}
           >
-            {TAGS.map((tag) => (
-              <CustomToggleButton key={tag} value={tag}>
-                {tag}
+            {CATEGORIES.map((category) => (
+              <CustomToggleButton key={category} value={category}>
+                {category}
               </CustomToggleButton>
             ))}
           </ToggleButtonGroup>

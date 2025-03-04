@@ -36,6 +36,10 @@ export interface Game {
   in_wishlist?: boolean;
   bgg_url?: string;
   expansions?: Array<{ id: string; name: string }>;
+  categories?: string[];
+  mechanics?: string[];
+  best_num_players?: string[];
+  recommended_num_players?: string[];
 }
 
 export interface Review {

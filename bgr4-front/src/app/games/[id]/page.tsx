@@ -201,6 +201,58 @@ const gameCache: Record<string, { data: ExtendedGame; timestamp: number }> = {};
 // キャッシュの有効期限（5分）
 const CACHE_EXPIRY = 5 * 60 * 1000;
 
+// プレイ人数情報
+const PlayerCountInfo = ({ game }: { game: Game }) => {
+  const bestPlayers = game.best_num_players || [];
+  const recommendedPlayers = game.recommended_num_players || [];
+
+  if (bestPlayers.length === 0 && recommendedPlayers.length === 0) {
+    return null;
+  }
+
+  return (
+    <Box mt={2}>
+      {bestPlayers.length > 0 && (
+        <>
+          <Typography variant="subtitle2" color="text.secondary">
+            ベストプレイ人数:
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5} mb={1}>
+            {bestPlayers.map((count) => (
+              <Chip
+                key={`best-${count}`}
+                label={`${count}人`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </Box>
+        </>
+      )}
+
+      {recommendedPlayers.length > 0 && (
+        <>
+          <Typography variant="subtitle2" color="text.secondary">
+            おすすめプレイ人数:
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
+            {recommendedPlayers.map((count) => (
+              <Chip
+                key={`rec-${count}`}
+                label={`${count}人`}
+                size="small"
+                color="success"
+                variant="outlined"
+              />
+            ))}
+          </Box>
+        </>
+      )}
+    </Box>
+  );
+};
+
 // 出版社情報
 const PublisherInfo = ({ game }: { game: Game }) => {
   const publisher = game.publisher || "不明";
@@ -684,6 +736,9 @@ export default function GamePage({ params }: GamePageProps) {
               </Grid>
             </Box>
 
+            {/* プレイ人数情報 */}
+            <PlayerCountInfo game={game} />
+
             {/* おすすめプレイ人数 */}
             {game.site_recommended_players &&
               game.site_recommended_players.length > 0 && (
@@ -844,6 +899,52 @@ export default function GamePage({ params }: GamePageProps) {
                 </Box>
                 <Typography variant="caption" color="text.secondary">
                   ※ レビュー投稿者が最も多く選択したメカニクスです
+                </Typography>
+              </Box>
+            )}
+
+            {/* BGGカテゴリ */}
+            {game.categories && game.categories.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  カテゴリ
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {game.categories.map((category, index) => (
+                    <Chip
+                      key={`category-${index}`}
+                      label={category}
+                      color="primary"
+                      variant="outlined"
+                      sx={{ m: 0.5 }}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  ※ BoardGameGeekに登録されているカテゴリです
+                </Typography>
+              </Box>
+            )}
+
+            {/* BGGメカニクス */}
+            {game.mechanics && game.mechanics.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  メカニクス
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {game.mechanics.map((mechanic, index) => (
+                    <Chip
+                      key={`mechanic-${index}`}
+                      label={mechanic}
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ m: 0.5 }}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  ※ BoardGameGeekに登録されているメカニクスです
                 </Typography>
               </Box>
             )}
