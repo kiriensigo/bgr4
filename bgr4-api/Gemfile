@@ -73,3 +73,6 @@ end
 gem "google-cloud-translate", "~> 3.7"
 
 gem "httparty", "~> 0.22.0"
+
+# JSONシリアライズ用のgem
+gem "active_model_serializers", "~> 0.10.13"

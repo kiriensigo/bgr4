@@ -23,7 +23,7 @@ export function formatDate(dateString: string | null | undefined): string {
 
     // 年だけの場合（月と日が1月1日の場合）
     if (date.getMonth() === 0 && date.getDate() === 1) {
-      return `${date.getFullYear()}年`;
+      return `${date.getFullYear()}年（発売年）`;
     }
 
     // 完全な日付の場合

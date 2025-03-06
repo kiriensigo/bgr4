@@ -19,6 +19,13 @@ class Game < ApplicationRecord
   # 拡張情報とベースゲーム情報を保存するためのJSONカラム
   store :metadata, accessors: [:expansions, :best_num_players, :recommended_num_players, :categories, :mechanics], coder: JSON
 
+  # metadataの特定のキーに値を保存するメソッド
+  def store_metadata(key, value)
+    metadata_will_change!
+    self.metadata ||= {}
+    self.metadata[key.to_s] = value
+  end
+
   # ゲーム作成後に初期レビューを作成するコールバック
   after_create :create_initial_reviews
 
@@ -30,9 +37,9 @@ class Game < ApplicationRecord
     "https://boardgamegeek.com/boardgame/#{bgg_id}" if bgg_id.present?
   end
   
-  # このゲームのやりたいリストアイテムを取得
+  # このゲームに関連するウィッシュリストアイテムを取得
   def wishlist_items
-    WishlistItem.where(game_id: bgg_id)
+    WishlistItem.where(game: bgg_id)
   end
 
   # BGGのURLをJSONレスポンスに含める
@@ -117,59 +124,72 @@ class Game < ApplicationRecord
   def update_from_bgg
     bgg_data = BggService.get_game_details(bgg_id)
     
-    return false if bgg_data.nil?
-    
-    # 古い属性を保存
-    old_attributes = self.attributes
-    
-    # BGGから取得した情報で更新
-    self.name = bgg_data[:name] if name.blank?
-    self.description = bgg_data[:description] if description.blank?
-    self.image_url = bgg_data[:image_url] if image_url.blank?
-    self.min_players = bgg_data[:min_players] if min_players.blank?
-    self.max_players = bgg_data[:max_players] if max_players.blank?
-    self.play_time = bgg_data[:play_time] if play_time.blank?
-    self.min_play_time = bgg_data[:min_play_time] if min_play_time.blank?
-    self.weight = bgg_data[:weight] if weight.blank?
-    self.publisher = bgg_data[:publisher] if publisher.blank?
-    self.designer = bgg_data[:designer] if designer.blank?
-    self.release_date = bgg_data[:release_date] if release_date.blank?
-    
-    # 日本語情報の更新
-    if !has_japanese_name? && bgg_data[:japanese_name].present?
-      self.japanese_name = bgg_data[:japanese_name]
-    end
-    
-    if !has_japanese_publisher? && bgg_data[:japanese_publisher].present?
-      self.japanese_publisher = bgg_data[:japanese_publisher]
-    end
-    
-    if !has_japanese_release_date? && bgg_data[:japanese_release_date].present?
-      self.japanese_release_date = bgg_data[:japanese_release_date]
-    end
-    
-    # 拡張情報の更新
-    self.expansions = bgg_data[:expansions] if expansions.blank?
-    
-    # ベストプレイ人数とおすすめプレイ人数の更新
-    self.best_num_players = bgg_data[:best_num_players] if best_num_players.blank?
-    self.recommended_num_players = bgg_data[:recommended_num_players] if recommended_num_players.blank?
-    
-    # カテゴリーとメカニクスの更新
-    self.categories = bgg_data[:categories] if categories.blank?
-    self.mechanics = bgg_data[:mechanics] if mechanics.blank?
-    
-    if changed?
-      if save
-        # 編集履歴を作成
-        create_edit_history(old_attributes, self.attributes, 'system')
-        return true
-      else
-        return false
+    if bgg_data.present?
+      # 基本情報を更新
+      self.name = bgg_data[:name] if name.blank?
+      self.description = bgg_data[:description] if description.blank?
+      self.image_url = bgg_data[:image_url] if image_url.blank?
+      self.min_players = bgg_data[:min_players] if min_players.blank?
+      self.max_players = bgg_data[:max_players] if max_players.blank?
+      self.play_time = bgg_data[:play_time] if play_time.blank?
+      self.min_play_time = bgg_data[:min_play_time] if min_play_time.blank?
+      
+      # 発売日を更新（常に最新の情報を使用）
+      self.release_date = bgg_data[:release_date] if bgg_data[:release_date].present?
+      
+      # 日本語情報を更新（存在する場合のみ）
+      if !has_japanese_name? && bgg_data[:japanese_name].present?
+        self.japanese_name = bgg_data[:japanese_name]
       end
+      
+      if !has_japanese_publisher? && bgg_data[:japanese_publisher].present?
+        self.japanese_publisher = bgg_data[:japanese_publisher]
+      end
+      
+      # 日本語出版社名を正規化
+      normalize_japanese_publisher
+      
+      # 日本語版発売日を更新（存在する場合のみ）
+      if !has_japanese_release_date? && bgg_data[:japanese_release_date].present?
+        self.japanese_release_date = bgg_data[:japanese_release_date]
+      end
+      
+      # 日本語版画像URLを更新（存在する場合のみ）
+      if japanese_image_url.blank? && bgg_data[:japanese_image_url].present?
+        self.japanese_image_url = bgg_data[:japanese_image_url]
+      end
+      
+      # メタデータを更新
+      if bgg_data[:expansions].present?
+        store_metadata(:expansions, bgg_data[:expansions])
+      end
+      
+      if bgg_data[:best_num_players].present?
+        store_metadata(:best_num_players, bgg_data[:best_num_players])
+      end
+      
+      if bgg_data[:recommended_num_players].present?
+        store_metadata(:recommended_num_players, bgg_data[:recommended_num_players])
+      end
+      
+      if bgg_data[:categories].present?
+        store_metadata(:categories, bgg_data[:categories])
+      end
+      
+      if bgg_data[:mechanics].present?
+        store_metadata(:mechanics, bgg_data[:mechanics])
+      end
+      
+      # 変更を保存
+      save
+      
+      # 初回レビューがない場合は作成
+      create_initial_reviews if reviews.count == 0
+      
+      return true
+    else
+      return false
     end
-    
-    true
   end
   
   # ゲーム編集履歴を作成
@@ -208,6 +228,44 @@ class Game < ApplicationRecord
   # システムユーザーを除いたレビュー数を取得
   def user_review_count
     reviews.exclude_system_user.count
+  end
+  
+  # reviews_count属性のエイリアス
+  def reviews_count
+    user_review_count
+  end
+  
+  # ゲームがウィッシュリストに入っているかどうかを返す
+  # 注: このメソッドはシリアライザーで使用されるため、スコープからユーザーを取得する必要があります
+  def in_wishlist
+    # モデルからは直接スコープにアクセスできないため、常にfalseを返す
+    # 実際の実装はGameSerializerクラスで行う
+    false
+  end
+  
+  # レビューの平均ルール複雑度を計算
+  def average_rule_complexity
+    reviews.average(:rule_complexity)&.round(1) || 0
+  end
+  
+  # レビューの平均運要素を計算
+  def average_luck_factor
+    reviews.average(:luck_factor)&.round(1) || 0
+  end
+  
+  # レビューの平均インタラクションを計算
+  def average_interaction
+    reviews.average(:interaction)&.round(1) || 0
+  end
+  
+  # レビューの平均ダウンタイムを計算
+  def average_downtime
+    reviews.average(:downtime)&.round(1) || 0
+  end
+  
+  # ベースゲーム情報を返す
+  def base_game
+    metadata&.dig('base_game')
   end
   
   # 人気のタグを取得
@@ -256,6 +314,110 @@ class Game < ApplicationRecord
     
     # 出現回数でソート
     player_counts.sort_by { |_, count| -count }.map { |count, votes| { count: count, votes: votes } }
+  end
+  
+  # 出版社名を日本語化
+  def normalize_japanese_publisher
+    return unless japanese_publisher.present?
+    
+    # 日本の出版社リストと正規化マッピング
+    japanese_publisher_mapping = {
+      # ホビージャパン系
+      'hobby japan' => 'ホビージャパン',
+      'hobbyjapan' => 'ホビージャパン',
+      'hobyjapan' => 'ホビージャパン',
+      'ホビージャパン' => 'ホビージャパン',
+      
+      # アークライト系
+      'arclight' => 'アークライト',
+      'arc light' => 'アークライト',
+      'arclight games' => 'アークライト',
+      'arclightgames' => 'アークライト',
+      'アークライト' => 'アークライト',
+      
+      # すごろくや系
+      'sugorokuya' => 'すごろくや',
+      'すごろくや' => 'すごろくや',
+      
+      # オインクゲームズ系
+      'oink games' => 'オインクゲームズ',
+      'oinkgames' => 'オインクゲームズ',
+      'オインクゲームズ' => 'オインクゲームズ',
+      
+      # グラウンディング系
+      'grounding inc.' => 'グラウンディング',
+      'grounding' => 'グラウンディング',
+      'grounding games' => 'グラウンディング',
+      'groundinggames' => 'グラウンディング',
+      'グラウンディング' => 'グラウンディング',
+      
+      # アズモデージャパン系
+      'asmodee japan' => 'アズモデージャパン',
+      'asmodee' => 'アズモデージャパン',
+      'asmodeejapan' => 'アズモデージャパン',
+      'アズモデージャパン' => 'アズモデージャパン',
+      
+      # テンデイズゲームズ系
+      'ten days games' => 'テンデイズゲームズ',
+      'tendays games' => 'テンデイズゲームズ',
+      'tendaysgames' => 'テンデイズゲームズ',
+      'テンデイズゲームズ' => 'テンデイズゲームズ',
+      
+      # ニューゲームズオーダー系
+      'new games order' => 'ニューゲームズオーダー',
+      'newgamesorder' => 'ニューゲームズオーダー',
+      'ニューゲームズオーダー' => 'ニューゲームズオーダー',
+      
+      # コロンアーク系
+      'colon arc' => 'コロンアーク',
+      'colonarc' => 'コロンアーク',
+      'コロンアーク' => 'コロンアーク',
+      
+      # 数寄ゲームズ系
+      'suki games' => '数寄ゲームズ',
+      'sukigames' => '数寄ゲームズ',
+      '数寄ゲームズ' => '数寄ゲームズ',
+      
+      # ダイスタワー系
+      'dice tower' => 'ダイスタワー',
+      'dicetower' => 'ダイスタワー',
+      'ダイスタワー' => 'ダイスタワー',
+      
+      # ボードゲームジャパン系
+      'board game japan' => 'ボードゲームジャパン',
+      'boardgame japan' => 'ボードゲームジャパン',
+      'boardgamejapan' => 'ボードゲームジャパン',
+      'ボードゲームジャパン' => 'ボードゲームジャパン',
+      
+      # ゲームマーケット系
+      'game market' => 'ゲームマーケット',
+      'gamemarket' => 'ゲームマーケット',
+      'ゲームマーケット' => 'ゲームマーケット',
+      
+      # ジーピー系
+      'gp' => 'ジーピー',
+      'ジーピー' => 'ジーピー',
+      
+      # ハコニワ系
+      'hakoniwagames' => 'ハコニワ',
+      'hakoniwa games' => 'ハコニワ',
+      'hakoniwa' => 'ハコニワ',
+      'ハコニワ' => 'ハコニワ'
+    }
+    
+    # 表記揺れを修正して正規化
+    normalized_name = nil
+    japanese_publisher_mapping.each do |key, value|
+      if japanese_publisher.downcase.include?(key.downcase)
+        normalized_name = value
+        break
+      end
+    end
+    
+    # 正規化された名前があれば更新
+    if normalized_name && normalized_name != japanese_publisher
+      update_column(:japanese_publisher, normalized_name)
+    end
   end
   
   private

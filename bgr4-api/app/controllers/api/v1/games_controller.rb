@@ -116,25 +116,21 @@ module Api
         # フロントエンドから送信されたパラメータを取得
         game_params = params[:game]
         
-        # パラメータのデバッグ出力
-        Rails.logger.info "Creating game with params: #{game_params.inspect}"
-        Rails.logger.info "BGG ID: #{game_params[:bgg_id]}"
-        Rails.logger.info "Japanese name: #{game_params[:japanese_name]}"
-        Rails.logger.info "Japanese publisher: #{game_params[:japanese_publisher]}"
-        Rails.logger.info "Japanese release date: #{game_params[:japanese_release_date]}"
-        
-        bgg_id = game_params[:bgg_id]
-        
-        # bgg_idがnilの場合はエラーを返す
-        if bgg_id.nil?
-          render json: { error: "BGG IDが指定されていません" }, status: :unprocessable_entity
+        # パラメータが不足している場合はエラーを返す
+        if game_params.blank? || game_params[:bgg_id].blank?
+          render json: { error: "BGG IDが必要です" }, status: :bad_request
           return
         end
         
-        # 既存のゲームをチェック
+        # BGG IDを取得
+        bgg_id = game_params[:bgg_id]
+        
+        # 既存のゲームを検索
         existing_game = Game.find_by(bgg_id: bgg_id)
+        
         if existing_game
-          render json: existing_game, status: :ok
+          # 既存のゲームが見つかった場合は、そのゲームを返す
+          render json: existing_game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
           return
         end
         
@@ -142,67 +138,70 @@ module Api
         bgg_game_info = BggService.get_game_details(bgg_id)
         
         if bgg_game_info.nil?
-          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :unprocessable_entity
+          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :not_found
           return
         end
+        
+        # 日本語版情報を取得
+        japanese_version_info = BggService.get_japanese_version_info(bgg_id)
         
         # ゲームを作成
         @game = Game.new(
           bgg_id: bgg_id,
-          name: game_params[:name],
-          japanese_name: game_params[:japanese_name],
-          description: game_params[:description],
+          name: game_params[:name] || bgg_game_info[:name],
+          japanese_name: game_params[:japanese_name] || bgg_game_info[:japanese_name],
+          description: game_params[:description] || bgg_game_info[:description],
           japanese_description: game_params[:japanese_description],
-          image_url: game_params[:image_url],
-          japanese_image_url: game_params[:japanese_image_url],
-          min_players: game_params[:min_players],
-          max_players: game_params[:max_players],
-          play_time: game_params[:play_time],
-          min_play_time: game_params[:min_play_time],
-          average_score: game_params[:average_score],
-          weight: game_params[:weight],
+          image_url: game_params[:image_url] || bgg_game_info[:image_url],
+          japanese_image_url: game_params[:japanese_image_url] || bgg_game_info[:japanese_image_url],
+          min_players: game_params[:min_players] || bgg_game_info[:min_players],
+          max_players: game_params[:max_players] || bgg_game_info[:max_players],
+          play_time: game_params[:play_time] || bgg_game_info[:play_time],
+          min_play_time: game_params[:min_play_time] || bgg_game_info[:min_play_time],
+          weight: game_params[:weight] || bgg_game_info[:weight],
           publisher: game_params[:publisher] || bgg_game_info[:publisher],
           designer: game_params[:designer] || bgg_game_info[:designer],
           release_date: game_params[:release_date] || bgg_game_info[:release_date],
           japanese_publisher: game_params[:japanese_publisher] || bgg_game_info[:japanese_publisher],
-          japanese_release_date: game_params[:japanese_release_date] || bgg_game_info[:japanese_release_date],
-          expansions: game_params[:expansions] || bgg_game_info[:expansions],
-          best_num_players: game_params[:best_num_players] || bgg_game_info[:best_num_players],
-          recommended_num_players: game_params[:recommended_num_players] || bgg_game_info[:recommended_num_players],
-          categories: game_params[:categories] || bgg_game_info[:categories],
-          mechanics: game_params[:mechanics] || bgg_game_info[:mechanics]
+          japanese_release_date: game_params[:japanese_release_date] || bgg_game_info[:japanese_release_date]
         )
         
-        # 日本語バージョン情報を取得して追加
-        japanese_version_info = BggService.get_japanese_version_info(bgg_id)
-        if japanese_version_info
-          Rails.logger.info "Found Japanese version info: #{japanese_version_info.inspect}"
-          
-          # 日本語名が送信されていない場合は、日本語バージョンの名前を使用
+        # メタデータを設定
+        @game.store_metadata(:expansions, bgg_game_info[:expansions]) if bgg_game_info[:expansions].present?
+        @game.store_metadata(:best_num_players, bgg_game_info[:best_num_players]) if bgg_game_info[:best_num_players].present?
+        @game.store_metadata(:recommended_num_players, bgg_game_info[:recommended_num_players]) if bgg_game_info[:recommended_num_players].present?
+        @game.store_metadata(:categories, bgg_game_info[:categories]) if bgg_game_info[:categories].present?
+        @game.store_metadata(:mechanics, bgg_game_info[:mechanics]) if bgg_game_info[:mechanics].present?
+        
+        # 日本語版情報が取得できた場合は補完
+        if japanese_version_info.present?
           @game.japanese_name ||= japanese_version_info[:name]
-          
-          # 日本語版の出版社が送信されていない場合は、日本語バージョンの出版社を使用
           @game.japanese_publisher ||= japanese_version_info[:publisher]
-          
-          # 日本語版の発売日が送信されていない場合は、日本語バージョンの発売日を使用
           @game.japanese_release_date ||= japanese_version_info[:release_date]
-          
-          # 日本語版の画像URLが送信されていない場合は、日本語バージョンの画像URLを使用
           @game.japanese_image_url ||= japanese_version_info[:image_url]
         end
         
+        # 日本語出版社名を正規化
+        @game.normalize_japanese_publisher if @game.japanese_publisher.present?
+        
         if @game.save
-          render json: @game, status: :created
+          # システムユーザーによる初期レビューを作成
+          @game.create_initial_reviews
+          
+          render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
-          render json: @game.errors, status: :unprocessable_entity
+          render json: { errors: @game.errors }, status: :unprocessable_entity
         end
       end
 
       def update
         if @game.update(game_params)
-          render json: @game
+          # 日本語出版社名を正規化
+          @game.normalize_japanese_publisher
+          
+          render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
-          render json: @game.errors, status: :unprocessable_entity
+          render json: { errors: @game.errors }, status: :unprocessable_entity
         end
       end
 
@@ -211,76 +210,119 @@ module Api
         # 強制更新フラグがある場合は、既存の値も上書きする
         force_update = params[:force_update] == 'true'
         
-        # 更新前の属性を保存
-        old_attributes = @game.attributes
+        # BGGからゲーム情報を取得
+        bgg_data = BggService.get_game_details(@game.bgg_id)
         
-        # BGGからデータを取得して更新
+        if bgg_data.nil?
+          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :not_found
+          return
+        end
+        
+        # 古い属性を保存
+        old_attrs = @game.attributes.dup
+        
+        # 強制更新の場合は全ての属性を更新
         if force_update
-          # 強制更新の場合は、BGGから取得した全ての情報で更新
-          bgg_data = BggService.get_game_details(@game.bgg_id)
+          @game.name = bgg_data[:name]
+          @game.description = bgg_data[:description]
+          @game.image_url = bgg_data[:image_url]
+          @game.min_players = bgg_data[:min_players]
+          @game.max_players = bgg_data[:max_players]
+          @game.play_time = bgg_data[:play_time]
+          @game.min_play_time = bgg_data[:min_play_time]
+          @game.weight = bgg_data[:weight]
+          @game.publisher = bgg_data[:publisher]
+          @game.designer = bgg_data[:designer]
+          @game.release_date = bgg_data[:release_date]
           
-          if bgg_data.present?
-            # BGGから取得した情報で更新
-            @game.name = bgg_data[:name]
-            @game.description = bgg_data[:description]
-            @game.image_url = bgg_data[:image_url]
-            @game.min_players = bgg_data[:min_players]
-            @game.max_players = bgg_data[:max_players]
-            @game.play_time = bgg_data[:play_time]
-            @game.min_play_time = bgg_data[:min_play_time]
-            @game.weight = bgg_data[:weight]
-            @game.publisher = bgg_data[:publisher]
-            @game.designer = bgg_data[:designer]
-            @game.release_date = bgg_data[:release_date]
-            
-            # 日本語情報の更新（日本語情報は常に保持する）
-            if bgg_data[:japanese_name].present?
-              # 日本語名が実際に日本語文字を含んでいるか確認
-              if bgg_data[:japanese_name].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-                @game.japanese_name = bgg_data[:japanese_name]
-              end
-            end
-            
-            if bgg_data[:japanese_publisher].present?
-              @game.japanese_publisher = bgg_data[:japanese_publisher]
-            end
-            
-            if bgg_data[:japanese_release_date].present?
-              @game.japanese_release_date = bgg_data[:japanese_release_date]
-            end
-            
-            # 拡張情報の更新
-            @game.expansions = bgg_data[:expansions]
-            
-            # ベストプレイ人数とおすすめプレイ人数の更新
-            @game.best_num_players = bgg_data[:best_num_players]
-            @game.recommended_num_players = bgg_data[:recommended_num_players]
-            
-            # カテゴリーとメカニクスの更新
-            @game.categories = bgg_data[:categories]
-            @game.mechanics = bgg_data[:mechanics]
-            
-            # 変更を保存
-            if @game.save
-              # 編集履歴を作成
-              @game.create_edit_history(old_attributes, @game.attributes, current_user)
-              render json: @game
-            else
-              render json: @game.errors, status: :unprocessable_entity
-            end
-          else
-            render json: { error: 'BGGからデータを取得できませんでした' }, status: :unprocessable_entity
+          # メタデータを更新
+          @game.store_metadata(:expansions, bgg_data[:expansions]) if bgg_data[:expansions].present?
+          @game.store_metadata(:best_num_players, bgg_data[:best_num_players]) if bgg_data[:best_num_players].present?
+          @game.store_metadata(:recommended_num_players, bgg_data[:recommended_num_players]) if bgg_data[:recommended_num_players].present?
+          @game.store_metadata(:categories, bgg_data[:categories]) if bgg_data[:categories].present?
+          @game.store_metadata(:mechanics, bgg_data[:mechanics]) if bgg_data[:mechanics].present?
+          
+          # 日本語情報は強制更新しない（手動で設定された可能性があるため）
+          if bgg_data[:japanese_name].present?
+            @game.japanese_name = bgg_data[:japanese_name]
+          end
+          
+          if bgg_data[:japanese_publisher].present?
+            @game.japanese_publisher = bgg_data[:japanese_publisher]
+          end
+          
+          # 日本語出版社名を正規化
+          @game.normalize_japanese_publisher if @game.japanese_publisher.present?
+          
+          if bgg_data[:japanese_release_date].present?
+            @game.japanese_release_date = bgg_data[:japanese_release_date]
+          end
+          
+          if bgg_data[:japanese_image_url].present?
+            @game.japanese_image_url = bgg_data[:japanese_image_url]
           end
         else
-          # 通常更新の場合は、既存のupdate_from_bggメソッドを使用
-          if @game.update_from_bgg
+          # 通常更新の場合は、空の属性のみ更新
+          old_attrs = @game.attributes.dup
+          @game.update_from_bgg
+        end
+        
+        # 変更があった場合は編集履歴を作成
+        if @game.changed?
+          if @game.save
             # 編集履歴を作成
-            @game.create_edit_history(old_attributes, @game.attributes, current_user)
-            render json: @game
+            @game.create_edit_history(old_attrs, @game.attributes, current_user || 'system')
           else
-            render json: { error: 'BGGからデータを取得できませんでした' }, status: :unprocessable_entity
+            render json: { errors: @game.errors }, status: :unprocessable_entity
+            return
           end
         end
+        
+        # 日本語版情報を取得して補完
+        japanese_version_info = BggService.get_japanese_version_info(@game.bgg_id)
+        if japanese_version_info.present?
+          updated = false
+          
+          # 日本語名がない場合は設定
+          if @game.japanese_name.blank? && japanese_version_info[:name].present?
+            @game.japanese_name = japanese_version_info[:name]
+            updated = true
+          end
+          
+          # 日本語版出版社がない場合は設定
+          if @game.japanese_publisher.blank? && japanese_version_info[:publisher].present?
+            @game.japanese_publisher = japanese_version_info[:publisher]
+            # 日本語出版社名を正規化
+            @game.normalize_japanese_publisher
+            updated = true
+          end
+          
+          # 日本語版発売日がない場合は設定
+          if @game.japanese_release_date.blank? && japanese_version_info[:release_date].present?
+            @game.japanese_release_date = japanese_version_info[:release_date]
+            updated = true
+          end
+          
+          # 日本語版画像URLがない場合は設定
+          if @game.japanese_image_url.blank? && japanese_version_info[:image_url].present?
+            @game.japanese_image_url = japanese_version_info[:image_url]
+            updated = true
+          end
+          
+          # 変更があった場合は保存
+          if updated
+            old_attrs = @game.attributes.dup
+            if @game.save
+              # 編集履歴を作成
+              @game.create_edit_history(old_attrs, @game.attributes, current_user || 'system')
+            else
+              render json: { errors: @game.errors }, status: :unprocessable_entity
+              return
+            end
+          end
+        end
+        
+        render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
       end
 
       def destroy
@@ -457,12 +499,9 @@ module Api
         # ソートパラメータを取得（デフォルトはレビュー新着順）
         sort_by = params[:sort_by].present? ? params[:sort_by] : 'review_date'
         
-        # 出版社名のバリエーションを生成
-        publisher_variations = generate_publisher_variations(publisher)
-        
-        # 出版社名のバリエーションに基づいてゲームを検索
-        base_query = Game.where("publisher ILIKE ANY (ARRAY[?]) OR japanese_publisher ILIKE ANY (ARRAY[?])", 
-                          publisher_variations, publisher_variations)
+        # 出版社名で検索
+        base_query = Game.where("publisher ILIKE ? OR japanese_publisher ILIKE ?", 
+                          "%#{publisher}%", "%#{publisher}%")
         
         # ソート順に応じてクエリを構築
         query = base_query
@@ -681,69 +720,10 @@ module Api
       
       # 出版社名のバリエーションを生成するメソッド
       def generate_publisher_variations(publisher)
-        # 出版社で検索（正規化された名前も含む）
-        normalized_publisher = normalize_publisher_name(publisher)
-        
-        # 出版社名のバリエーションを作成
-        publisher_variations = [publisher, normalized_publisher]
-        
-        # 括弧を含む場合は括弧の前の部分も検索対象に
-        if normalized_publisher.include?(" (")
-          base_name = normalized_publisher.split(" (").first
-          publisher_variations << base_name
-        end
-        
-        # 英語名と日本語名の対応関係
-        english_japanese_mapping = {
-          'Hobby Japan' => 'ホビージャパン',
-          'Arclight' => 'アークライト',
-          'Suki Games' => '数寄ゲームズ',
-          'Oink Games' => 'オインクゲームズ',
-          'Grounding Inc.' => 'グラウンディング',
-          'Asmodee Japan' => 'アズモデージャパン'
-        }
-        
-        # 日本語名と英語名の対応関係
-        japanese_english_mapping = {
-          'ホビージャパン' => 'Hobby Japan',
-          'アークライト' => 'Arclight',
-          '数寄ゲームズ' => 'Suki Games',
-          'オインクゲームズ' => 'Oink Games',
-          'グラウンディング' => 'Grounding Inc.',
-          'アズモデージャパン' => 'Asmodee Japan'
-        }
-        
-        # 英語名から日本語名、または日本語名から英語名のバリエーションを追加
-        english_japanese_mapping.each do |en, ja|
-          if normalized_publisher.include?(en)
-            publisher_variations << ja
-          end
-        end
-        
-        japanese_english_mapping.each do |ja, en|
-          if normalized_publisher.include?(ja)
-            publisher_variations << en
-          end
-        end
-        
-        # 検索用にワイルドカードを追加
-        publisher_variations.uniq.map { |pub| "%#{pub}%" }
-      end
-      
-      # デザイナー名のバリエーションを生成するメソッド
-      def generate_designer_variations(designer)
-        # デザイナーで検索（正規化された名前も含む）
-        normalized_designer = normalize_designer_name(designer)
-        
-        # 正規化された名前と元の名前の両方で検索
-        ["%#{designer}%", "%#{normalized_designer}%"].uniq
-      end
-      
-      def normalize_publisher_name(name)
-        return name if name.blank?
+        return [publisher] if publisher.blank?
         
         # 大文字小文字を統一
-        normalized = name.strip.downcase
+        normalized = publisher.strip.downcase
         
         # 出版社名の正規化ルール
         publisher_mapping = {
@@ -774,54 +754,51 @@ module Api
           'asmodee japan' => 'Asmodee Japan',
           'asmodeejapan' => 'Asmodee Japan',
           'asmodee-japan' => 'Asmodee Japan',
-          'days of wonder' => 'Days of Wonder',
-          'daysofwonder' => 'Days of Wonder',
-          'days-of-wonder' => 'Days of Wonder',
-          'z-man games' => 'Z-Man Games',
-          'z man games' => 'Z-Man Games',
-          'zman games' => 'Z-Man Games',
-          'zmangames' => 'Z-Man Games',
-          'z-mangames' => 'Z-Man Games',
-          'fantasy flight games' => 'Fantasy Flight Games',
-          'fantasyflightgames' => 'Fantasy Flight Games',
-          'fantasy-flight-games' => 'Fantasy Flight Games',
-          'ffg' => 'Fantasy Flight Games',
-          'rio grande games' => 'Rio Grande Games',
-          'riograndegames' => 'Rio Grande Games',
-          'rio-grande-games' => 'Rio Grande Games',
-          'matagot' => 'Matagot',
-          'iello' => 'IELLO',
-          'cmon' => 'CMON',
-          'cmon limited' => 'CMON',
-          'cool mini or not' => 'CMON',
-          'coolminiornot' => 'CMON',
+          'ten days games' => 'Ten Days Games',
+          'tendays games' => 'Ten Days Games',
+          'tendaysgames' => 'Ten Days Games',
+          'new games order' => 'New Games Order',
+          'newgamesorder' => 'New Games Order',
+          'sugorokuya' => 'Sugorokuya',
+          'colon arc' => 'Colon Arc',
+          'colonarc' => 'Colon Arc',
+          'dice tower' => 'Dice Tower',
+          'dicetower' => 'Dice Tower',
+          'board game japan' => 'Board Game Japan',
+          'boardgamejapan' => 'Board Game Japan',
+          'game market' => 'Game Market',
+          'gamemarket' => 'Game Market',
+          'gp' => 'GP',
+          'hakoniwagames' => 'Hakoniwa',
+          'hakoniwa games' => 'Hakoniwa',
+          'hakoniwa' => 'Hakoniwa',
           
           # 日本語名の正規化
-          'ホビージャパン' => 'ホビージャパン (Hobby Japan)',
-          'ホビー・ジャパン' => 'ホビージャパン (Hobby Japan)',
-          'ホビージャパン（hobby japan）' => 'ホビージャパン (Hobby Japan)',
-          'ホビージャパン(hobby japan)' => 'ホビージャパン (Hobby Japan)',
-          'アークライト' => 'アークライト (Arclight)',
-          'アーク・ライト' => 'アークライト (Arclight)',
-          'アークライト（arclight）' => 'アークライト (Arclight)',
-          'アークライト(arclight)' => 'アークライト (Arclight)',
-          'アークライトゲームズ' => 'アークライト (Arclight)',
-          '数寄ゲームズ' => '数寄ゲームズ (Suki Games)',
-          'すきげーむず' => '数寄ゲームズ (Suki Games)',
-          '数寄ゲームズ（suki games）' => '数寄ゲームズ (Suki Games)',
-          '数寄ゲームズ(suki games)' => '数寄ゲームズ (Suki Games)',
-          'オインクゲームズ' => 'オインクゲームズ (Oink Games)',
-          'おいんくげーむず' => 'オインクゲームズ (Oink Games)',
-          'オインクゲームズ（oink games）' => 'オインクゲームズ (Oink Games)',
-          'オインクゲームズ(oink games)' => 'オインクゲームズ (Oink Games)',
-          'グラウンディング' => 'グラウンディング (Grounding Inc.)',
-          'ぐらうんでぃんぐ' => 'グラウンディング (Grounding Inc.)',
-          'グラウンディング（grounding）' => 'グラウンディング (Grounding Inc.)',
-          'グラウンディング(grounding)' => 'グラウンディング (Grounding Inc.)',
-          'アズモデージャパン' => 'アズモデージャパン (Asmodee Japan)',
-          'あずもでーじゃぱん' => 'アズモデージャパン (Asmodee Japan)',
-          'アズモデージャパン（asmodee japan）' => 'アズモデージャパン (Asmodee Japan)',
-          'アズモデージャパン(asmodee japan)' => 'アズモデージャパン (Asmodee Japan)',
+          'ホビージャパン' => 'ホビージャパン',
+          'ホビー・ジャパン' => 'ホビージャパン',
+          'ホビージャパン（hobby japan）' => 'ホビージャパン',
+          'ホビージャパン(hobby japan)' => 'ホビージャパン',
+          'アークライト' => 'アークライト',
+          'アーク・ライト' => 'アークライト',
+          'アークライト（arclight）' => 'アークライト',
+          'アークライト(arclight)' => 'アークライト',
+          'アークライトゲームズ' => 'アークライト',
+          '数寄ゲームズ' => '数寄ゲームズ',
+          'すきげーむず' => '数寄ゲームズ',
+          '数寄ゲームズ（suki games）' => '数寄ゲームズ',
+          '数寄ゲームズ(suki games)' => '数寄ゲームズ',
+          'オインクゲームズ' => 'オインクゲームズ',
+          'おいんくげーむず' => 'オインクゲームズ',
+          'オインクゲームズ（oink games）' => 'オインクゲームズ',
+          'オインクゲームズ(oink games)' => 'オインクゲームズ',
+          'グラウンディング' => 'グラウンディング',
+          'ぐらうんでぃんぐ' => 'グラウンディング',
+          'グラウンディング（grounding）' => 'グラウンディング',
+          'グラウンディング(grounding)' => 'グラウンディング',
+          'アズモデージャパン' => 'アズモデージャパン',
+          'あずもでーじゃぱん' => 'アズモデージャパン',
+          'アズモデージャパン（asmodee japan）' => 'アズモデージャパン',
+          'アズモデージャパン(asmodee japan)' => 'アズモデージャパン',
           'テンデイズゲームズ' => 'テンデイズゲームズ',
           'てんでいずげーむず' => 'テンデイズゲームズ',
           'ニューゲームズオーダー' => 'ニューゲームズオーダー',
@@ -829,36 +806,35 @@ module Api
           'すごろくや' => 'すごろくや',
           'コロンアーク' => 'コロンアーク',
           'ころんあーく' => 'コロンアーク',
-          'アナログランチボックス' => 'アナログランチボックス',
-          'あなろぐらんちぼっくす' => 'アナログランチボックス',
-          'ドミナゲームズ' => 'ドミナゲームズ',
-          'どみなげーむず' => 'ドミナゲームズ',
-          'おかずブランド' => 'おかずブランド',
-          'ジェリージェリーゲームズ' => 'ジェリージェリーゲームズ',
-          'じぇりーじぇりーげーむず' => 'ジェリージェリーゲームズ',
-          'いつつ' => 'いつつ',
-          '遊歩堂' => '遊歩堂',
-          'ゆうほどう' => '遊歩堂',
-          'ヨクトゲームズ' => 'ヨクトゲームズ',
-          'よくとげーむず' => 'ヨクトゲームズ',
-          'タコアシゲームズ' => 'タコアシゲームズ',
-          'たこあしげーむず' => 'タコアシゲームズ',
-          '耐気圏内ゲームズ' => '耐気圏内ゲームズ',
-          'たいきけんないげーむず' => '耐気圏内ゲームズ',
-          'チーム彩園' => 'チーム彩園',
-          'ちーむさいえん' => 'チーム彩園',
+          'ダイスタワー' => 'ダイスタワー',
+          'だいすたわー' => 'ダイスタワー',
+          'ボードゲームジャパン' => 'ボードゲームジャパン',
+          'ぼーどげーむじゃぱん' => 'ボードゲームジャパン',
+          'ゲームマーケット' => 'ゲームマーケット',
+          'げーむまーけっと' => 'ゲームマーケット',
+          'ジーピー' => 'ジーピー',
+          'じーぴー' => 'ジーピー',
+          'ハコニワ' => 'ハコニワ',
+          'はこにわ' => 'ハコニワ',
         }
         
-        # マッピングに存在する場合は正規化された名前を返す
-        publisher_mapping[normalized] || name
+        # マッピングに基づいて正規化
+        publisher_mapping.each do |key, value|
+          if normalized.include?(key)
+            return [value]
+          end
+        end
+        
+        # マッピングに該当しない場合は元の名前を返す
+        [publisher]
       end
       
-      # デザイナー名を正規化するメソッド
-      def normalize_designer_name(name)
-        return name if name.blank?
+      # デザイナー名のバリエーションを生成するメソッド
+      def generate_designer_variations(designer)
+        return [designer] if designer.blank?
         
         # 大文字小文字を統一
-        normalized = name.strip.downcase
+        normalized = designer.strip.downcase
         
         # デザイナー名の正規化ルール
         designer_mapping = {
@@ -901,8 +877,15 @@ module Api
           'プフィスター' => 'アレクサンダー・プフィスター (Alexander Pfister)',
         }
         
-        # マッピングに存在する場合は正規化された名前を返す
-        designer_mapping[normalized] || name
+        # マッピングに基づいて正規化
+        designer_mapping.each do |key, value|
+          if normalized.include?(key)
+            return [value]
+          end
+        end
+        
+        # マッピングに該当しない場合は元の名前を返す
+        [designer]
       end
     end
   end

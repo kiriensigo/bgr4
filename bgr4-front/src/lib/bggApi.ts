@@ -383,11 +383,29 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       "";
 
     // 日本語名を探す
-    const japaneseName = names.find(
-      (n: any) =>
-        n["@_type"] === "alternate" &&
-        n["@_value"].match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+    // まずはひらがな・カタカナを含む名前を優先的に探す
+    const japaneseNameWithKana = names.find((n: any) =>
+      n["@_value"].match(/[\u3040-\u309F\u30A0-\u30FF]/)
     )?.["@_value"];
+
+    // ひらがな・カタカナを含む名前がなければ、漢字のみの名前を探す
+    const japaneseNameWithKanjiOnly = names.find(
+      (n: any) =>
+        !n["@_value"].match(/[\u3040-\u309F\u30A0-\u30FF]/) &&
+        n["@_value"].match(/[\u4E00-\u9FAF]/)
+    )?.["@_value"];
+
+    console.log("日本語名検出ロジック:", {
+      allNames: names.map((n: any) => ({
+        type: n["@_type"],
+        value: n["@_value"],
+      })),
+      japaneseNameWithKana,
+      japaneseNameWithKanjiOnly,
+    });
+
+    // ひらがな・カタカナを含む名前を優先、なければ漢字のみの名前を使用
+    const japaneseName = japaneseNameWithKana || japaneseNameWithKanjiOnly;
 
     // 「Japanese edition」などの英語表記を除外するための関数
     const isActualJapaneseName = (name: string | undefined): boolean => {
@@ -398,12 +416,26 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
         /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/
       );
 
+      // ひらがな・カタカナを含むか確認
+      const containsKana = !!name.match(/[\u3040-\u309F\u30A0-\u30FF]/);
+
+      // 漢字のみを含むか確認
+      const containsKanjiOnly =
+        !!name.match(/[\u4E00-\u9FAF]/) && !containsKana;
+
       // 「Japanese」「Japan」などの英語表記のみの場合は除外
       const isOnlyEnglishJapaneseReference =
         !containsJapaneseChars &&
         (name.toLowerCase().includes("japanese") ||
           name.toLowerCase().includes("japan edition") ||
           name.toLowerCase().includes("japan version"));
+
+      console.log(`Name "${name}" analysis:`, {
+        containsJapaneseChars,
+        containsKana,
+        containsKanjiOnly,
+        isOnlyEnglishJapaneseReference,
+      });
 
       return containsJapaneseChars && !isOnlyEnglishJapaneseReference;
     };
@@ -412,7 +444,9 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       "All names:",
       names.map((n: any) => ({ type: n["@_type"], value: n["@_value"] }))
     );
-    console.log("Japanese name detected from alternate names:", japaneseName);
+    console.log("Japanese name with kana:", japaneseNameWithKana);
+    console.log("Japanese name with kanji only:", japaneseNameWithKanjiOnly);
+    console.log("Selected Japanese name:", japaneseName);
     console.log("Is actual Japanese name:", isActualJapaneseName(japaneseName));
 
     // 出版社情報を取得
@@ -595,9 +629,12 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
           const versionName = version.name?.["@_value"] || "";
 
           // 日本語版かどうかを判定
-          const hasJapaneseChars = !!versionName.match(
-            /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/
-          );
+          // ひらがなまたはカタカナを含むか確認（最優先）
+          const hasKana = !!versionName.match(/[\u3040-\u309F\u30A0-\u30FF]/);
+
+          // 漢字のみを含むか確認（次点）
+          const hasKanjiOnly =
+            !hasKana && !!versionName.match(/[\u4E00-\u9FAF]/);
 
           const containsJapanKeyword =
             versionName.toLowerCase().includes("japanese") ||
@@ -634,10 +671,18 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
           }
 
           // 日本語版と判定する条件
+          // 1. ひらがな・カタカナを含む場合は最優先
+          // 2. 漢字のみの場合は次点
+          // 3. 「Japanese」などのキーワードと日本の出版社の組み合わせも考慮
           const isJapaneseVersion =
-            hasJapaneseChars || (containsJapanKeyword && hasJapanesePublisher);
+            hasKana ||
+            hasKanjiOnly ||
+            (containsJapanKeyword && hasJapanesePublisher);
 
           if (isJapaneseVersion) {
+            console.log("Found Japanese version:", version);
+            console.log("Version has kana:", hasKana);
+            console.log("Version has kanji only:", hasKanjiOnly);
             japaneseVersion = version;
             versionId = version["@_id"];
             break;

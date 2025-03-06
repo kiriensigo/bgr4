@@ -10,4 +10,12 @@ class GameSerializer < ActiveModel::Serializer
   def baseGame
     object.base_game
   end
+  
+  def in_wishlist
+    # スコープ（current_user）が存在しない場合はfalseを返す
+    return false unless scope && scope.is_a?(User)
+    
+    # ユーザーのウィッシュリストにこのゲームが含まれているかどうかを確認
+    WishlistItem.exists?(user_id: scope.id, game: object.bgg_id)
+  end
 end 

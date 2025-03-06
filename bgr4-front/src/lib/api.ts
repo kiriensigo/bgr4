@@ -4,6 +4,11 @@ import { getBGGGameDetails, type BGGGameDetails } from "./bggApi";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const API_BASE_URL = `${API_URL}/api/v1`;
 
+// ゲーム情報のキャッシュ
+export const gameCache: Record<string, { data: Game; timestamp: number }> = {};
+// キャッシュの有効期限（5分）
+export const CACHE_EXPIRY = 5 * 60 * 1000;
+
 export interface Game {
   id: string | number;
   bgg_id: string;
@@ -310,35 +315,30 @@ export async function getGame(
   authHeaders?: Record<string, string>
 ): Promise<Game> {
   try {
-    // まずAPIからゲーム情報の取得を試みる
     const response = await fetch(`${API_BASE_URL}/games/${id}`, {
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
         ...(authHeaders || {}),
       },
+      // キャッシュを無効化
+      cache: "no-cache",
     });
 
-    // ゲームが見つかった場合はそのデータを返す
-    if (response.ok) {
-      const gameData = await response.json();
-      return gameData;
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(
+          `ゲームID ${id} はまだデータベースに登録されていません`
+        );
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch game");
     }
 
-    // ゲームが見つからない場合（404）はエラーメッセージを表示
-    if (response.status === 404) {
-      throw new Error(
-        `ゲームID: ${id}はまだデータベースに登録されていません。検索画面から登録できます。`
-      );
-    }
-
-    // その他のエラーの場合
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || errorData.message || "ゲーム情報の取得に失敗しました"
-    );
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("Error fetching game:", error);
     throw error;
   }
 }
@@ -733,6 +733,16 @@ export async function updateGameFromBgg(
   authHeaders: Record<string, string>
 ): Promise<Game> {
   try {
+    // タイムアウト処理を追加
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒でタイムアウト
+
+    // キャッシュをクリア
+    const cacheKey = `game-${gameId}`;
+    if (gameCache[cacheKey]) {
+      delete gameCache[cacheKey];
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/games/${gameId}/update_from_bgg?force_update=${forceUpdate}`,
       {
@@ -741,17 +751,36 @@ export async function updateGameFromBgg(
           "Content-Type": "application/json",
           ...authHeaders,
         },
+        signal: controller.signal,
+        // キャッシュを無効化
+        cache: "no-cache",
       }
     );
+
+    // タイムアウトをクリア
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to update game from BGG");
     }
 
-    return await response.json();
+    const updatedGame = await response.json();
+
+    // キャッシュを更新
+    gameCache[cacheKey] = {
+      data: updatedGame,
+      timestamp: Date.now(),
+    };
+
+    return updatedGame;
   } catch (error) {
     console.error("Error updating game from BGG:", error);
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(
+        "BGGからの応答がタイムアウトしました。時間をおいて再度お試しください。"
+      );
+    }
     throw error;
   }
 }

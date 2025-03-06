@@ -27,6 +27,7 @@ export default function RootLayout({
                 flexDirection: "column",
                 minHeight: "100vh",
               }}
+              inert={undefined}
             >
               <Header />
               <Box

@@ -44,12 +44,33 @@ class BggService
       
       # 日本語名の取得
       japanese_name = nil
+      japanese_name_with_kana = nil
+      
+      # デバッグ用に全ての名前を記録
+      all_names = []
       item.xpath('.//name').each do |name|
-        if name.attr('value').match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-          japanese_name = name.attr('value')
+        name_value = name.attr('value')
+        name_type = name.attr('type')
+        all_names << { value: name_value, type: name_type }
+        
+        # ひらがなまたはカタカナを含む場合は最優先
+        if name_value.match?(/[\p{Hiragana}\p{Katakana}]/)
+          japanese_name_with_kana = name_value
+          Rails.logger.info "Found Japanese name with kana: #{name_value}"
           break
+        # 漢字のみの場合は候補として保存
+        elsif name_value.match?(/\p{Han}/) && !japanese_name
+          japanese_name = name_value
+          Rails.logger.info "Found Japanese name with kanji only: #{name_value}"
         end
       end
+      
+      Rails.logger.info "All names: #{all_names.inspect}"
+      Rails.logger.info "Japanese name with kana: #{japanese_name_with_kana}"
+      Rails.logger.info "Japanese name with kanji only: #{japanese_name}"
+      
+      # ひらがな・カタカナを含む名前があればそれを優先、なければ漢字のみの名前を使用
+      japanese_name = japanese_name_with_kana || japanese_name
       
       # 「Japanese edition」などの英語表記のみの場合は、日本語名として扱わない
       if japanese_name
@@ -80,13 +101,127 @@ class BggService
       
       # 日本語版出版社の取得
       japanese_publisher = nil
+      
+      # 日本の出版社リストと正規化マッピング
+      japanese_publisher_mapping = {
+        # ホビージャパン系
+        'hobby japan' => 'ホビージャパン',
+        'hobbyjapan' => 'ホビージャパン',
+        'hobyjapan' => 'ホビージャパン',
+        'ホビージャパン' => 'ホビージャパン',
+        
+        # アークライト系
+        'arclight' => 'アークライト',
+        'arc light' => 'アークライト',
+        'arclight games' => 'アークライト',
+        'arclightgames' => 'アークライト',
+        'アークライト' => 'アークライト',
+        
+        # すごろくや系
+        'sugorokuya' => 'すごろくや',
+        'すごろくや' => 'すごろくや',
+        
+        # オインクゲームズ系
+        'oink games' => 'オインクゲームズ',
+        'oinkgames' => 'オインクゲームズ',
+        'オインクゲームズ' => 'オインクゲームズ',
+        
+        # グラウンディング系
+        'grounding inc.' => 'グラウンディング',
+        'grounding' => 'グラウンディング',
+        'grounding games' => 'グラウンディング',
+        'groundinggames' => 'グラウンディング',
+        'グラウンディング' => 'グラウンディング',
+        
+        # アズモデージャパン系
+        'asmodee japan' => 'アズモデージャパン',
+        'asmodee' => 'アズモデージャパン',
+        'asmodeejapan' => 'アズモデージャパン',
+        'アズモデージャパン' => 'アズモデージャパン',
+        
+        # テンデイズゲームズ系
+        'ten days games' => 'テンデイズゲームズ',
+        'tendays games' => 'テンデイズゲームズ',
+        'tendaysgames' => 'テンデイズゲームズ',
+        'テンデイズゲームズ' => 'テンデイズゲームズ',
+        
+        # ニューゲームズオーダー系
+        'new games order' => 'ニューゲームズオーダー',
+        'newgamesorder' => 'ニューゲームズオーダー',
+        'ニューゲームズオーダー' => 'ニューゲームズオーダー',
+        
+        # コロンアーク系
+        'colon arc' => 'コロンアーク',
+        'colonarc' => 'コロンアーク',
+        'コロンアーク' => 'コロンアーク',
+        
+        # 数寄ゲームズ系
+        'suki games' => '数寄ゲームズ',
+        'sukigames' => '数寄ゲームズ',
+        '数寄ゲームズ' => '数寄ゲームズ',
+        
+        # ダイスタワー系
+        'dice tower' => 'ダイスタワー',
+        'dicetower' => 'ダイスタワー',
+        'ダイスタワー' => 'ダイスタワー',
+        
+        # ボードゲームジャパン系
+        'board game japan' => 'ボードゲームジャパン',
+        'boardgame japan' => 'ボードゲームジャパン',
+        'boardgamejapan' => 'ボードゲームジャパン',
+        'ボードゲームジャパン' => 'ボードゲームジャパン',
+        
+        # ゲームマーケット系
+        'game market' => 'ゲームマーケット',
+        'gamemarket' => 'ゲームマーケット',
+        'ゲームマーケット' => 'ゲームマーケット',
+        
+        # ジーピー系
+        'gp' => 'ジーピー',
+        'ジーピー' => 'ジーピー',
+        
+        # ハコニワ系
+        'hakoniwagames' => 'ハコニワ',
+        'hakoniwa games' => 'ハコニワ',
+        'hakoniwa' => 'ハコニワ',
+        'ハコニワ' => 'ハコニワ',
+        
+        # その他の主要な出版社
+        'z-man games' => 'Z-Man Games',
+        'zman games' => 'Z-Man Games',
+        'zmangames' => 'Z-Man Games',
+        'days of wonder' => 'Days of Wonder',
+        'daysofwonder' => 'Days of Wonder',
+        'fantasy flight games' => 'Fantasy Flight Games',
+        'fantasyflightgames' => 'Fantasy Flight Games',
+        'ffg' => 'Fantasy Flight Games',
+        'rio grande games' => 'Rio Grande Games',
+        'riograndegames' => 'Rio Grande Games',
+        'matagot' => 'Matagot',
+        'iello' => 'IELLO',
+        'cmon' => 'CMON',
+        'cmon limited' => 'CMON',
+        'cool mini or not' => 'CMON',
+        'coolminiornot' => 'CMON'
+      }
+      
       item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
         publisher_name = pub.attr('value')
+        
+        # 日本語文字を含むか、または既知の日本の出版社かをチェック
         if publisher_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) || 
-           publisher_name.include?('Hobby Japan') || 
-           publisher_name.include?('Arclight') ||
-           publisher_name.include?('Ten Days Games')
-          japanese_publisher = publisher_name
+           japanese_publisher_mapping.keys.any? { |key| publisher_name.downcase.include?(key.downcase) }
+          
+          # 表記揺れを修正して正規化
+          normalized_name = nil
+          japanese_publisher_mapping.each do |key, value|
+            if publisher_name.downcase.include?(key.downcase)
+              normalized_name = value
+              break
+            end
+          end
+          
+          japanese_publisher = normalized_name || publisher_name
           break
         end
       end
@@ -99,8 +234,14 @@ class BggService
         break
       end
       
-      # 発売日の取得
-      release_date = item.at_xpath('.//yearpublished')&.attr('value')
+      # 発売年の取得
+      year_published = item.at_xpath('.//yearpublished')&.attr('value')
+      
+      # 発売日の設定（年のみの場合は1月1日を追加）
+      release_date = nil
+      if year_published.present?
+        release_date = "#{year_published}-01-01"
+      end
       
       # 日本語版発売日は現状取得できないのでnilにしておく
       japanese_release_date = nil
@@ -213,15 +354,27 @@ class BggService
         japanese_version = nil
         version_id = nil
         
+        # デバッグ用に全てのバージョン情報を記録
+        all_versions = []
+        
         doc.xpath('//versions/item').each do |version|
           version_name = version.at_xpath('./name')&.attr('value') || ''
           current_version_id = version.attr('id')
           
+          # バージョン情報を記録
+          all_versions << {
+            id: current_version_id,
+            name: version_name
+          }
+          
           # 日本語版かどうかを判定
           is_japanese_version = false
           
-          # 実際に日本語文字を含むか確認
-          has_japanese_chars = version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          # ひらがなまたはカタカナを含むか確認（最優先）
+          has_kana = version_name.match?(/[\p{Hiragana}\p{Katakana}]/)
+          
+          # 漢字のみを含むか確認（次点）
+          has_kanji_only = version_name.match?(/\p{Han}/) && !has_kana
           
           # 「Japanese」「Japan」などの英語表記を含むか確認
           contains_japan_keyword = 
@@ -243,14 +396,24 @@ class BggService
           end
           
           # 日本語版と判定する条件
-          is_japanese_version = has_japanese_chars || (contains_japan_keyword && has_japanese_publisher)
+          # 1. ひらがな・カタカナを含む場合は最優先
+          # 2. 漢字のみの場合は次点
+          # 3. 「Japanese」などのキーワードと日本の出版社の組み合わせも考慮
+          is_japanese_version = has_kana || has_kanji_only || (contains_japan_keyword && has_japanese_publisher)
+          
+          Rails.logger.info "Version #{current_version_id} (#{version_name}) analysis: kana=#{has_kana}, kanji_only=#{has_kanji_only}, japan_keyword=#{contains_japan_keyword}, jp_publisher=#{has_japanese_publisher}, is_japanese=#{is_japanese_version}"
           
           if is_japanese_version
             japanese_version = version
             version_id = current_version_id
-            break
+            Rails.logger.info "Found Japanese version: #{version_name} (ID: #{current_version_id})"
+            # ひらがな・カタカナを含む場合は即座に採用して検索終了
+            break if has_kana
           end
         end
+        
+        Rails.logger.info "All versions: #{all_versions.inspect}"
+        Rails.logger.info "Selected Japanese version: #{japanese_version ? japanese_version.at_xpath('./name')&.attr('value') : 'none'} (ID: #{version_id})"
         
         if japanese_version
           # バージョン情報から日本語名を取得
@@ -425,10 +588,18 @@ class BggService
         title_match = title_text.match(/^([^\|]+)/)
         if title_match && title_match[1]
           potential_name = title_match[1].strip
-          # 実際に日本語文字を含むか確認
-          if potential_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          
+          # ひらがなまたはカタカナを含むか確認（最優先）
+          has_kana = potential_name.match?(/[\p{Hiragana}\p{Katakana}]/)
+          
+          # 漢字のみを含むか確認（次点）
+          has_kanji_only = potential_name.match?(/\p{Han}/) && !has_kana
+          
+          # 日本語文字（ひらがな、カタカナ、漢字）を含む場合のみ採用
+          if has_kana || has_kanji_only
             japanese_name = potential_name
-            Rails.logger.info "Found Japanese name from version page title: #{japanese_name}"
+            priority_type = has_kana ? "kana" : "kanji"
+            Rails.logger.info "Found Japanese name (#{priority_type}) from version page title: #{japanese_name}"
           end
         end
       end
