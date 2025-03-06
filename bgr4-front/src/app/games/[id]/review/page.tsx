@@ -200,7 +200,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               downtime: userReview.downtime || 3,
               recommended_players: userReview.recommended_players || [],
               mechanics: userReview.mechanics || [],
-              categories: userReview.tags || [],
+              categories: userReview.categories || [],
               custom_tags: (userReview.custom_tags || []).join(" "),
               short_comment: userReview.short_comment || "",
             });
@@ -261,7 +261,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         downtime: review.downtime,
         recommended_players: review.recommended_players,
         mechanics: review.mechanics,
-        tags: review.categories,
+        categories: review.categories,
         custom_tags: review.custom_tags
           .split(/\s+/)
           .filter((tag) => tag.length > 0),

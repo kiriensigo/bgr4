@@ -7,6 +7,7 @@ import {
   addToWishlist,
   removeFromWishlist,
   getWishlist,
+  updateGameFromBgg,
   type Game,
 } from "@/lib/api";
 import {
@@ -31,6 +32,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -42,6 +45,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import TranslateIcon from "@mui/icons-material/Translate";
 import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
 import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import GameCard from "@/components/GameCard";
 import ReviewList from "@/components/ReviewList";
 import GameRating from "@/components/GameRating";
@@ -66,7 +70,7 @@ interface Review {
   downtime: number;
   recommended_players: string[];
   mechanics: string[];
-  tags: string[];
+  categories: string[];
   custom_tags: string[];
   short_comment: string;
   created_at: string;
@@ -134,27 +138,29 @@ const calculateAverageScores = (reviews: Review[]) => {
   };
 };
 
-// 人気のタグを集計する関数
-const getPopularTags = (reviews: any[]) => {
+// 人気のカテゴリーを集計する関数
+const getPopularCategories = (reviews: any[]) => {
   if (!reviews || reviews.length === 0) return [];
 
-  const tagCount = new Map<string, number>();
+  const categoryCount = new Map<string, number>();
   reviews.forEach((review) => {
-    // tagsとcustom_tagsが配列であることを確認し、そうでない場合は空配列を使用
-    const tags = Array.isArray(review.tags) ? review.tags : [];
+    // categoriesとcustom_tagsが配列であることを確認し、そうでない場合は空配列を使用
+    const categories = Array.isArray(review.categories)
+      ? review.categories
+      : [];
     const customTags = Array.isArray(review.custom_tags)
       ? review.custom_tags
       : [];
 
-    [...tags, ...customTags].forEach((tag) => {
-      if (tag) {
-        // tagがnullやundefinedでないことを確認
-        tagCount.set(tag, (tagCount.get(tag) || 0) + 1);
+    [...categories, ...customTags].forEach((category) => {
+      if (category) {
+        // categoryがnullやundefinedでないことを確認
+        categoryCount.set(category, (categoryCount.get(category) || 0) + 1);
       }
     });
   });
 
-  return Array.from(tagCount.entries())
+  return Array.from(categoryCount.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([name, count]) => ({ name, count }));
@@ -324,6 +330,9 @@ export default function GamePage({ params }: GamePageProps) {
   >("success");
   const [wishlistItemId, setWishlistItemId] = useState<number | null>(null);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
+  const [updatingGame, setUpdatingGame] = useState(false);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
 
   const fetchGameData = useCallback(async () => {
     try {
@@ -491,6 +500,71 @@ export default function GamePage({ params }: GamePageProps) {
     }
   };
 
+  // BGGからゲーム情報を更新するダイアログを開く
+  const handleOpenUpdateDialog = () => {
+    setOpenUpdateDialog(true);
+  };
+
+  // BGGからゲーム情報を更新するダイアログを閉じる
+  const handleCloseUpdateDialog = () => {
+    setOpenUpdateDialog(false);
+    setForceUpdate(false);
+  };
+
+  // BGGからゲーム情報を更新する
+  const handleUpdateGameFromBgg = async () => {
+    if (!user) return;
+
+    try {
+      setUpdatingGame(true);
+      const authHeaders = await getAuthHeaders();
+
+      if (!authHeaders) {
+        throw new Error("認証情報が取得できませんでした");
+      }
+
+      const updatedGame = await updateGameFromBgg(
+        params.id,
+        forceUpdate,
+        authHeaders
+      );
+
+      // ゲーム情報を更新
+      setGame(updatedGame as ExtendedGame);
+
+      // 日本語名があれば更新
+      if (updatedGame.japanese_name) {
+        setJapaneseName(updatedGame.japanese_name);
+      }
+
+      // キャッシュを更新
+      const cacheKey = `game-${params.id}`;
+      gameCache[cacheKey] = {
+        data: updatedGame,
+        timestamp: Date.now(),
+      };
+
+      // 成功メッセージを表示
+      setSnackbarMessage("ゲーム情報を更新しました");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+
+      // ダイアログを閉じる
+      handleCloseUpdateDialog();
+    } catch (error) {
+      console.error("Error updating game from BGG:", error);
+      setSnackbarMessage(
+        error instanceof Error
+          ? error.message
+          : "ゲーム情報の更新に失敗しました"
+      );
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setUpdatingGame(false);
+    }
+  };
+
   if (loading) {
     return (
       <Container sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -578,6 +652,19 @@ export default function GamePage({ params }: GamePageProps) {
               </Button>
             )}
 
+            {/* BGGからゲーム情報を更新するボタン（システム管理者のみ表示） */}
+            {user && user.is_admin && (
+              <Button
+                variant="outlined"
+                color="info"
+                startIcon={<RefreshIcon />}
+                onClick={handleOpenUpdateDialog}
+                sx={{ mb: 2, mr: 2 }}
+              >
+                BGGから更新
+              </Button>
+            )}
+
             {/* やりたいリストボタン */}
             {user && (
               <Tooltip
@@ -603,9 +690,14 @@ export default function GamePage({ params }: GamePageProps) {
                       : handleAddToWishlist
                   }
                   disabled={addingToWishlist}
-                  sx={{ mb: 2, mr: 2 }}
+                  sx={{ mb: 2 }}
                 >
-                  {game.in_wishlist ? "やりたい解除" : "やりたい！"}
+                  {game.in_wishlist
+                    ? "やりたいリストから削除"
+                    : "やりたいリストに追加"}
+                  {addingToWishlist && (
+                    <CircularProgress size={24} sx={{ ml: 1 }} />
+                  )}
                 </Button>
               </Tooltip>
             )}
@@ -795,41 +887,41 @@ export default function GamePage({ params }: GamePageProps) {
                 </Box>
               )}
 
-            {/* 人気タグ */}
-            {game.popular_tags && game.popular_tags.length > 0 && (
+            {/* 人気カテゴリー */}
+            {game.popular_categories && game.popular_categories.length > 0 && (
               <Box sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  人気タグ
+                  人気カテゴリー
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {game.popular_tags.map((tag, index) => {
-                    // tagがオブジェクトの場合の処理
+                  {game.popular_categories.map((category, index) => {
+                    // categoryがオブジェクトの場合の処理
                     let displayText;
-                    let key = `tag-${index}`;
+                    let key = `category-${index}`;
 
-                    if (typeof tag === "object" && tag !== null) {
+                    if (typeof category === "object" && category !== null) {
                       // nameプロパティがある場合はそれを使用
-                      if (tag.name) {
-                        displayText = tag.name;
-                        key = `tag-name-${tag.name}-${index}`;
+                      if (category.name) {
+                        displayText = category.name;
+                        key = `category-name-${category.name}-${index}`;
                       }
                       // countプロパティがある場合はそれを使用
-                      else if (tag.count) {
-                        displayText = tag.count;
-                        key = `tag-count-${tag.count}-${index}`;
+                      else if (category.count) {
+                        displayText = category.count;
+                        key = `category-count-${category.count}-${index}`;
                       }
                       // どちらもない場合はJSONを文字列化
                       else {
                         try {
-                          displayText = JSON.stringify(tag);
+                          displayText = JSON.stringify(category);
                         } catch (e) {
                           displayText = "不明";
                         }
                       }
                     } else {
                       // プリミティブ値の場合はそのまま使用
-                      displayText = tag;
-                      key = `tag-${tag}-${index}`;
+                      displayText = category;
+                      key = `category-${category}-${index}`;
                     }
 
                     return (
@@ -844,7 +936,7 @@ export default function GamePage({ params }: GamePageProps) {
                   })}
                 </Box>
                 <Typography variant="caption" color="text.secondary">
-                  ※ レビュー投稿者が最も多く選択したタグです
+                  ※ レビュー投稿者が最も多く選択したカテゴリです
                 </Typography>
               </Box>
             )}
@@ -1022,7 +1114,7 @@ export default function GamePage({ params }: GamePageProps) {
                   人気のタグ
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {getPopularTags(game.reviews).map((tag) => (
+                  {getPopularCategories(game.reviews).map((tag) => (
                     <Chip
                       key={tag.name}
                       label={tag.name}
@@ -1112,6 +1204,39 @@ export default function GamePage({ params }: GamePageProps) {
             disabled={submitting || !japaneseName.trim()}
           >
             {submitting ? "送信中..." : "保存"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* BGGからゲーム情報を更新するダイアログ */}
+      <Dialog open={openUpdateDialog} onClose={handleCloseUpdateDialog}>
+        <DialogTitle>BGGからゲーム情報を更新</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            BoardGameGeekから最新のゲーム情報を取得して更新します。
+          </Typography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={forceUpdate}
+                onChange={(e) => setForceUpdate(e.target.checked)}
+              />
+            }
+            label="強制更新（既存の情報も上書きする）"
+          />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            ※通常は空欄の項目のみ更新されます。強制更新を選択すると、既存の情報も上書きされます。
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseUpdateDialog}>キャンセル</Button>
+          <Button
+            onClick={handleUpdateGameFromBgg}
+            color="primary"
+            disabled={updatingGame}
+          >
+            更新
+            {updatingGame && <CircularProgress size={24} sx={{ ml: 1 }} />}
           </Button>
         </DialogActions>
       </Dialog>

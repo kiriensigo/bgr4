@@ -2,7 +2,7 @@ module Api
   module V1
     class GamesController < ApplicationController
       before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image]
-      before_action :set_game, only: [:show, :update, :destroy]
+      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg]
 
       def index
         # ページネーションパラメータを取得
@@ -95,6 +95,12 @@ module Api
         end
         
         game_json = @game.as_json
+        
+        # 日本語名が「Japanese edition」などの英語表記のみの場合はnilに設定
+        if game_json['japanese_name'] && !game_json['japanese_name'].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          game_json['japanese_name'] = nil
+        end
+        
         game_json['reviews'] = reviews_with_users
         
         # 人気のタグ、メカニクス、おすすめプレイ人数を取得
@@ -197,6 +203,83 @@ module Api
           render json: @game
         else
           render json: @game.errors, status: :unprocessable_entity
+        end
+      end
+
+      # BGGからゲーム情報を更新するエンドポイント
+      def update_from_bgg
+        # 強制更新フラグがある場合は、既存の値も上書きする
+        force_update = params[:force_update] == 'true'
+        
+        # 更新前の属性を保存
+        old_attributes = @game.attributes
+        
+        # BGGからデータを取得して更新
+        if force_update
+          # 強制更新の場合は、BGGから取得した全ての情報で更新
+          bgg_data = BggService.get_game_details(@game.bgg_id)
+          
+          if bgg_data.present?
+            # BGGから取得した情報で更新
+            @game.name = bgg_data[:name]
+            @game.description = bgg_data[:description]
+            @game.image_url = bgg_data[:image_url]
+            @game.min_players = bgg_data[:min_players]
+            @game.max_players = bgg_data[:max_players]
+            @game.play_time = bgg_data[:play_time]
+            @game.min_play_time = bgg_data[:min_play_time]
+            @game.weight = bgg_data[:weight]
+            @game.publisher = bgg_data[:publisher]
+            @game.designer = bgg_data[:designer]
+            @game.release_date = bgg_data[:release_date]
+            
+            # 日本語情報の更新（日本語情報は常に保持する）
+            if bgg_data[:japanese_name].present?
+              # 日本語名が実際に日本語文字を含んでいるか確認
+              if bgg_data[:japanese_name].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                @game.japanese_name = bgg_data[:japanese_name]
+              end
+            end
+            
+            if bgg_data[:japanese_publisher].present?
+              @game.japanese_publisher = bgg_data[:japanese_publisher]
+            end
+            
+            if bgg_data[:japanese_release_date].present?
+              @game.japanese_release_date = bgg_data[:japanese_release_date]
+            end
+            
+            # 拡張情報の更新
+            @game.expansions = bgg_data[:expansions]
+            
+            # ベストプレイ人数とおすすめプレイ人数の更新
+            @game.best_num_players = bgg_data[:best_num_players]
+            @game.recommended_num_players = bgg_data[:recommended_num_players]
+            
+            # カテゴリーとメカニクスの更新
+            @game.categories = bgg_data[:categories]
+            @game.mechanics = bgg_data[:mechanics]
+            
+            # 変更を保存
+            if @game.save
+              # 編集履歴を作成
+              @game.create_edit_history(old_attributes, @game.attributes, current_user)
+              render json: @game
+            else
+              render json: @game.errors, status: :unprocessable_entity
+            end
+          else
+            render json: { error: 'BGGからデータを取得できませんでした' }, status: :unprocessable_entity
+          end
+        else
+          # 通常更新の場合は、既存のupdate_from_bggメソッドを使用
+          if @game.update_from_bgg
+            # 編集履歴を作成
+            @game.create_edit_history(old_attributes, @game.attributes, current_user)
+            render json: @game
+          else
+            render json: { error: 'BGGからデータを取得できませんでした' }, status: :unprocessable_entity
+          end
         end
       end
 

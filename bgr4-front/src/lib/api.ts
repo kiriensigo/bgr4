@@ -30,7 +30,6 @@ export interface Game {
   average_luck_factor?: number;
   average_interaction?: number;
   average_downtime?: number;
-  popular_tags?: string[];
   popular_mechanics?: string[];
   site_recommended_players?: string[];
   in_wishlist?: boolean;
@@ -40,6 +39,7 @@ export interface Game {
   mechanics?: string[];
   best_num_players?: string[];
   recommended_num_players?: string[];
+  popular_categories?: string[];
 }
 
 export interface Review {
@@ -58,7 +58,7 @@ export interface Review {
   play_time?: number;
   recommended_players?: string[];
   mechanics?: string[];
-  tags?: string[];
+  categories?: string[];
   custom_tags?: string[];
   short_comment: string;
   created_at: string;
@@ -132,7 +132,7 @@ export interface SearchParams {
   downtime_min?: number;
   downtime_max?: number;
   mechanics?: string[];
-  tags?: string[];
+  categories?: string[];
   recommended_players?: string[];
   publisher?: string;
   page?: number;
@@ -177,7 +177,8 @@ export async function searchGames(
     queryParams.append("downtime_max", params.downtime_max.toString());
   if (params.mechanics?.length)
     queryParams.append("mechanics", params.mechanics.join(","));
-  if (params.tags?.length) queryParams.append("tags", params.tags.join(","));
+  if (params.categories?.length)
+    queryParams.append("categories", params.categories.join(","));
   if (params.recommended_players?.length)
     queryParams.append(
       "recommended_players",
@@ -703,23 +704,54 @@ export async function removeFromWishlist(
       {
         method: "DELETE",
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
           ...authHeaders,
         },
       }
     );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || "やりたいリストからの削除に失敗しました"
-      );
+      throw new Error("Failed to remove from wishlist");
     }
 
-    return response.json();
+    return await response.json();
   } catch (error) {
     console.error("Error removing from wishlist:", error);
+    throw error;
+  }
+}
+
+/**
+ * BGGからゲーム情報を更新する
+ * @param gameId ゲームID
+ * @param forceUpdate 強制更新フラグ（trueの場合、既存の値も上書きする）
+ * @param authHeaders 認証ヘッダー
+ * @returns 更新されたゲーム情報
+ */
+export async function updateGameFromBgg(
+  gameId: string,
+  forceUpdate: boolean = false,
+  authHeaders: Record<string, string>
+): Promise<Game> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games/${gameId}/update_from_bgg?force_update=${forceUpdate}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update game from BGG");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating game from BGG:", error);
     throw error;
   }
 }

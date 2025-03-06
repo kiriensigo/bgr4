@@ -18,6 +18,7 @@ export interface Game {
   release_date?: string;
   japanese_release_date?: string;
   japanese_publisher?: string;
+  popular_categories?: string[];
 }
 
 export interface GameWithReviews extends Game {
@@ -27,7 +28,7 @@ export interface GameWithReviews extends Game {
   average_luck_factor?: number;
   average_interaction?: number;
   average_downtime?: number;
-  popular_tags?: string[];
+  popular_categories?: string[];
   popular_mechanics?: string[];
   site_recommended_players?: string[];
   in_wishlist?: boolean;
@@ -50,7 +51,7 @@ export interface Review {
   long_comment?: string;
   recommended_players?: string[];
   mechanics?: string[];
-  tags?: string[];
+  categories?: string[];
   custom_tags?: string[];
   created_at: string;
   updated_at?: string;

@@ -153,7 +153,8 @@ export default function SearchResultsPage() {
         // 配列パラメータを処理
         const apiParams: any = { ...params };
         if (params.mechanics) apiParams.mechanics = params.mechanics.split(",");
-        if (params.tags) apiParams.tags = params.tags.split(",");
+        if (params.categories)
+          apiParams.categories = params.categories.split(",");
         if (params.recommended_players)
           apiParams.recommended_players = params.recommended_players.split(",");
 

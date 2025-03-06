@@ -42,7 +42,7 @@ type Review = {
   short_comment: string;
   recommended_players: number[];
   mechanics: string[];
-  tags: string[];
+  categories: string[];
   custom_tags: string[];
   created_at: string;
   likes_count: number;
@@ -354,7 +354,9 @@ export default function ReviewsPage() {
                         playTime={review.game.play_time}
                       />
 
-                      <GameTags tags={review.tags.slice(0, 3)} />
+                      <GameTags
+                        categories={(review.categories || []).slice(0, 3)}
+                      />
                     </CardContent>
                   </CardActionArea>
 

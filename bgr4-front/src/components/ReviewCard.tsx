@@ -26,7 +26,7 @@ interface Review {
   created_at: string;
   likes_count: number;
   liked_by_current_user: boolean;
-  tags?: string[];
+  categories?: string[];
   mechanics?: string[];
   user: {
     id: number;
@@ -78,7 +78,7 @@ export default function ReviewCard({
   overallScoreVariant = "compact",
 }: ReviewCardProps) {
   const gameId = game.bgg_id || game.id || "";
-  const tags = review.tags || [];
+  const categories = review.categories || [];
   const score =
     typeof review.overall_score === "string"
       ? parseFloat(review.overall_score)
@@ -137,7 +137,7 @@ export default function ReviewCard({
       {showGameInfo && (
         <GameInfoCard
           game={game}
-          tags={tags}
+          tags={categories}
           showRating={false}
           reviewsCount={reviewsCount}
           useOverallScoreDisplay={true}

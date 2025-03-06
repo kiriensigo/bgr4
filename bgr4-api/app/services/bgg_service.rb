@@ -51,6 +51,25 @@ class BggService
         end
       end
       
+      # 「Japanese edition」などの英語表記のみの場合は、日本語名として扱わない
+      if japanese_name
+        # 実際に日本語文字（ひらがな、カタカナ、漢字）を含むか確認
+        contains_japanese_chars = japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+        
+        # 「Japanese」「Japan」などの英語表記のみの場合は除外
+        is_only_english_japanese_reference = 
+          !contains_japanese_chars && 
+          (japanese_name.downcase.include?('japanese') || 
+           japanese_name.downcase.include?('japan edition') || 
+           japanese_name.downcase.include?('japan version'))
+        
+        # 日本語文字を含まない、または英語表記のみの場合はnilに設定
+        if !contains_japanese_chars || is_only_english_japanese_reference
+          Rails.logger.info "Ignoring non-Japanese name: #{japanese_name}"
+          japanese_name = nil
+        end
+      end
+      
       # 出版社の取得
       publisher = nil
       item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
@@ -180,223 +199,167 @@ class BggService
   
   # 日本語バージョン情報を取得するメソッド
   def self.get_japanese_version_info(bgg_id)
-    # 特定のゲームIDに対する手動マッピング
-    manual_mapping = {
-      # パレオの日本語版情報
-      '300531' => {
-        name: 'パレオ ～人類の黎明～',
-        publisher: 'アークライト (Arclight)',
-        release_date: '2021-03-01', # 正確な発売日を設定
-        image_url: nil # 画像URLは自動検出に任せる
-      },
-      # カートグラファーの日本語版情報
-      '263918' => {
-        name: 'カートグラファー',
-        publisher: 'ホビージャパン (Hobby Japan)',
-        release_date: '2020-07-01', # 正確な発売日を設定
-        image_url: nil
-      },
-      # ウイングスパンの日本語版情報
-      '266192' => {
-        name: 'ウイングスパン',
-        publisher: 'ホビージャパン (Hobby Japan)',
-        release_date: '2020-10-01',
-        image_url: nil
-      },
-      # アズールの日本語版情報
-      '230802' => {
-        name: 'アズール',
-        publisher: 'アークライト (Arclight)',
-        release_date: '2018-07-01',
-        image_url: nil
-      },
-      # カスカディアの日本語版情報
-      '295947' => {
-        name: 'カスカディア',
-        publisher: 'アークライト (Arclight)',
-        release_date: '2022-03-01',
-        image_url: nil
-      }
-    }
+    # 手動マッピングを削除し、自動的に日本語名を取得する機能のみを使用
     
-    # 手動マッピングがある場合はそれを返す
-    if manual_mapping[bgg_id.to_s]
-      Rails.logger.info "Using manual mapping for game #{bgg_id}: #{manual_mapping[bgg_id.to_s].inspect}"
-      return manual_mapping[bgg_id.to_s]
-    end
-    
-    # 以下、通常の処理
-    # まずバージョン情報を取得
-    versions_response = get("/thing?id=#{bgg_id}&versions=1")
-    return nil unless versions_response.success?
-    
-    versions_xml = Nokogiri::XML(versions_response.body)
-    
-    # 日本語バージョンを探す
-    japanese_version = nil
-    
-    versions_xml.xpath('//item/versions/item').each do |version|
-      version_name = version.at_xpath('./name')&.attr('value') || ''
-      version_nickname = version.at_xpath('./nameid[@type="primary"]')&.text || ''
-      
-      # 日本語バージョンかどうかを判定するための条件を強化
-      has_japanese_chars = version_name.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
-      contains_japan_keyword = 
-        version_name.downcase.include?('japanese') || 
-        version_name.downcase.include?('japan') || 
-        version_name.include?('日本語') ||
-        version_nickname.downcase.include?('japanese') || 
-        version_nickname.downcase.include?('japan') || 
-        version_nickname.include?('日本語')
-      
-      # 日本の出版社が含まれているかチェック
-      has_japanese_publisher = false
-      version.xpath('.//link[@type="boardgamepublisher"]').each do |link|
-        publisher_name = link.attr('value') || ''
-        if publisher_name.match?(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/) ||
-           publisher_name.include?('Japan') ||
-           publisher_name.include?('Hobby Japan') ||
-           publisher_name.include?('Arclight') ||
-           publisher_name.include?('アークライト') ||
-           publisher_name.include?('ホビージャパン') ||
-           publisher_name.include?('数寄ゲームズ') ||
-           publisher_name.include?('Suki Games')
-          has_japanese_publisher = true
-          break
-        end
-      end
-      
-      # 日本語バージョンかどうかを判定
-      is_japanese = has_japanese_chars || contains_japan_keyword || has_japanese_publisher ||
-                    version.at_xpath('./link[@type="language" and @value="Japanese"]')
-      
-      if is_japanese
-        japanese_version = version
-        Rails.logger.info "Found Japanese version: #{version_name}"
-        break
-      end
-    end
-    
-    return nil unless japanese_version
-    
-    # バージョンIDを取得
-    version_id = japanese_version['id']
-    Rails.logger.info "Japanese version ID: #{version_id}"
-    
-    # バージョンリストから直接情報を取得
-    # 日本語名を取得
-    japanese_name = japanese_version.at_xpath('./name')&.attr('value')
-    Rails.logger.info "Version Japanese name from version list: #{japanese_name}"
-    
-    # 出版社を取得
-    publishers = japanese_version.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
-    Rails.logger.info "Version publishers from version list: #{publishers.inspect}"
-    
-    # 発売年を取得
-    year_published = japanese_version.at_xpath('./yearpublished')&.attr('value')
-    release_date = year_published ? "#{year_published}-01-01" : nil
-    Rails.logger.info "Version release date from version list: #{release_date}"
-    
-    # 画像URLを取得
-    image_url = japanese_version.at_xpath('./image')&.text || japanese_version.at_xpath('./thumbnail')&.text
-    Rails.logger.info "Version image URL from version list: #{image_url}"
-    
-    # バージョン詳細情報を取得（可能であれば）
+    # バージョン情報を取得
     begin
-      version_response = get("/version?id=#{version_id}")
-      if version_response.success?
-        version_xml = Nokogiri::XML(version_response.body)
-        version_item = version_xml.at_xpath('//item')
+      uri = URI("#{BASE_URL}/thing?id=#{bgg_id}&versions=1")
+      response = Net::HTTP.get_response(uri)
+      
+      if response.is_a?(Net::HTTPSuccess)
+        doc = Nokogiri::XML(response.body)
         
-        if version_item
-          # 詳細情報から日本語名を取得（既に取得している場合は上書きしない）
-          detail_japanese_name = version_item.at_xpath('./name')&.attr('value')
-          if detail_japanese_name
-            Rails.logger.info "Version Japanese name from detail: #{detail_japanese_name}"
-            japanese_name = detail_japanese_name
+        # 日本語版を探す
+        japanese_version = nil
+        version_id = nil
+        
+        doc.xpath('//versions/item').each do |version|
+          version_name = version.at_xpath('./name')&.attr('value') || ''
+          current_version_id = version.attr('id')
+          
+          # 日本語版かどうかを判定
+          is_japanese_version = false
+          
+          # 実際に日本語文字を含むか確認
+          has_japanese_chars = version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          
+          # 「Japanese」「Japan」などの英語表記を含むか確認
+          contains_japan_keyword = 
+            version_name.downcase.include?('japanese') || 
+            version_name.downcase.include?('japan') || 
+            version_name.downcase.include?('日本語')
+          
+          # 日本の出版社が含まれているか確認
+          has_japanese_publisher = false
+          version.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
+            publisher_name = pub.attr('value')
+            if publisher_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) || 
+               publisher_name.include?('Hobby Japan') || 
+               publisher_name.include?('Arclight') ||
+               publisher_name.include?('Ten Days Games')
+              has_japanese_publisher = true
+              break
+            end
           end
           
-          # 詳細情報から出版社を取得（既に取得している場合は上書きしない）
-          detail_publishers = version_item.xpath('.//link[@type="boardgamepublisher"]').map { |link| link.attr('value') }
-          if detail_publishers.any?
-            Rails.logger.info "Version publishers from detail: #{detail_publishers.inspect}"
-            publishers = detail_publishers
-          end
+          # 日本語版と判定する条件
+          is_japanese_version = has_japanese_chars || (contains_japan_keyword && has_japanese_publisher)
           
-          # 詳細情報から発売日を取得（既に取得している場合は上書きしない）
-          detail_release_date = version_item.at_xpath('./releasedate')&.text
-          if detail_release_date && !detail_release_date.empty?
-            # 日付形式を検出して適切に変換
-            begin
-              if detail_release_date.match?(/^\d{4}-\d{2}-\d{2}$/)
-                # すでにYYYY-MM-DD形式の場合はそのまま使用
-                release_date = detail_release_date
-              elsif detail_release_date.match?(/^\w+ \d{1,2}, \d{4}$/) || detail_release_date.match?(/^\w+ \d{1,2} \d{4}$/)
-                # "Month Day, Year"形式または"Month Day Year"形式の場合
-                date = Date.parse(detail_release_date)
-                release_date = date.strftime('%Y-%m-%d')
-              else
-                # その他の形式の場合も解析を試みる
-                date = Date.parse(detail_release_date)
-                release_date = date.strftime('%Y-%m-%d')
-              end
-              Rails.logger.info "Formatted release date from detail: #{release_date}"
-            rescue => e
-              Rails.logger.error "Error parsing release date: #{e.message}"
-              # 解析に失敗した場合は、年だけを抽出して使用
-              if detail_release_date.match?(/\b\d{4}\b/)
-                year = detail_release_date.match(/\b(\d{4})\b/)[1]
-                release_date = "#{year}-01-01"
-                Rails.logger.info "Using year from release date: #{release_date}"
+          if is_japanese_version
+            japanese_version = version
+            version_id = current_version_id
+            break
+          end
+        end
+        
+        if japanese_version
+          # バージョン情報から日本語名を取得
+          version_name = japanese_version.at_xpath('./name')&.attr('value')
+          
+          # nameidから日本語名を取得（BGGのバージョンページでは「Name」フィールドに相当）
+          nameid_elements = japanese_version.xpath('./nameid')
+          if nameid_elements.any?
+            nameid_elements.each do |nameid|
+              nameid_type = nameid.attr('type')
+              nameid_value = nameid.text
+              
+              Rails.logger.info "Checking nameid: #{nameid_value}, type: #{nameid_type}"
+              
+              # 「primary」タイプのnameidが実際の日本語名の可能性が高い
+              if nameid_type == 'primary' && nameid_value.present? && nameid_value.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                version_name = nameid_value
+                Rails.logger.info "Found actual Japanese name from nameid: #{version_name}"
+                break
               end
             end
           end
           
-          # 詳細情報から画像URLを取得（既に取得している場合は上書きしない）
-          detail_image_url = version_item.at_xpath('./image')&.text || version_item.at_xpath('./thumbnail')&.text
-          if detail_image_url
-            Rails.logger.info "Version image URL from detail: #{detail_image_url}"
-            image_url = detail_image_url
+          # 「Japanese edition」などの英語表記のみの場合は、日本語名として扱わない
+          if version_name
+            # 実際に日本語文字（ひらがな、カタカナ、漢字）を含むか確認
+            contains_japanese_chars = version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+            
+            # 「Japanese」「Japan」などの英語表記のみの場合は除外
+            is_only_english_japanese_reference = 
+              !contains_japanese_chars && 
+              (version_name.downcase.include?('japanese') || 
+               version_name.downcase.include?('japan edition') || 
+               version_name.downcase.include?('japan version'))
+            
+            # 日本語文字を含まない、または英語表記のみの場合はnilに設定
+            if !contains_japanese_chars || is_only_english_japanese_reference
+              Rails.logger.info "Ignoring non-Japanese version name: #{version_name}"
+              
+              # バージョン情報の他のフィールドから日本語名を探す
+              description = japanese_version.at_xpath('./description')&.text
+              if description.present?
+                # 説明文から日本語名を抽出する（「Name: マイシティ」などのパターンを探す）
+                name_match = description.match(/Name:\s*([^\s]+[\p{Hiragana}\p{Katakana}\p{Han}][^\n]*)/)
+                if name_match && name_match[1]
+                  potential_name = name_match[1].strip
+                  if potential_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                    version_name = potential_name
+                    Rails.logger.info "Found Japanese name from description: #{version_name}"
+                  end
+                end
+              end
+              
+              # それでも日本語名が見つからない場合はnilに設定
+              if !version_name || !version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                version_name = nil
+              end
+            end
           end
+          
+          # 出版社を取得
+          publisher = nil
+          japanese_version.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
+            publisher = pub.attr('value')
+            break
+          end
+          
+          # 発売日を取得
+          release_date = japanese_version.at_xpath('./yearpublished')&.attr('value')
+          release_date = "#{release_date}-01-01" if release_date
+          
+          # 画像URLを取得
+          image_url = japanese_version.at_xpath('./image')&.text || japanese_version.at_xpath('./thumbnail')&.text
+          
+          # バージョンIDがあれば、バージョン詳細ページから追加情報を取得
+          if version_id.present?
+            Rails.logger.info "Fetching additional details for version ID: #{version_id}"
+            version_details = get_version_details(version_id)
+            
+            if version_details
+              # バージョン詳細から取得した情報で上書き（nilでない場合のみ）
+              version_name = version_details[:name] if version_details[:name].present?
+              publisher = version_details[:publisher] if version_details[:publisher].present?
+              release_date = version_details[:release_date] if version_details[:release_date].present?
+              image_url = version_details[:image_url] if version_details[:image_url].present?
+              
+              Rails.logger.info "Updated version info from details page: name=#{version_name}, publisher=#{publisher}"
+            end
+          end
+          
+          # 最終的な日本語名が実際に日本語文字を含むか確認
+          if version_name && !version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+            Rails.logger.info "Final version name does not contain Japanese characters, setting to nil: #{version_name}"
+            version_name = nil
+          end
+          
+          return {
+            name: version_name,
+            publisher: publisher,
+            release_date: release_date,
+            image_url: image_url
+          }
         end
       end
     rescue => e
-      Rails.logger.error "Error fetching version details (continuing with version list data): #{e.message}"
-      # エラーは無視して処理を続行
+      Rails.logger.error "Error fetching Japanese version info for BGG ID #{bgg_id}: #{e.message}"
     end
     
-    # 画像URLが取得できない場合は、バージョンIDを使って画像を検索
-    if image_url.blank? && version_id.present?
-      Rails.logger.info "Searching for version image using version ID: #{version_id}"
-      version_image_url = search_version_image_by_id(version_id)
-      if version_image_url.present?
-        Rails.logger.info "Found version image by ID: #{version_image_url}"
-        image_url = version_image_url
-      end
-    end
-    
-    # 画像URLが取得できない場合は、BGGの画像検索APIを使用して日本語版の画像を検索
-    if image_url.blank? && japanese_name.present?
-      # 日本語名を使用して画像を検索
-      Rails.logger.info "Version image URL not found, searching in gallery..."
-      image_url = search_japanese_version_image(bgg_id, japanese_name)
-      if image_url.present?
-        Rails.logger.info "Found Japanese version image through search: #{image_url}"
-      else
-        Rails.logger.warn "No Japanese version image found through search"
-      end
-    end
-    
-    # 日本語版情報を返す
-    japanese_info = {
-      name: japanese_name,
-      publisher: publishers.first,
-      release_date: release_date,
-      image_url: image_url
-    }
-    
-    Rails.logger.info "Final Japanese version info: #{japanese_info.inspect}"
-    japanese_info
+    nil
   end
   
   # バージョンIDを使って画像を検索する新しいメソッド
@@ -414,25 +377,101 @@ class BggService
       gallery_link = html.at_css('a[href*="/images/version/"]')
       return nil unless gallery_link
       
-      # 画像ギャラリーページを取得
+      # ギャラリーページを取得
       gallery_url = "https://boardgamegeek.com#{gallery_link['href']}"
       gallery_response = HTTParty.get(gallery_url)
       return nil unless gallery_response.success?
       
       # ギャラリーページから最初の画像を抽出
       gallery_html = Nokogiri::HTML(gallery_response.body)
-      image_link = gallery_html.at_css('.gallery-item img')
+      image_link = gallery_html.at_css('.gallery-item a')
+      return nil unless image_link
       
-      if image_link && image_link['src']
-        # 小さい画像URLを大きい画像URLに変換
-        image_url = image_link['src'].gsub('_mt', '')
-        return image_url
+      # 画像詳細ページを取得
+      image_url = "https://boardgamegeek.com#{image_link['href']}"
+      image_response = HTTParty.get(image_url)
+      return nil unless image_response.success?
+      
+      # 画像詳細ページから実際の画像URLを抽出
+      image_html = Nokogiri::HTML(image_response.body)
+      actual_image = image_html.at_css('.img-responsive')
+      return nil unless actual_image
+      
+      return actual_image['src']
+    rescue => e
+      Rails.logger.error "Error searching version image by ID #{version_id}: #{e.message}"
+      return nil
+    end
+  end
+  
+  # バージョンIDを使って詳細情報を取得する新しいメソッド
+  def self.get_version_details(version_id)
+    begin
+      # バージョン詳細ページのHTMLを直接取得
+      version_url = "https://boardgamegeek.com/boardgameversion/#{version_id}"
+      response = HTTParty.get(version_url)
+      return nil unless response.success?
+      
+      # HTMLからバージョン情報を抽出
+      html = Nokogiri::HTML(response.body)
+      
+      # 日本語名を取得（ページタイトルから）
+      title_element = html.at_css('title')
+      japanese_name = nil
+      
+      if title_element
+        title_text = title_element.text
+        # タイトルから日本語名を抽出（例: "マイシティ | Board Game Version | BoardGameGeek"）
+        title_match = title_text.match(/^([^\|]+)/)
+        if title_match && title_match[1]
+          potential_name = title_match[1].strip
+          # 実際に日本語文字を含むか確認
+          if potential_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+            japanese_name = potential_name
+            Rails.logger.info "Found Japanese name from version page title: #{japanese_name}"
+          end
+        end
       end
       
-      nil
+      # 出版社情報を取得
+      publisher_element = html.css('.game-header-linked-items a').find { |a| a['href'].include?('boardgamepublisher') }
+      publisher = publisher_element ? publisher_element.text.strip : nil
+      
+      # 発売日を取得
+      release_date = nil
+      html.css('.game-header-body .gameplay-item').each do |item|
+        if item.text.include?('Published')
+          date_text = item.text.gsub('Published', '').strip
+          # 年だけの場合は1月1日を追加
+          if date_text.match?(/^\d{4}$/)
+            release_date = "#{date_text}-01-01"
+          else
+            # 日付形式を解析して標準形式に変換
+            begin
+              date_obj = Date.parse(date_text)
+              release_date = date_obj.strftime('%Y-%m-%d')
+            rescue
+              # 解析できない場合は年だけ抽出
+              year_match = date_text.match(/\b(\d{4})\b/)
+              release_date = year_match ? "#{year_match[1]}-01-01" : nil
+            end
+          end
+          break
+        end
+      end
+      
+      # 画像URLを取得
+      image_url = search_version_image_by_id(version_id)
+      
+      return {
+        name: japanese_name,
+        publisher: publisher,
+        release_date: release_date,
+        image_url: image_url
+      }
     rescue => e
-      Rails.logger.error "Error searching version image by ID: #{e.message}"
-      nil
+      Rails.logger.error "Error getting version details for version ID #{version_id}: #{e.message}"
+      return nil
     end
   end
   

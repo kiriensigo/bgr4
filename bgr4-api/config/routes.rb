@@ -33,6 +33,7 @@ Rails.application.routes.draw do
         member do
           patch 'update_japanese_name'
           get 'edit_histories'
+          put 'update_from_bgg'  # BGGからゲーム情報を更新するルート
         end
         resources :reviews, only: [:index, :create, :update]
       end

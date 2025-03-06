@@ -26,7 +26,7 @@ import Cookies from "js-cookie";
 
 export default function Header() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, getAuthHeaders } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -62,26 +62,30 @@ export default function Header() {
             }/api/v1/reviews/my`,
             {
               headers: {
-                "Content-Type": "application/json",
-                "access-token": Cookies.get("access-token") || "",
-                client: Cookies.get("client") || "",
-                uid: Cookies.get("uid") || "",
+                ...getAuthHeaders(),
               },
+              credentials: "include",
             }
           );
 
           if (response.ok) {
             const data = await response.json();
             setReviewCount(Array.isArray(data) ? data.length : 0);
+          } else {
+            console.error("レビュー数の取得に失敗しました:", response.status);
+            const errorData = await response.json().catch(() => ({}));
+            console.error("エラー詳細:", errorData);
+            setReviewCount(0);
           }
         } catch (error) {
           console.error("レビュー数の取得に失敗しました:", error);
+          setReviewCount(0);
         }
       };
 
       fetchReviewCount();
     }
-  }, [user]);
+  }, [user, getAuthHeaders]);
 
   // レビュー3件以上のユーザーかどうかを判定
   const canRegisterGame = reviewCount >= 3;
@@ -91,12 +95,15 @@ export default function Header() {
     user?.email?.endsWith("@boardgamereview.com") ||
     user?.email === "admin@example.com";
 
+  // 一時的な対応：ユーザーが存在する場合は常にゲーム登録リンクを表示
+  const showGameRegister = user ? true : false;
+
   const menuItems = [
     { label: "ホーム", path: "/" },
     { label: "検索", path: "/search" },
     { label: "ゲーム一覧", path: "/games" },
     { label: "レビュー一覧", path: "/reviews" },
-    ...(user && (canRegisterGame || isAdmin)
+    ...(user && (showGameRegister || canRegisterGame || isAdmin)
       ? [{ label: "ゲーム登録", path: "/games/register" }]
       : []),
     ...(isAdmin ? [{ label: "編集履歴", path: "/admin/edit-histories" }] : []),

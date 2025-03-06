@@ -1,11 +1,11 @@
 import { Box, Chip } from "@mui/material";
 
 type GameTagsProps = {
-  tags: string[];
+  categories: string[];
   maxTags?: number;
 };
 
-export default function GameTags({ tags, maxTags = 3 }: GameTagsProps) {
+export default function GameTags({ categories, maxTags = 3 }: GameTagsProps) {
   return (
     <Box
       sx={{
@@ -15,9 +15,9 @@ export default function GameTags({ tags, maxTags = 3 }: GameTagsProps) {
         mt: 1,
       }}
     >
-      {tags.slice(0, maxTags).map((tag) => (
-        <Chip key={tag} label={tag} size="small" variant="outlined" />
+      {categories.slice(0, maxTags).map((category) => (
+        <Chip key={category} label={category} size="small" variant="outlined" />
       ))}
     </Box>
   );
-} 
+}

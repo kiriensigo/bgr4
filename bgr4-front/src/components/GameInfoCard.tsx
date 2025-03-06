@@ -19,7 +19,7 @@ interface GameInfoCardProps {
     min_play_time?: number;
     average_score?: number | null;
   };
-  tags?: string[];
+  categories?: string[];
   showRating?: boolean;
   useOverallScoreDisplay?: boolean;
   reviewsCount?: number;
@@ -30,7 +30,7 @@ interface GameInfoCardProps {
  * ゲーム情報を表示するコンポーネント
  *
  * @param game - ゲーム情報
- * @param tags - タグ情報
+ * @param categories - カテゴリー情報
  * @param showRating - 評価を表示するかどうか
  * @param useOverallScoreDisplay - 総合得点コンポーネントを使用するかどうか
  * @param reviewsCount - レビュー数
@@ -38,7 +38,7 @@ interface GameInfoCardProps {
  */
 export default function GameInfoCard({
   game,
-  tags = [],
+  categories = [],
   showRating = true,
   useOverallScoreDisplay = false,
   reviewsCount = 0,
@@ -146,7 +146,7 @@ export default function GameInfoCard({
         )}
       </Box>
 
-      {tags.length > 0 && (
+      {categories.length > 0 && (
         <Box
           sx={{
             display: "flex",
@@ -155,8 +155,13 @@ export default function GameInfoCard({
             mt: 1,
           }}
         >
-          {tags.slice(0, maxTagsToShow).map((tag) => (
-            <Chip key={tag} label={tag} size="small" variant="outlined" />
+          {categories.slice(0, maxTagsToShow).map((category) => (
+            <Chip
+              key={category}
+              label={category}
+              size="small"
+              variant="outlined"
+            />
           ))}
         </Box>
       )}

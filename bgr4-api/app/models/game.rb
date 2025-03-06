@@ -189,8 +189,8 @@ class Game < ApplicationRecord
     # 変更があった場合のみ履歴を作成
     if changes.present?
       game_edit_histories.create(
-        changes: changes,
-        editor: editor
+        action: editor.is_a?(String) ? editor : editor.try(:email) || 'unknown',
+        details: changes
       )
     end
   end

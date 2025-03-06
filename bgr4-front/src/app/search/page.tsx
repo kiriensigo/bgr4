@@ -279,7 +279,7 @@ export default function SearchPage() {
             searchParams.mechanics.length > 0
               ? searchParams.mechanics
               : undefined,
-          tags:
+          categories:
             searchParams.categories.length > 0
               ? searchParams.categories
               : undefined,
@@ -290,7 +290,8 @@ export default function SearchPage() {
           publisher: searchParams.publisher,
           // 検索モード設定
           use_reviews_mechanics: searchParams.useReviewsMechanics || undefined,
-          use_reviews_tags: searchParams.useReviewsCategories || undefined,
+          use_reviews_categories:
+            searchParams.useReviewsCategories || undefined,
           use_reviews_recommended_players:
             searchParams.useReviewsRecommendedPlayers || undefined,
         };
