@@ -30,6 +30,9 @@ end
 
 puts "System user created: #{system_user.email}"
 
+# 日本語出版社データの読み込み
+load Rails.root.join('db', 'seeds', 'japanese_publishers.rb')
+
 # BGGから人気ゲームを取得して保存
 popular_games = BggService.get_popular_games(20)
 popular_games.each do |game_data|

@@ -210,108 +210,13 @@ module Api
         # 強制更新フラグがある場合は、既存の値も上書きする
         force_update = params[:force_update] == 'true'
         
-        # BGGからゲーム情報を取得
-        bgg_data = BggService.get_game_details(@game.bgg_id)
-        
-        if bgg_data.nil?
-          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :not_found
-          return
-        end
-        
         # 古い属性を保存
         old_attrs = @game.attributes.dup
         
-        # 強制更新の場合は全ての属性を更新
-        if force_update
-          @game.name = bgg_data[:name]
-          @game.description = bgg_data[:description]
-          @game.image_url = bgg_data[:image_url]
-          @game.min_players = bgg_data[:min_players]
-          @game.max_players = bgg_data[:max_players]
-          @game.play_time = bgg_data[:play_time]
-          @game.min_play_time = bgg_data[:min_play_time]
-          @game.weight = bgg_data[:weight]
-          @game.publisher = bgg_data[:publisher]
-          @game.designer = bgg_data[:designer]
-          @game.release_date = bgg_data[:release_date]
-          
-          # メタデータを更新
-          @game.store_metadata(:expansions, bgg_data[:expansions]) if bgg_data[:expansions].present?
-          @game.store_metadata(:best_num_players, bgg_data[:best_num_players]) if bgg_data[:best_num_players].present?
-          @game.store_metadata(:recommended_num_players, bgg_data[:recommended_num_players]) if bgg_data[:recommended_num_players].present?
-          @game.store_metadata(:categories, bgg_data[:categories]) if bgg_data[:categories].present?
-          @game.store_metadata(:mechanics, bgg_data[:mechanics]) if bgg_data[:mechanics].present?
-          
-          # 日本語情報は強制更新しない（手動で設定された可能性があるため）
-          if bgg_data[:japanese_name].present?
-            @game.japanese_name = bgg_data[:japanese_name]
-          end
-          
-          if bgg_data[:japanese_publisher].present?
-            @game.japanese_publisher = bgg_data[:japanese_publisher]
-          end
-          
-          # 日本語出版社名を正規化
-          @game.normalize_japanese_publisher if @game.japanese_publisher.present?
-          
-          if bgg_data[:japanese_release_date].present?
-            @game.japanese_release_date = bgg_data[:japanese_release_date]
-          end
-          
-          if bgg_data[:japanese_image_url].present?
-            @game.japanese_image_url = bgg_data[:japanese_image_url]
-          end
-        else
-          # 通常更新の場合は、空の属性のみ更新
-          old_attrs = @game.attributes.dup
-          @game.update_from_bgg
-        end
-        
-        # 変更があった場合は編集履歴を作成
-        if @game.changed?
-          if @game.save
-            # 編集履歴を作成
-            @game.create_edit_history(old_attrs, @game.attributes, current_user || 'system')
-          else
-            render json: { errors: @game.errors }, status: :unprocessable_entity
-            return
-          end
-        end
-        
-        # 日本語版情報を取得して補完
-        japanese_version_info = BggService.get_japanese_version_info(@game.bgg_id)
-        if japanese_version_info.present?
-          updated = false
-          
-          # 日本語名がない場合は設定
-          if @game.japanese_name.blank? && japanese_version_info[:name].present?
-            @game.japanese_name = japanese_version_info[:name]
-            updated = true
-          end
-          
-          # 日本語版出版社がない場合は設定
-          if @game.japanese_publisher.blank? && japanese_version_info[:publisher].present?
-            @game.japanese_publisher = japanese_version_info[:publisher]
-            # 日本語出版社名を正規化
-            @game.normalize_japanese_publisher
-            updated = true
-          end
-          
-          # 日本語版発売日がない場合は設定
-          if @game.japanese_release_date.blank? && japanese_version_info[:release_date].present?
-            @game.japanese_release_date = japanese_version_info[:release_date]
-            updated = true
-          end
-          
-          # 日本語版画像URLがない場合は設定
-          if @game.japanese_image_url.blank? && japanese_version_info[:image_url].present?
-            @game.japanese_image_url = japanese_version_info[:image_url]
-            updated = true
-          end
-          
-          # 変更があった場合は保存
-          if updated
-            old_attrs = @game.attributes.dup
+        # ゲーム情報をBGGから更新
+        if @game.update_from_bgg(force_update)
+          # 変更があった場合は編集履歴を作成
+          if @game.changed?
             if @game.save
               # 編集履歴を作成
               @game.create_edit_history(old_attrs, @game.attributes, current_user || 'system')
@@ -320,9 +225,11 @@ module Api
               return
             end
           end
+          
+          render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
+        else
+          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :not_found
         end
-        
-        render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
       end
 
       def destroy

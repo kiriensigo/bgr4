@@ -121,75 +121,99 @@ class Game < ApplicationRecord
   end
 
   # BGGからゲーム情報を更新
-  def update_from_bgg
+  def update_from_bgg(force_update = false)
+    # BGGからゲーム情報を取得
     bgg_data = BggService.get_game_details(bgg_id)
+    return false unless bgg_data
     
-    if bgg_data.present?
-      # 基本情報を更新
-      self.name = bgg_data[:name] if name.blank?
-      self.description = bgg_data[:description] if description.blank?
-      self.image_url = bgg_data[:image_url] if image_url.blank?
-      self.min_players = bgg_data[:min_players] if min_players.blank?
-      self.max_players = bgg_data[:max_players] if max_players.blank?
-      self.play_time = bgg_data[:play_time] if play_time.blank?
-      self.min_play_time = bgg_data[:min_play_time] if min_play_time.blank?
+    # 基本情報を更新
+    self.name = bgg_data[:name] if name.blank? || force_update
+    self.description = bgg_data[:description] if description.blank? || force_update
+    self.image_url = bgg_data[:image_url] if image_url.blank? || force_update
+    self.min_players = bgg_data[:min_players] if min_players.blank? || force_update
+    self.max_players = bgg_data[:max_players] if max_players.blank? || force_update
+    self.play_time = bgg_data[:play_time] if play_time.blank? || force_update
+    self.min_play_time = bgg_data[:min_play_time] if min_play_time.blank? || force_update
+    self.average_score = bgg_data[:average_score] if average_score.blank? || force_update
+    self.weight = bgg_data[:weight] if weight.blank? || force_update
+    self.publisher = bgg_data[:publisher] if publisher.blank? || force_update
+    self.designer = bgg_data[:designer] if designer.blank? || force_update
+    self.release_date = bgg_data[:release_date] if release_date.blank? || force_update
+    
+    # JapanesePublisherモデルから日本語出版社情報を取得
+    japanese_publisher_from_db = JapanesePublisher.get_publisher_name(bgg_id)
+    if japanese_publisher_from_db.present?
+      self.japanese_publisher = japanese_publisher_from_db
+      Rails.logger.info "Using Japanese publisher from database: #{japanese_publisher_from_db}"
+    end
+    
+    # 日本語版情報を取得
+    japanese_version = BggService.get_japanese_version_info(bgg_id)
+    
+    if japanese_version
+      # 日本語版情報を更新
+      if japanese_version[:name].present? && (force_update || !has_japanese_name?)
+        self.japanese_name = japanese_version[:name]
+      end
       
-      # 発売日を更新（常に最新の情報を使用）
-      self.release_date = bgg_data[:release_date] if bgg_data[:release_date].present?
+      # 日本語出版社情報がデータベースから取得できなかった場合のみAPIの情報を使用
+      if japanese_publisher_from_db.blank? && japanese_version[:publisher].present? && (force_update || !has_japanese_publisher?)
+        self.japanese_publisher = japanese_version[:publisher]
+      end
       
-      # 日本語情報を更新（存在する場合のみ）
-      if !has_japanese_name? && bgg_data[:japanese_name].present?
+      if japanese_version[:release_date].present? && (force_update || !has_japanese_release_date?)
+        self.japanese_release_date = japanese_version[:release_date]
+      end
+      
+      if japanese_version[:image_url].present? && (japanese_image_url.blank? || force_update)
+        self.japanese_image_url = japanese_version[:image_url]
+      end
+    else
+      # BGGから直接取得した日本語情報を使用（get_japanese_version_infoで見つからなかった場合）
+      if bgg_data[:japanese_name].present? && (force_update || !has_japanese_name?)
         self.japanese_name = bgg_data[:japanese_name]
       end
       
-      if !has_japanese_publisher? && bgg_data[:japanese_publisher].present?
+      # 日本語出版社情報がデータベースから取得できなかった場合のみAPIの情報を使用
+      if japanese_publisher_from_db.blank? && bgg_data[:japanese_publisher].present? && (force_update || !has_japanese_publisher?)
         self.japanese_publisher = bgg_data[:japanese_publisher]
       end
       
-      # 日本語出版社名を正規化
-      normalize_japanese_publisher
-      
-      # 日本語版発売日を更新（存在する場合のみ）
-      if !has_japanese_release_date? && bgg_data[:japanese_release_date].present?
+      if bgg_data[:japanese_release_date].present? && (force_update || !has_japanese_release_date?)
         self.japanese_release_date = bgg_data[:japanese_release_date]
       end
       
-      # 日本語版画像URLを更新（存在する場合のみ）
-      if japanese_image_url.blank? && bgg_data[:japanese_image_url].present?
+      if bgg_data[:japanese_image_url].present? && (japanese_image_url.blank? || force_update)
         self.japanese_image_url = bgg_data[:japanese_image_url]
       end
-      
-      # メタデータを更新
-      if bgg_data[:expansions].present?
-        store_metadata(:expansions, bgg_data[:expansions])
-      end
-      
-      if bgg_data[:best_num_players].present?
-        store_metadata(:best_num_players, bgg_data[:best_num_players])
-      end
-      
-      if bgg_data[:recommended_num_players].present?
-        store_metadata(:recommended_num_players, bgg_data[:recommended_num_players])
-      end
-      
-      if bgg_data[:categories].present?
-        store_metadata(:categories, bgg_data[:categories])
-      end
-      
-      if bgg_data[:mechanics].present?
-        store_metadata(:mechanics, bgg_data[:mechanics])
-      end
-      
-      # 変更を保存
-      save
-      
-      # 初回レビューがない場合は作成
-      create_initial_reviews if reviews.count == 0
-      
-      return true
-    else
-      return false
     end
+    
+    # 日本語出版社名を正規化
+    normalize_japanese_publisher
+    
+    # メタデータを更新
+    if bgg_data[:expansions].present?
+      store_metadata(:expansions, bgg_data[:expansions])
+    end
+    
+    if bgg_data[:best_num_players].present?
+      store_metadata(:best_num_players, bgg_data[:best_num_players])
+    end
+    
+    if bgg_data[:recommended_num_players].present?
+      store_metadata(:recommended_num_players, bgg_data[:recommended_num_players])
+    end
+    
+    if bgg_data[:categories].present?
+      store_metadata(:categories, bgg_data[:categories])
+    end
+    
+    if bgg_data[:mechanics].present?
+      store_metadata(:mechanics, bgg_data[:mechanics])
+    end
+    
+    save!
+    true
   end
   
   # ゲーム編集履歴を作成
@@ -320,6 +344,17 @@ class Game < ApplicationRecord
   def normalize_japanese_publisher
     return unless japanese_publisher.present?
     
+    # JapanesePublisherモデルから出版社情報を取得
+    japanese_publisher_from_db = JapanesePublisher.get_publisher_name(bgg_id)
+    if japanese_publisher_from_db.present?
+      # データベースの情報を優先
+      if japanese_publisher != japanese_publisher_from_db
+        self.japanese_publisher = japanese_publisher_from_db
+        Rails.logger.info "Normalized Japanese publisher from database: #{japanese_publisher_from_db}"
+      end
+      return
+    end
+    
     # 日本の出版社リストと正規化マッピング
     japanese_publisher_mapping = {
       # ホビージャパン系
@@ -402,7 +437,16 @@ class Game < ApplicationRecord
       'hakoniwagames' => 'ハコニワ',
       'hakoniwa games' => 'ハコニワ',
       'hakoniwa' => 'ハコニワ',
-      'ハコニワ' => 'ハコニワ'
+      'ハコニワ' => 'ハコニワ',
+      
+      # ケンビル系（Cascadia対応）
+      'alderac entertainment group' => '株式会社ケンビル',
+      'aeg' => '株式会社ケンビル',
+      'flatout games' => '株式会社ケンビル',
+      'cmon' => '株式会社ケンビル',
+      'ケンビル' => '株式会社ケンビル',
+      'kenbill' => '株式会社ケンビル',
+      '株式会社ケンビル' => '株式会社ケンビル'
     }
     
     # 表記揺れを修正して正規化
@@ -414,9 +458,10 @@ class Game < ApplicationRecord
       end
     end
     
-    # 正規化された名前があれば更新
-    if normalized_name && normalized_name != japanese_publisher
-      update_column(:japanese_publisher, normalized_name)
+    # 正規化された名前が見つかり、現在の値と異なる場合は更新
+    if normalized_name.present? && normalized_name != japanese_publisher
+      self.japanese_publisher = normalized_name
+      Rails.logger.info "Normalized Japanese publisher from mapping: #{japanese_publisher} (from #{japanese_publisher_before_last_save})"
     end
   end
   

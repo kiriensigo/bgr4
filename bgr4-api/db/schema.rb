@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_04_110133) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_06_153031) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,7 +40,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_04_110133) do
     t.decimal "weight", precision: 5, scale: 4
     t.string "best_num_players", default: [], array: true
     t.string "recommended_num_players", default: [], array: true
-    t.string "popular_tags", default: [], array: true
+    t.string "popular_categories", default: [], array: true
     t.string "popular_mechanics", default: [], array: true
     t.string "site_recommended_players", default: [], array: true
     t.text "japanese_description"
@@ -55,9 +55,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_04_110133) do
     t.json "categories"
     t.json "mechanics"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
+    t.index ["popular_categories"], name: "index_games_on_popular_categories", using: :gin
     t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin
-    t.index ["popular_tags"], name: "index_games_on_popular_tags", using: :gin
     t.index ["site_recommended_players"], name: "index_games_on_site_recommended_players", using: :gin
+  end
+
+  create_table "japanese_publishers", force: :cascade do |t|
+    t.integer "bgg_id"
+    t.string "publisher_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bgg_id"], name: "index_japanese_publishers_on_bgg_id", unique: true
   end
 
   create_table "likes", force: :cascade do |t|
@@ -79,7 +87,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_04_110133) do
     t.decimal "downtime", precision: 2, scale: 1
     t.string "recommended_players", default: [], array: true
     t.string "mechanics", default: [], array: true
-    t.string "tags", default: [], array: true
+    t.string "categories", default: [], array: true
     t.string "custom_tags", default: [], array: true
     t.text "short_comment", null: false
     t.datetime "created_at", null: false

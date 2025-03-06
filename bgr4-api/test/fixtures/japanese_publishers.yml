@@ -1,0 +1,9 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  bgg_id: 1
+  publisher_name: MyString
+
+two:
+  bgg_id: 1
+  publisher_name: MyString
