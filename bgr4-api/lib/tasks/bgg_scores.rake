@@ -26,7 +26,7 @@ namespace :bgg do
             downtime: 3,
             recommended_players: [],
             mechanics: [],
-            tags: [],
+            categories: [],
             custom_tags: []
           )
         end

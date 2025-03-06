@@ -98,7 +98,7 @@ module Api
         game_json['reviews'] = reviews_with_users
         
         # 人気のタグ、メカニクス、おすすめプレイ人数を取得
-        game_json['popular_tags'] = @game.popular_tags
+        game_json['popular_categories'] = @game.popular_categories
         game_json['popular_mechanics'] = @game.popular_mechanics
         game_json['recommended_players'] = @game.recommended_players
         game_json['review_count'] = @game.user_review_count
@@ -214,7 +214,7 @@ module Api
         play_time_max = params[:play_time_max]
         
         # レビュー関連のパラメータ
-        use_reviews_tags = params[:use_reviews_tags] == 'true'
+        use_reviews_categories = params[:use_reviews_categories] == 'true'
         use_reviews_mechanics = params[:use_reviews_mechanics] == 'true'
         use_reviews_recommended_players = params[:use_reviews_recommended_players] == 'true'
         
@@ -278,7 +278,7 @@ module Api
         
         # レビュー関連のパラメータを処理
         # システムユーザーのレビューがあるゲームも含める
-        if use_reviews_tags || use_reviews_mechanics || use_reviews_recommended_players
+        if use_reviews_categories || use_reviews_mechanics || use_reviews_recommended_players
           # システムユーザーを取得
           system_user = User.find_by(email: 'system@boardgamereview.com')
           

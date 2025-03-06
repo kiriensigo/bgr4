@@ -20,8 +20,8 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     # 1. 平均スコアの計算 - すべてのレビューから（システムユーザー含む）
     update_average_score(game)
     
-    # 2. 人気タグの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
-    update_popular_tags(game, game.reviews)
+    # 2. 人気カテゴリーの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
+    update_popular_categories(game, game.reviews)
     
     # 3. 人気メカニクスの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
     update_popular_mechanics(game, game.reviews)
@@ -50,19 +50,19 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     Rails.logger.info "Updated average score for game #{game.name}: #{average}"
   end
 
-  # 人気タグの計算（上位6つ）
-  def update_popular_tags(game, reviews)
-    # 全レビューからタグを集計
-    all_tags = reviews.flat_map(&:tags) + reviews.flat_map(&:custom_tags)
-    tag_counts = all_tags.reject(&:blank?).group_by(&:itself).transform_values(&:count)
+  # 人気カテゴリーの計算（上位6つ）
+  def update_popular_categories(game, reviews)
+    # 全レビューからカテゴリーを集計
+    all_categories = reviews.flat_map(&:categories) + reviews.flat_map(&:custom_tags)
+    category_counts = all_categories.reject(&:blank?).group_by(&:itself).transform_values(&:count)
     
-    # 登録数の多い順に上位6つのタグを抽出
-    popular_tags = tag_counts.sort_by { |_, count| -count }.first(6).map(&:first)
+    # 登録数の多い順に上位6つのカテゴリーを抽出
+    popular_categories = category_counts.sort_by { |_, count| -count }.first(6).map(&:first)
     
-    # ゲームの人気タグを更新
-    game.popular_tags = popular_tags
+    # ゲームの人気カテゴリーを更新
+    game.popular_categories = popular_categories
     
-    Rails.logger.info "Updated popular tags for game #{game.name}: #{popular_tags.join(', ')}"
+    Rails.logger.info "Updated popular categories for game #{game.name}: #{popular_categories.join(', ')}"
   end
 
   # 人気メカニクスの計算（上位6つ）

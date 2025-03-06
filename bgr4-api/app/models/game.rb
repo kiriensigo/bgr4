@@ -211,21 +211,21 @@ class Game < ApplicationRecord
   end
   
   # 人気のタグを取得
-  def popular_tags
-    tags = {}
+  def popular_categories
+    categories_count = {}
     
     reviews.each do |review|
-      # タグとカスタムタグを結合
-      all_tags = (review.tags || []) + (review.custom_tags || [])
+      # カテゴリーとカスタムタグを結合
+      all_categories = (review.categories || []) + (review.custom_tags || [])
       
-      all_tags.each do |tag|
-        next unless tag.present?
-        tags[tag] = (tags[tag] || 0) + 1
+      all_categories.each do |category|
+        next unless category.present?
+        categories_count[category] = (categories_count[category] || 0) + 1
       end
     end
     
     # 出現回数でソート
-    tags.sort_by { |_, count| -count }.map { |tag, count| { name: tag, count: count } }
+    categories_count.sort_by { |_, count| -count }.map { |category, count| { name: category, count: count } }
   end
   
   # 人気のメカニクスを取得
@@ -388,12 +388,12 @@ class Game < ApplicationRecord
     end
     
     # タグを設定（BGGのベストプレイ人数から）
-    tags = []
+    categories_list = []
     
     # BGGのベストプレイ人数からタグを追加
     recommended_players.each do |num|
       site_tag = bgg_best_player_to_site_tag[num.to_s]
-      tags << site_tag if site_tag.present? && !tags.include?(site_tag)
+      categories_list << site_tag if site_tag.present? && !categories_list.include?(site_tag)
     end
     
     # カテゴリーを設定（BGGのメカニクスから）
@@ -406,6 +406,9 @@ class Game < ApplicationRecord
         categories << site_category if site_category.present? && !categories.include?(site_category)
       end
     end
+    
+    # カテゴリーリストにカテゴリーを追加
+    categories_list.concat(categories)
     
     # メカニクスを設定（BGGのカテゴリーから）
     mechanics = []
@@ -447,7 +450,7 @@ class Game < ApplicationRecord
         downtime: downtime,
         recommended_players: recommended_players,
         mechanics: mechanics,
-        tags: tags,
+        categories: categories_list,
         short_comment: short_comment
       )
     end

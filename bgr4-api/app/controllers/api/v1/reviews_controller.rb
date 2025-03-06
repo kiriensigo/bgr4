@@ -111,10 +111,28 @@ module Api
       end
 
       def my
-        @reviews = current_user.reviews
-                              .includes(:game, :likes)
-                              .order(created_at: :desc)
-        render json: @reviews.map { |review| review_with_details(review) }
+        begin
+          unless current_user
+            Rails.logger.error "Current user is not set"
+            return render json: { error: "ユーザーが見つかりません" }, status: :unauthorized
+          end
+
+          Rails.logger.info "Fetching reviews for user: #{current_user.id}"
+          @reviews = current_user.reviews
+                                .includes(:game, :likes)
+                                .order(created_at: :desc)
+
+          if @reviews.nil?
+            Rails.logger.error "Reviews is nil for user: #{current_user.id}"
+            return render json: [], status: :ok
+          end
+
+          render json: @reviews.map { |review| review_with_details(review) }
+        rescue => e
+          Rails.logger.error "Error in my action: #{e.message}"
+          Rails.logger.error e.backtrace.join("\n")
+          render json: { error: "レビューの取得中にエラーが発生しました: #{e.message}" }, status: :internal_server_error
+        end
       end
 
       def like
@@ -161,7 +179,7 @@ module Api
           :short_comment,
           recommended_players: [],
           mechanics: [],
-          tags: [],
+          categories: [],
           custom_tags: []
         )
       end
@@ -180,7 +198,7 @@ module Api
           short_comment: review.short_comment,
           recommended_players: review.recommended_players,
           mechanics: review.mechanics,
-          tags: review.tags,
+          categories: review.categories,
           custom_tags: review.custom_tags,
           created_at: review.created_at,
           likes_count: review.likes_count,

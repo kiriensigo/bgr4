@@ -3,7 +3,7 @@ class GameSerializer < ActiveModel::Serializer
              :image_url, :japanese_image_url, :min_players, :max_players, :play_time, :min_play_time,
              :average_score, :weight, :reviews_count, :in_wishlist,
              :average_rule_complexity, :average_luck_factor, :average_interaction,
-             :average_downtime, :popular_tags, :popular_mechanics, :site_recommended_players,
+             :average_downtime, :popular_categories, :popular_mechanics, :site_recommended_players,
              :bgg_url, :publisher, :designer, :release_date, :japanese_release_date,
              :japanese_publisher, :expansions, :baseGame
 
