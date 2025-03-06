@@ -124,10 +124,11 @@ module Api
 
           if @reviews.nil?
             Rails.logger.error "Reviews is nil for user: #{current_user.id}"
-            return render json: [], status: :ok
+            return render json: { reviews: [] }, status: :ok
           end
 
-          render json: @reviews.map { |review| review_with_details(review) }
+          # 明示的にルートキーを指定してJSONを返す
+          render json: { reviews: @reviews.map { |review| review_with_details(review) } }
         rescue => e
           Rails.logger.error "Error in my action: #{e.message}"
           Rails.logger.error e.backtrace.join("\n")

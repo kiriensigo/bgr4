@@ -604,9 +604,174 @@ class BggService
         end
       end
       
+      # バージョン情報セクションを取得
+      version_info_section = html.css('.game-header-body .gameplay-item').text
+      Rails.logger.info "Version info section: #{version_info_section}"
+      
       # 出版社情報を取得
-      publisher_element = html.css('.game-header-linked-items a').find { |a| a['href'].include?('boardgamepublisher') }
-      publisher = publisher_element ? publisher_element.text.strip : nil
+      publishers = []
+      html.css('.game-header-linked-items a').each do |a|
+        if a['href'].include?('boardgamepublisher')
+          publishers << a.text.strip
+        end
+      end
+      
+      # 出版社情報をログに記録
+      Rails.logger.info "Found publishers for version #{version_id}: #{publishers.inspect}"
+      
+      # バージョン情報から直接出版社を抽出（HTMLテキストから）
+      publisher_section = html.css('.game-header-body').text
+      if publisher_section.include?('Publisher:')
+        publisher_text = publisher_section.match(/Publisher:\s*([^\n]+)/)
+        if publisher_text && publisher_text[1]
+          publisher_list = publisher_text[1].split(',').map(&:strip)
+          Rails.logger.info "Found publishers from version text: #{publisher_list.inspect}"
+          publishers = publisher_list if publisher_list.any?
+        end
+      end
+      
+      # 日本の出版社を優先的に選択
+      japanese_publisher = nil
+      
+      # 日本の出版社リストと正規化マッピング
+      japanese_publisher_mapping = {
+        # ホビージャパン系
+        'hobby japan' => 'ホビージャパン',
+        'hobbyjapan' => 'ホビージャパン',
+        'hobyjapan' => 'ホビージャパン',
+        'ホビージャパン' => 'ホビージャパン',
+        
+        # アークライト系
+        'arclight' => 'アークライト',
+        'arc light' => 'アークライト',
+        'arclight games' => 'アークライト',
+        'arclightgames' => 'アークライト',
+        'アークライト' => 'アークライト',
+        
+        # すごろくや系
+        'sugorokuya' => 'すごろくや',
+        'すごろくや' => 'すごろくや',
+        
+        # オインクゲームズ系
+        'oink games' => 'オインクゲームズ',
+        'oinkgames' => 'オインクゲームズ',
+        'オインクゲームズ' => 'オインクゲームズ',
+        
+        # グラウンディング系
+        'grounding inc.' => 'グラウンディング',
+        'grounding' => 'グラウンディング',
+        'grounding games' => 'グラウンディング',
+        'groundinggames' => 'グラウンディング',
+        'グラウンディング' => 'グラウンディング',
+        
+        # アズモデージャパン系
+        'asmodee japan' => 'アズモデージャパン',
+        'asmodee' => 'アズモデージャパン',
+        'asmodeejapan' => 'アズモデージャパン',
+        'アズモデージャパン' => 'アズモデージャパン',
+        
+        # テンデイズゲームズ系
+        'ten days games' => 'テンデイズゲームズ',
+        'tendays games' => 'テンデイズゲームズ',
+        'tendaysgames' => 'テンデイズゲームズ',
+        'テンデイズゲームズ' => 'テンデイズゲームズ',
+        
+        # ニューゲームズオーダー系
+        'new games order' => 'ニューゲームズオーダー',
+        'newgamesorder' => 'ニューゲームズオーダー',
+        'ニューゲームズオーダー' => 'ニューゲームズオーダー',
+        
+        # コロンアーク系
+        'colon arc' => 'コロンアーク',
+        'colonarc' => 'コロンアーク',
+        'コロンアーク' => 'コロンアーク',
+        
+        # 数寄ゲームズ系
+        'suki games' => '数寄ゲームズ',
+        'sukigames' => '数寄ゲームズ',
+        '数寄ゲームズ' => '数寄ゲームズ',
+        
+        # ダイスタワー系
+        'dice tower' => 'ダイスタワー',
+        'dicetower' => 'ダイスタワー',
+        'ダイスタワー' => 'ダイスタワー',
+        
+        # ボードゲームジャパン系
+        'board game japan' => 'ボードゲームジャパン',
+        'boardgame japan' => 'ボードゲームジャパン',
+        'boardgamejapan' => 'ボードゲームジャパン',
+        'ボードゲームジャパン' => 'ボードゲームジャパン',
+        
+        # ゲームマーケット系
+        'game market' => 'ゲームマーケット',
+        'gamemarket' => 'ゲームマーケット',
+        'ゲームマーケット' => 'ゲームマーケット',
+        
+        # ジーピー系
+        'gp' => 'ジーピー',
+        'ジーピー' => 'ジーピー',
+        
+        # ハコニワ系
+        'hakoniwagames' => 'ハコニワ',
+        'hakoniwa games' => 'ハコニワ',
+        'hakoniwa' => 'ハコニワ',
+        'ハコニワ' => 'ハコニワ',
+        
+        # ケンビル系
+        'kenbill' => '株式会社ケンビル',
+        'kenbill co., ltd.' => '株式会社ケンビル',
+        '株式会社ケンビル' => '株式会社ケンビル',
+        'ケンビル' => '株式会社ケンビル',
+        '株式会社ケンビル (kenbill)' => '株式会社ケンビル',
+      }
+      
+      # 日本語の出版社を探す
+      publishers.each do |pub|
+        # 日本語文字を含むか確認
+        if pub.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          japanese_publisher = pub
+          Rails.logger.info "Found Japanese publisher with Japanese characters: #{pub}"
+          break
+        end
+        
+        # 既知の日本の出版社かをチェック
+        japanese_publisher_mapping.each do |key, value|
+          if pub.downcase.include?(key.downcase)
+            japanese_publisher = value
+            Rails.logger.info "Found Japanese publisher matching known publisher: #{pub} -> #{value}"
+            break
+          end
+        end
+        
+        break if japanese_publisher
+      end
+      
+      # 日本語の出版社が見つからなかった場合、バージョン情報から日本の出版社を探す
+      if !japanese_publisher && publishers.any?
+        # バージョン情報に「Japanese」などのキーワードがあり、出版社が存在する場合
+        if version_info_section.downcase.include?('japanese') || version_info_section.downcase.include?('japan')
+          # 日本語出版社の候補を探す
+          japanese_publisher_candidates = publishers.select do |pub|
+            # 「株式会社」や「(株)」などの日本企業の特徴的な表記を含むか
+            pub.include?('株式会社') || pub.include?('(株)') || 
+            # 「ケンビル」などの日本語名を含むか
+            pub.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) ||
+            # 「(KenBill)」などの日本企業の英語表記を含むか
+            pub.match?(/\([A-Za-z\s]+\)$/) ||
+            # 既知の日本の出版社名を含むか
+            japanese_publisher_mapping.keys.any? { |key| pub.downcase.include?(key.downcase) }
+          end
+          
+          if japanese_publisher_candidates.any?
+            japanese_publisher = japanese_publisher_candidates.first
+            Rails.logger.info "Selected Japanese publisher candidate: #{japanese_publisher}"
+          else
+            # 候補が見つからない場合は最初の出版社を使用
+            japanese_publisher = publishers.first
+            Rails.logger.info "Using first publisher as Japanese publisher based on version info: #{japanese_publisher}"
+          end
+        end
+      end
       
       # 発売日を取得
       release_date = nil
@@ -636,7 +801,7 @@ class BggService
       
       return {
         name: japanese_name,
-        publisher: publisher,
+        publisher: japanese_publisher,
         release_date: release_date,
         image_url: image_url
       }
