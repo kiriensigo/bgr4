@@ -45,6 +45,23 @@ export interface Game {
   best_num_players?: string[];
   recommended_num_players?: string[];
   popular_categories?: string[];
+  registered_on_site?: boolean;
+}
+
+export interface GameExpansion {
+  id: string | number;
+  bgg_id: string;
+  name: string;
+  japanese_name?: string;
+  image_url?: string;
+  japanese_image_url?: string;
+  registered_on_site: boolean;
+  relationship_type: string;
+}
+
+export interface ExpansionsResponse {
+  expansions: GameExpansion[];
+  base_games: GameExpansion[];
 }
 
 export interface Review {
@@ -733,16 +750,6 @@ export async function updateGameFromBgg(
   authHeaders: Record<string, string>
 ): Promise<Game> {
   try {
-    // タイムアウト処理を追加
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒でタイムアウト
-
-    // キャッシュをクリア
-    const cacheKey = `game-${gameId}`;
-    if (gameCache[cacheKey]) {
-      delete gameCache[cacheKey];
-    }
-
     const response = await fetch(
       `${API_BASE_URL}/games/${gameId}/update_from_bgg?force_update=${forceUpdate}`,
       {
@@ -751,36 +758,81 @@ export async function updateGameFromBgg(
           "Content-Type": "application/json",
           ...authHeaders,
         },
-        signal: controller.signal,
-        // キャッシュを無効化
-        cache: "no-cache",
       }
     );
 
-    // タイムアウトをクリア
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to update game from BGG");
+      throw new Error(`Error updating game: ${response.statusText}`);
     }
 
-    const updatedGame = await response.json();
-
-    // キャッシュを更新
-    gameCache[cacheKey] = {
-      data: updatedGame,
-      timestamp: Date.now(),
-    };
-
-    return updatedGame;
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("Error updating game from BGG:", error);
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error(
-        "BGGからの応答がタイムアウトしました。時間をおいて再度お試しください。"
-      );
+    throw error;
+  }
+}
+
+// 拡張情報を取得する関数
+export async function getGameExpansions(
+  gameId: string,
+  registeredOnly: boolean = false,
+  authHeaders?: Record<string, string>
+): Promise<ExpansionsResponse> {
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (authHeaders) {
+      Object.assign(headers, authHeaders);
     }
+
+    const response = await fetch(
+      `${API_BASE_URL}/games/${gameId}/expansions?registered_only=${registeredOnly}`,
+      {
+        method: "GET",
+        headers,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error fetching expansions: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching game expansions:", error);
+    throw error;
+  }
+}
+
+// BGGから拡張情報を更新する関数
+export async function updateGameExpansions(
+  gameId: string,
+  authHeaders: Record<string, string>
+): Promise<ExpansionsResponse> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games/${gameId}/update_expansions`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error updating expansions: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating game expansions:", error);
     throw error;
   }
 }

@@ -1,8 +1,8 @@
 module Api
   module V1
     class GamesController < ApplicationController
-      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image]
-      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg]
+      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image, :expansions]
+      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :expansions, :update_expansions]
 
       def index
         # ページネーションパラメータを取得
@@ -129,7 +129,12 @@ module Api
         existing_game = Game.find_by(bgg_id: bgg_id)
         
         if existing_game
-          # 既存のゲームが見つかった場合は、そのゲームを返す
+          # 既存のゲームが見つかった場合は、登録済みフラグを更新
+          existing_game.update(registered_on_site: true)
+          
+          # 拡張情報を更新
+          existing_game.fetch_and_save_expansions
+          
           render json: existing_game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
           return
         end
@@ -163,7 +168,8 @@ module Api
           designer: game_params[:designer] || bgg_game_info[:designer],
           release_date: game_params[:release_date] || bgg_game_info[:release_date],
           japanese_publisher: game_params[:japanese_publisher] || bgg_game_info[:japanese_publisher],
-          japanese_release_date: game_params[:japanese_release_date] || bgg_game_info[:japanese_release_date]
+          japanese_release_date: game_params[:japanese_release_date] || bgg_game_info[:japanese_release_date],
+          registered_on_site: true
         )
         
         # メタデータを設定
@@ -187,6 +193,9 @@ module Api
         if @game.save
           # システムユーザーによる初期レビューを作成
           @game.create_initial_reviews
+          
+          # 拡張情報を取得して保存
+          @game.fetch_and_save_expansions
           
           render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
@@ -601,6 +610,86 @@ module Api
           render json: { image_url: image_url }
         else
           render json: { error: "画像が見つかりませんでした" }, status: :not_found
+        end
+      end
+
+      def expansions
+        # 登録済みの拡張のみを取得するかどうか
+        registered_only = params[:registered_only] == 'true'
+        
+        # 拡張情報を取得
+        if registered_only
+          expansions = @game.registered_expansions
+          base_games = @game.registered_base_games
+        else
+          expansions = @game.expansions
+          base_games = @game.base_games
+        end
+        
+        # 拡張情報をJSON形式で返す
+        render json: {
+          expansions: expansions.map { |exp| 
+            {
+              id: exp.id,
+              bgg_id: exp.bgg_id,
+              name: exp.name,
+              japanese_name: exp.japanese_name,
+              image_url: exp.image_url,
+              japanese_image_url: exp.japanese_image_url,
+              registered_on_site: exp.registered_on_site,
+              relationship_type: @game.base_game_expansions.find_by(expansion_id: exp.bgg_id)&.relationship_type
+            }
+          },
+          base_games: base_games.map { |base| 
+            {
+              id: base.id,
+              bgg_id: base.bgg_id,
+              name: base.name,
+              japanese_name: base.japanese_name,
+              image_url: base.image_url,
+              japanese_image_url: base.japanese_image_url,
+              registered_on_site: base.registered_on_site,
+              relationship_type: @game.expansion_base_games.find_by(base_game_id: base.bgg_id)&.relationship_type
+            }
+          }
+        }
+      end
+
+      def update_expansions
+        # BGGから拡張情報を取得して保存
+        if @game.fetch_and_save_expansions
+          # 拡張情報を取得して返す
+          expansions = @game.expansions
+          base_games = @game.base_games
+          
+          render json: {
+            expansions: expansions.map { |exp| 
+              {
+                id: exp.id,
+                bgg_id: exp.bgg_id,
+                name: exp.name,
+                japanese_name: exp.japanese_name,
+                image_url: exp.image_url,
+                japanese_image_url: exp.japanese_image_url,
+                registered_on_site: exp.registered_on_site,
+                relationship_type: @game.base_game_expansions.find_by(expansion_id: exp.bgg_id)&.relationship_type
+              }
+            },
+            base_games: base_games.map { |base| 
+              {
+                id: base.id,
+                bgg_id: base.bgg_id,
+                name: base.name,
+                japanese_name: base.japanese_name,
+                image_url: base.image_url,
+                japanese_image_url: base.japanese_image_url,
+                registered_on_site: base.registered_on_site,
+                relationship_type: @game.expansion_base_games.find_by(base_game_id: base.bgg_id)&.relationship_type
+              }
+            }
+          }
+        else
+          render json: { error: "拡張情報を更新できませんでした" }, status: :unprocessable_entity
         end
       end
 

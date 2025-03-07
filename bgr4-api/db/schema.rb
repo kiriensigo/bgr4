@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_06_153031) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_07_103441) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,6 +23,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_06_153031) do
     t.datetime "updated_at", null: false
     t.index ["game_id"], name: "index_game_edit_histories_on_game_id"
     t.index ["user_id"], name: "index_game_edit_histories_on_user_id"
+  end
+
+  create_table "game_expansions", force: :cascade do |t|
+    t.string "base_game_id"
+    t.string "expansion_id"
+    t.string "relationship_type"
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["base_game_id", "expansion_id"], name: "index_game_expansions_on_base_game_id_and_expansion_id", unique: true
+    t.index ["base_game_id"], name: "index_game_expansions_on_base_game_id"
+    t.index ["expansion_id"], name: "index_game_expansions_on_expansion_id"
   end
 
   create_table "games", force: :cascade do |t|
@@ -54,6 +66,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_06_153031) do
     t.string "japanese_publisher"
     t.json "categories"
     t.json "mechanics"
+    t.boolean "registered_on_site", default: false
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
     t.index ["popular_categories"], name: "index_games_on_popular_categories", using: :gin
     t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin

@@ -59,6 +59,7 @@ import { getAuthHeaders } from "@/lib/auth";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import GameExpansions from "@/components/GameExpansions";
 
 interface Review {
   id: number;
@@ -1367,29 +1368,8 @@ export default function GamePage({ params }: GamePageProps) {
               )}
 
               {/* 拡張情報 */}
-              {game.expansions && game.expansions.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    拡張
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {game.expansions.map((expansion) => (
-                      <Link
-                        key={expansion.id}
-                        href={`/games/${expansion.id}`}
-                        style={{ textDecoration: "none" }}
-                      >
-                        <Chip
-                          label={expansion.name}
-                          color="primary"
-                          variant="outlined"
-                          sx={{ m: 0.5 }}
-                          clickable
-                        />
-                      </Link>
-                    ))}
-                  </Box>
-                </Box>
+              {game && (
+                <GameExpansions gameId={game.bgg_id} isAdmin={user?.is_admin} />
               )}
 
               {/* ベースゲーム情報 */}

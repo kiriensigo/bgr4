@@ -34,6 +34,8 @@ Rails.application.routes.draw do
           patch 'update_japanese_name'
           get 'edit_histories'
           put 'update_from_bgg'  # BGGからゲーム情報を更新するルート
+          get 'expansions'       # 拡張情報を取得するルート
+          put 'update_expansions' # 拡張情報を更新するルート
         end
         resources :reviews, only: [:index, :create, :update]
       end
