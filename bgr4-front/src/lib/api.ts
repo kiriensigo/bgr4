@@ -836,3 +836,36 @@ export async function updateGameExpansions(
     throw error;
   }
 }
+
+/**
+ * システムレビューを更新する
+ * @param gameId ゲームID
+ * @param authHeaders 認証ヘッダー
+ * @returns 更新結果
+ */
+export async function updateSystemReviews(
+  gameId: string,
+  authHeaders: Record<string, string>
+): Promise<{ message: string }> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/games/${gameId}/update_system_reviews`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error updating system reviews: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating system reviews:", error);
+    throw error;
+  }
+}

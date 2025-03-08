@@ -2,7 +2,8 @@ module Api
   module V1
     class GamesController < ApplicationController
       before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image, :expansions]
-      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :expansions, :update_expansions]
+      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :expansions, :update_expansions, :update_system_reviews]
+      before_action :authenticate_admin!, only: [:update_system_reviews]
 
       def index
         # ページネーションパラメータを取得
@@ -191,11 +192,11 @@ module Api
         @game.normalize_japanese_publisher if @game.japanese_publisher.present?
         
         if @game.save
-          # システムユーザーによる初期レビューを作成
-          @game.create_initial_reviews
-          
           # 拡張情報を取得して保存
           @game.fetch_and_save_expansions
+          
+          # 初期レビューを作成
+          @game.create_initial_reviews
           
           render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
@@ -693,6 +694,15 @@ module Api
         end
       end
 
+      # システムレビューを更新するアクション
+      def update_system_reviews
+        if @game.update_system_reviews
+          render json: { message: "システムレビューを更新しました" }, status: :ok
+        else
+          render json: { error: "システムレビューの更新に失敗しました" }, status: :unprocessable_entity
+        end
+      end
+
       private
 
       def set_game
@@ -708,7 +718,7 @@ module Api
           :bgg_id, :name, :japanese_name, :description, :japanese_description, :image_url, 
           :min_players, :max_players, :play_time, :min_play_time,
           :average_score, :weight, :publisher, :designer, :release_date,
-          :japanese_publisher, :japanese_release_date, :japanese_image_url,
+          :japanese_publisher, :japanese_release_date, :japanese_image_url, :registered_on_site,
           best_num_players: [], recommended_num_players: [], expansions: [],
           categories: [], mechanics: []
         )

@@ -2,75 +2,188 @@
 description: 
 globs: 
 ---
-# BGG API処理の概要
+---
+description: 
+globs: 
+---
+## BGGとサイトの変換メカニクス
 
-BGG!
+BGGとサイトでは「カテゴリー」と「メカニクス」の概念が混在しています。これは意図的な設計で、日本のボードゲームユーザー向けに最適化された分類方法です。
 
-## BoardGameGeek API概要
+### 変換の基本方針
 
-BoardGameGeek (BGG) APIは、ボードゲーム情報を取得するための外部APIです。このプロジェクトでは、以下の目的でBGG APIを利用しています：
+1. **BGGのカテゴリーやメカニクスの中には、当サイトのカテゴリーになるものとメカニクスになるものが混在しています**
+2. **マッピングにないBGGのカテゴリーやメカニクスは除外します（当サイトは過多な情報を必要としていません）**
+3. **BGGのベストプレイ人数 → 本サイトの「ソロ向き」「ペア向き」「多人数向き」カテゴリー**
 
-1. ゲーム基本情報の取得（名前、説明、画像URL、プレイ人数、プレイ時間など）
-2. ゲームの評価情報の取得（平均評価、重さなど）
-3. 人気のゲーム（Hot Games）の取得
-4. 拡張ゲームとベースゲームの関係情報の取得
+### BGGカテゴリーからの変換マップ
 
-## API呼び出しの実装
+```ruby
+bgg_category_to_site_category = {
+  'Animals' => '動物',
+  'Bluffing' => 'ブラフ',
+  'Card Game' => 'カードゲーム',
+  "Children's Game" => '子供向け',
+  'Deduction' => '推理',
+  'Memory' => '記憶',
+  'Negotiation' => '交渉',
+  'Party Game' => 'パーティー',
+  'Puzzle' => 'パズル',
+  'Wargame' => 'ウォーゲーム',
+  'Word Game' => 'ワードゲーム'
+}
 
-### フロントエンド側の実装 (`bgr4-front/src/lib/bggApi.ts`)
+bgg_category_to_site_mechanic = {
+  'Dice' => 'ダイスロール'
+}
+```
 
-フロントエンド側では、以下の主要な関数を使用してBGG APIと通信しています：
+### BGGメカニクスからの変換マップ
 
-1. **getBGGGameDetails(id: string)**: 特定のゲームIDに基づいて詳細情報を取得
-2. **getHotGames()**: 人気のゲームリストを取得
-3. **getGameDetails(id: string)**: 単一ゲームの詳細を取得するためのヘルパー関数
-4. **getGamesDetails(ids: string)**: 複数ゲームの詳細を一度に取得するためのヘルパー関数
+```ruby
+bgg_mechanic_to_site_category = {
+  'Acting' => '演技',
+  'Deduction' => '推理',
+  'Legacy Game' => 'レガシー・キャンペーン',
+  'Memory' => '記憶',
+  'Negotiation' => '交渉',
+  'Paper-and-Pencil' => '紙ペン',
+  'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
+  'Solo / Solitaire Game' => 'ソロ向き',
+  'Pattern Building' => 'パズル',
+  'Trick-taking' => 'トリテ'
+}
 
-XMLレスポンスの解析には `fast-xml-parser` ライブラリを使用しています。
+bgg_mechanic_to_site_mechanic = {
+  'Area Majority / Influence' => 'エリア支配',
+  'Auction / Bidding' => 'オークション',
+  'Auction Compensation' => 'オークション',
+  'Auction: Dexterity' => 'オークション',
+  'Auction: Dutch' => 'オークション',
+  'Auction: Dutch Priority' => 'オークション',
+  'Auction: English' => 'オークション',
+  'Auction: Fixed Placement' => 'オークション',
+  'Auction: Multiple Lot' => 'オークション',
+  'Auction: Once Around' => 'オークション',
+  'Auction: Sealed Bid' => 'オークション',
+  'Auction: Turn Order Until Pass' => 'オークション',
+  'Betting and Bluffing' => '賭け',
+  'Closed Drafting' => 'ドラフト',
+  'Cooperative Game' => '協力',
+  'Deck Construction' => 'デッキ/バッグビルド',
+  'Deck, Bag, and Pool Building' => 'デッキ/バッグビルド',
+  'Dice Rolling' => 'ダイスロール',
+  'Hidden Roles' => '正体隠匿',
+  'Modular Board' => 'モジュラーボード',
+  'Network and Route Building' => 'ルート構築',
+  'Open Drafting' => 'ドラフト',
+  'Push Your Luck' => 'バースト',
+  'Set Collection' => 'セット収集',
+  'Simultaneous Action Selection' => '同時手番',
+  'Tile Placement' => 'タイル配置',
+  'Variable Player Powers' => 'プレイヤー別能力',
+  'Variable Set-up' => 'プレイヤー別能力',
+  'Worker Placement' => 'ワカプレ',
+  'Worker Placement with Dice Workers' => 'ワカプレ',
+  'Worker Placement, Different Worker Types' => 'ワカプレ'
+}
+```
 
-### バックエンド側の実装 (`bgr4-api/app/services/bgg_service.rb`)
+### BGGのベストプレイ人数から当サイトのカテゴリーへの変換マップ
 
-バックエンド側では、`BggService` クラスを通じてBGG APIと通信しています：
+```ruby
+bgg_best_player_to_site_categories = {
+  '1' => 'ソロ向き',
+  '2' => 'ペア向き',
+  '6' => '多人数向き',
+  '7' => '多人数向き',
+  '8' => '多人数向き',
+  '9' => '多人数向き',
+  '10' => '多人数向き'
+}
+```
 
-1. **search_games(query)**: キーワードに基づいてゲームを検索
-2. **get_game_details(bgg_id)**: 特定のゲームIDに基づいて詳細情報を取得
-3. **get_popular_games(limit = 50)**: 人気のゲームリストを取得
-4. **get_hot_games()**: BGGのHot Gamesリストを取得
-5. **parse_hot_games(response)**: Hot Gamesレスポンスを解析
+### 日本の出版社リストと正規化マッピング
 
-XMLレスポンスの解析には `Nokogiri` ライブラリを使用しています。
+```ruby
+japanese_publisher_mapping = {
+  # ホビージャパン系
+  'hobby japan' => 'ホビージャパン',
+  'hobbyjapan' => 'ホビージャパン',
+  'hobby-japan' => 'ホビージャパン',
+  
+  # アークライト系
+  'arclight' => 'アークライト',
+  'arclightgames' => 'アークライト',
+  'arc light' => 'アークライト',
+  
+  # その他の日本の出版社
+  'グループSNE' => 'グループSNE',
+  'groupsne' => 'グループSNE',
+  'group sne' => 'グループSNE',
+  
+  'カナイ製作所' => 'カナイ製作所',
+  'kanai' => 'カナイ製作所',
+  'カナイファクトリー' => 'カナイ製作所',
+  
+  'ニューゲームズオーダー' => 'ニューゲームズオーダー',
+  'new games order' => 'ニューゲームズオーダー',
+  'ngo' => 'ニューゲームズオーダー',
+  
+  'コロンアーク' => 'コロンアーク',
+  'colon arc' => 'コロンアーク',
+  
+  '数寄ゲームズ' => '数寄ゲームズ',
+  'suki games' => '数寄ゲームズ',
+  
+  'ダイスタワー' => 'ダイスタワー',
+  'dice tower' => 'ダイスタワー',
+  
+  'ボードゲームジャパン' => 'ボードゲームジャパン',
+  'board game japan' => 'ボードゲームジャパン',
+  'bgj' => 'ボードゲームジャパン',
+  
+  'ゲームマーケット' => 'ゲームマーケット',
+  'game market' => 'ゲームマーケット',
+  
+  'ジーピー' => 'ジーピー',
+  'gp' => 'ジーピー',
+  
+  'ハコニワ' => 'ハコニワ',
+  'hakoniwagames' => 'ハコニワ',
+  
+  'テンデイズゲームズ' => 'テンデイズゲームズ',
+  'ten days games' => 'テンデイズゲームズ',
+  'tendaysgames' => 'テンデイズゲームズ',
+  
+  'グラウンディング' => 'グラウンディング',
+  'grounding inc.' => 'グラウンディング',
+  'grounding' => 'グラウンディング',
+  
+  'オインクゲームズ' => 'オインクゲームズ',
+  'oink games' => 'オインクゲームズ',
+  
+  'アズモデージャパン' => 'アズモデージャパン',
+  'asmodee japan' => 'アズモデージャパン',
+  'asmodee' => 'アズモデージャパン',
+  
+  '株式会社ケンビル' => 'ケンビル',
+  'kenbill' => 'ケンビル',
+}
+```
 
-## データ処理の流れ
+### 変換処理の流れ
 
-1. BGG APIからXML形式でデータを取得
-2. XMLをパースして必要な情報を抽出
-3. 日本語名や日本語版の情報を特定（日本語の文字コード範囲でマッチングなど）
-4. 拡張ゲームとベースゲームの関係を解析
-   - `link[@type="boardgameexpansion" and @inbound="true"]`: このゲームの拡張
-   - `link[@type="boardgameexpansion" and not(@inbound="true")]`: このゲームのベースゲーム
-5. 取得したデータをアプリケーションのデータモデルに変換
+1. BGG APIからゲーム情報を取得
+2. BGGのカテゴリーを当サイトのカテゴリーとメカニクスに変換（マッピングにないものは除外）
+3. BGGのメカニクスを当サイトのカテゴリーとメカニクスに変換（マッピングにないものは除外）
+4. BGGのベストプレイ人数から本サイトのカテゴリー「ソロ向き」「ペア向き」「多人数向き」を生成
+5. 変換できなかった項目はログに記録し、必要に応じて変換マップを更新
+6. 当サイトに変換されたカテゴリーとメカニクス情報を使用して初期レビューを作成
 
-## 拡張情報とベースゲーム情報の処理
+### 注意点
 
-BGG APIから取得した拡張情報とベースゲーム情報は、以下のように処理されます：
-
-1. XMLから拡張情報とベースゲーム情報を抽出
-2. データベースの `metadata` JSONカラムに保存（`store` アクセサを使用）
-3. フロントエンドでは `expansions` と `baseGame` プロパティとして利用可能
-4. ゲーム詳細ページで拡張ゲームとベースゲームへのリンクを表示
-
-## エラーハンドリングと再試行メカニズム
-
-BGG APIは時々レスポンスが遅れたり、「後でやり直してください」というメッセージを返すことがあります。これに対処するため：
-
-1. `fetchWithRetry` 関数を実装して、最大3回まで再試行
-2. 「Please try again later」メッセージを検出した場合、2秒待機して再試行
-3. エラーが発生した場合は適切なエラーメッセージをログに記録
-
-## キャッシュメカニズム
-
-パフォーマンス向上のため、フロントエンド側でゲーム情報をキャッシュする仕組みを実装しています：
-
-1. ゲーム詳細ページでは、取得したゲーム情報を `gameCache` オブジェクトに保存
-2. キャッシュの有効期限は5分（`CACHE_EXPIRY = 5 * 60 * 1000`）
-3. 有効なキャッシュがある場合は、APIリクエストを送信せずにキャッシュからデータを使用 
+1. 変換マップは定期的に更新が必要
+2. BGGの分類体系が変更された場合は、変換マップも更新する必要がある
+3. 未マッピングの項目は `UnmappedBggItem` モデルに記録され、管理画面から確認可能
+4. 当サイトは過多な情報を必要としていないため、マッピングにないカテゴリーやメカニクスは除外するテゴリーやメカニクスは除外する 

@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  bgg_type: MyString
+  bgg_name: MyString
+  occurrence_count: 1
+
+two:
+  bgg_type: MyString
+  bgg_name: MyString
+  occurrence_count: 1

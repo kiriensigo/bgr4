@@ -1,4 +1,11 @@
 Rails.application.routes.draw do
+  namespace :admin do
+    resources :mappings, only: [:index] do
+      collection do
+        put 'update'
+      end
+    end
+  end
   # devise_token_authのルートを設定
   mount_devise_token_auth_for 'User', at: 'auth', controllers: {
     registrations: 'auth/registrations',
@@ -36,6 +43,7 @@ Rails.application.routes.draw do
           put 'update_from_bgg'  # BGGからゲーム情報を更新するルート
           get 'expansions'       # 拡張情報を取得するルート
           put 'update_expansions' # 拡張情報を更新するルート
+          put 'update_system_reviews' # システムレビューを更新するルート
         end
         resources :reviews, only: [:index, :create, :update]
       end

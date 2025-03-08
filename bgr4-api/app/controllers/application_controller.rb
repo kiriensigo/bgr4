@@ -22,6 +22,19 @@ class ApplicationController < ActionController::API
     true
   end
 
+  def authenticate_admin!
+    authenticate_user!
+    
+    unless current_user&.is_admin?
+      Rails.logger.error "Admin authentication failed: User is not an admin"
+      render json: { error: '管理者権限が必要です' }, status: :unauthorized
+      return
+    end
+    
+    Rails.logger.info "Admin authentication successful for user: #{current_user.email}"
+    true
+  end
+
   private
 
   def not_found

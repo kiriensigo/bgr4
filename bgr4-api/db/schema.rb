@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_07_103441) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_07_120127) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -108,6 +108,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_07_103441) do
     t.index ["game_id"], name: "index_reviews_on_game_id"
     t.index ["user_id", "game_id"], name: "index_reviews_on_user_id_and_game_id"
     t.index ["user_id"], name: "index_reviews_on_user_id"
+  end
+
+  create_table "unmapped_bgg_items", force: :cascade do |t|
+    t.string "bgg_type", null: false
+    t.string "bgg_name", null: false
+    t.integer "occurrence_count", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bgg_type", "bgg_name"], name: "index_unmapped_bgg_items_on_bgg_type_and_bgg_name", unique: true
+    t.index ["occurrence_count"], name: "index_unmapped_bgg_items_on_occurrence_count"
   end
 
   create_table "users", force: :cascade do |t|

@@ -11,6 +11,7 @@ import {
   type Game,
   gameCache,
   CACHE_EXPIRY,
+  updateSystemReviews,
 } from "@/lib/api";
 import {
   Container,
@@ -60,6 +61,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import GameExpansions from "@/components/GameExpansions";
+import UpdateIcon from "@mui/icons-material/Update";
 
 interface Review {
   id: number;
@@ -341,6 +343,8 @@ export default function GamePage({ params }: GamePageProps) {
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0); // ローディングの進捗状態
+  const [openSystemReviewsDialog, setOpenSystemReviewsDialog] = useState(false);
+  const [updatingSystemReviews, setUpdatingSystemReviews] = useState(false);
 
   // ローディングの進捗状態を更新するタイマー
   useEffect(() => {
@@ -655,6 +659,76 @@ export default function GamePage({ params }: GamePageProps) {
     }
   };
 
+  // システムレビューを更新するダイアログを開く
+  const handleOpenSystemReviewsDialog = () => {
+    setOpenSystemReviewsDialog(true);
+  };
+
+  // システムレビューを更新するダイアログを閉じる
+  const handleCloseSystemReviewsDialog = () => {
+    setOpenSystemReviewsDialog(false);
+  };
+
+  // システムレビューを更新する
+  const handleUpdateSystemReviews = async () => {
+    if (!user) return;
+
+    try {
+      // 更新中フラグを設定
+      setUpdatingSystemReviews(true);
+
+      // 少し待ってローディングインジケーターが確実に表示されるようにする
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const authHeaders = await getAuthHeaders();
+
+      if (!authHeaders) {
+        throw new Error("認証情報が取得できませんでした");
+      }
+
+      // ダイアログを閉じる（ローディング状態を表示するため）
+      handleCloseSystemReviewsDialog();
+
+      // 成功メッセージを表示
+      setSnackbarMessage("システムレビューを更新中です...");
+      setSnackbarSeverity("info");
+      setSnackbarOpen(true);
+
+      // タイムアウト処理を追加
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(
+          () => reject(new Error("更新処理がタイムアウトしました")),
+          15000
+        ); // 15秒でタイムアウト
+      });
+
+      // 実際の更新処理
+      const updatePromise = updateSystemReviews(params.id, authHeaders);
+
+      // レース条件でどちらか早い方を採用
+      const result = await Promise.race([updatePromise, timeoutPromise]);
+
+      // 更新が成功した場合
+      setSnackbarMessage("システムレビューを更新しました");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+
+      // ページをリロードして最新の情報を表示
+      window.location.reload();
+    } catch (error) {
+      console.error("システムレビューの更新に失敗しました:", error);
+      setSnackbarMessage(
+        `システムレビューの更新に失敗しました: ${
+          error instanceof Error ? error.message : "不明なエラー"
+        }`
+      );
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setUpdatingSystemReviews(false);
+    }
+  };
+
   if (loading) {
     return (
       <Container sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -722,7 +796,7 @@ export default function GamePage({ params }: GamePageProps) {
               alignItems: "center",
               backdropFilter: "blur(3px)",
             }}
-            inert={updatingGame ? undefined : "true"}
+            inert={updatingGame ? undefined : true}
           >
             <Paper
               elevation={4}
@@ -888,17 +962,28 @@ export default function GamePage({ params }: GamePageProps) {
                 </Button>
               )}
 
-              {/* BGGからゲーム情報を更新するボタン（システム管理者のみ表示） */}
-              {user && user.is_admin && (
-                <Button
-                  variant="outlined"
-                  color="info"
-                  startIcon={<RefreshIcon />}
-                  onClick={handleOpenUpdateDialog}
-                  sx={{ mb: 2, mr: 2 }}
-                >
-                  BGGから更新
-                </Button>
+              {/* 管理者のみに表示するボタン */}
+              {user?.is_admin && (
+                <>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={handleOpenUpdateDialog}
+                    startIcon={<RefreshIcon />}
+                    sx={{ mt: 1, mb: 1 }}
+                  >
+                    BGGから更新
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleOpenSystemReviewsDialog}
+                    startIcon={<UpdateIcon />}
+                    sx={{ mt: 1, mb: 1, ml: 1 }}
+                  >
+                    システムレビュー更新
+                  </Button>
+                </>
               )}
 
               {/* やりたいリストボタン */}
@@ -1400,11 +1485,9 @@ export default function GamePage({ params }: GamePageProps) {
         <Dialog
           open={openDialog}
           onClose={handleCloseDialog}
-          BackdropProps={{
-            sx: {
-              "&.MuiBackdrop-root": {
-                inert: openDialog ? undefined : "true",
-              },
+          slotProps={{
+            backdrop: {
+              inert: openDialog ? undefined : true,
             },
           }}
         >
@@ -1442,11 +1525,9 @@ export default function GamePage({ params }: GamePageProps) {
         <Dialog
           open={openUpdateDialog}
           onClose={handleCloseUpdateDialog}
-          BackdropProps={{
-            sx: {
-              "&.MuiBackdrop-root": {
-                inert: openUpdateDialog ? undefined : "true",
-              },
+          slotProps={{
+            backdrop: {
+              inert: openUpdateDialog ? undefined : true,
             },
           }}
         >
@@ -1477,6 +1558,37 @@ export default function GamePage({ params }: GamePageProps) {
             >
               更新
               {updatingGame && <CircularProgress size={24} sx={{ ml: 1 }} />}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* システムレビューを更新するダイアログ */}
+        <Dialog
+          open={openSystemReviewsDialog}
+          onClose={handleCloseSystemReviewsDialog}
+          slotProps={{
+            backdrop: {
+              inert: openSystemReviewsDialog ? undefined : true,
+            },
+          }}
+        >
+          <DialogTitle>システムレビューを更新</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" gutterBottom>
+              BoardGameGeekから最新のシステムレビューを取得して更新します。
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseSystemReviewsDialog}>キャンセル</Button>
+            <Button
+              onClick={handleUpdateSystemReviews}
+              color="primary"
+              disabled={updatingSystemReviews}
+            >
+              更新
+              {updatingSystemReviews && (
+                <CircularProgress size={24} sx={{ ml: 1 }} />
+              )}
             </Button>
           </DialogActions>
         </Dialog>
