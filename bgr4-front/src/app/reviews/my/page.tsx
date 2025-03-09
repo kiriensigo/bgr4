@@ -17,19 +17,29 @@ interface Game {
   id: string;
   bgg_id: string;
   name: string;
-  image_url: string;
+  japanese_name?: string;
+  image_url?: string;
+  japanese_image_url?: string;
+  reviews_count?: number;
 }
 
 interface Review {
   id: number;
   user: {
+    id: number;
     name: string;
+    image?: string;
   };
   game: Game;
   overall_score: number;
+  rule_complexity?: number;
+  luck_factor?: number;
+  interaction?: number;
+  downtime?: number;
   short_comment: string;
   created_at: string;
   likes_count: number;
+  liked_by_current_user?: boolean;
 }
 
 export default function MyReviewsPage() {
@@ -40,10 +50,9 @@ export default function MyReviewsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // 総いいね数を計算
-  const totalLikes = reviews.reduce(
-    (sum, review) => sum + review.likes_count,
-    0
-  );
+  const totalLikes = Array.isArray(reviews)
+    ? reviews.reduce((sum, review) => sum + (review.likes_count || 0), 0)
+    : 0;
 
   const fetchMyReviews = async () => {
     try {
@@ -64,7 +73,18 @@ export default function MyReviewsPage() {
       }
 
       const data = await response.json();
-      setReviews(data);
+      // 開発環境でのみコンソールログを出力
+      if (process.env.NODE_ENV === "development") {
+        console.log("API Response:", data);
+        console.log("API Response Structure:", {
+          hasReviews: !!data.reviews,
+          reviewsIsArray: Array.isArray(data.reviews),
+          reviewsLength: data.reviews?.length,
+          firstReview: data.reviews?.[0],
+        });
+      }
+      const reviewsData = data.reviews || [];
+      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
     } catch (err) {
       console.error("Error fetching reviews:", err);
       setError("レビューの取得に失敗しました");
@@ -133,7 +153,14 @@ export default function MyReviewsPage() {
             <Grid item xs={12} sm={6} md={4} key={review.id}>
               <GameCard
                 game={review.game}
-                review={review}
+                review={{
+                  id: review.id,
+                  overall_score: review.overall_score,
+                  short_comment: review.short_comment,
+                  created_at: review.created_at,
+                  likes_count: review.likes_count,
+                  user: review.user,
+                }}
                 type="review"
                 onReviewUpdated={handleReviewUpdated}
               />

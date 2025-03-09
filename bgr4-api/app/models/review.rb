@@ -8,7 +8,7 @@ class Review < ApplicationRecord
   # システムユーザーを除外するスコープ
   scope :exclude_system_user, -> {
     system_user = User.find_by(email: 'system@boardgamereview.com')
-    where.not(user: system_user) if system_user
+    system_user.present? ? where.not(user: system_user) : all
   }
 
   validates :user_id, presence: true

@@ -59,9 +59,16 @@ export interface GameExpansion {
   relationship_type: string;
 }
 
+export interface UnregisteredExpansion {
+  id: string;
+  type: string;
+}
+
 export interface ExpansionsResponse {
   expansions: GameExpansion[];
   base_games: GameExpansion[];
+  unregistered_expansion_ids: UnregisteredExpansion[];
+  unregistered_base_game_ids: UnregisteredExpansion[];
 }
 
 export interface Review {

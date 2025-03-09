@@ -1,6 +1,6 @@
 class GameExpansion < ApplicationRecord
-  belongs_to :base_game, class_name: 'Game', primary_key: 'bgg_id', foreign_key: 'base_game_id'
-  belongs_to :expansion, class_name: 'Game', primary_key: 'bgg_id', foreign_key: 'expansion_id'
+  belongs_to :base_game, class_name: 'Game', primary_key: 'bgg_id', foreign_key: 'base_game_id', optional: true
+  belongs_to :expansion, class_name: 'Game', primary_key: 'bgg_id', foreign_key: 'expansion_id', optional: true
   
   validates :base_game_id, presence: true
   validates :expansion_id, presence: true
@@ -31,4 +31,20 @@ class GameExpansion < ApplicationRecord
   scope :registered_on_site, -> { 
     joins(:expansion).where(expansions_game_expansions: { registered_on_site: true })
   }
+
+  # 登録済みのゲームIDのみを取得（拡張側）
+  def self.registered_expansion_ids(base_game_id)
+    joins("LEFT JOIN games ON games.bgg_id = game_expansions.expansion_id")
+      .where(base_game_id: base_game_id)
+      .where("games.id IS NOT NULL AND games.registered_on_site = true")
+      .pluck(:expansion_id)
+  end
+
+  # 登録済みのゲームIDのみを取得（ベースゲーム側）
+  def self.registered_base_game_ids(expansion_id)
+    joins("LEFT JOIN games ON games.bgg_id = game_expansions.base_game_id")
+      .where(expansion_id: expansion_id)
+      .where("games.id IS NOT NULL AND games.registered_on_site = true")
+      .pluck(:base_game_id)
+  end
 end

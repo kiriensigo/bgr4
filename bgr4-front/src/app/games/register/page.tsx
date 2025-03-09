@@ -27,7 +27,11 @@ export default function RegisterGamePage() {
   // BGGのURLからIDを抽出する関数
   const extractBggId = (url: string): string | null => {
     // URLからBGG IDを抽出するための正規表現
-    const patterns = [/boardgamegeek\.com\/boardgame\/(\d+)/, /^(\d+)$/];
+    const patterns = [
+      /boardgamegeek\.com\/boardgame\/(\d+)/,
+      /boardgamegeek\.com\/boardgameexpansion\/(\d+)/,
+      /^(\d+)$/,
+    ];
 
     for (const pattern of patterns) {
       const match = url.match(pattern);
@@ -164,64 +168,42 @@ export default function RegisterGamePage() {
   }
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ py: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            ボードゲームを登録
-          </Typography>
-
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            BoardGameGeekのゲームページのURLまたはゲームIDを入力してください。
-          </Typography>
-
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="BoardGameGeekのURL または ゲームID"
-              value={bggUrl}
-              onChange={(e) => setBggUrl(e.target.value)}
-              placeholder="例: https://boardgamegeek.com/boardgame/12345 または 12345"
-              sx={{ mb: 3 }}
-              required
-              error={!!error}
-              helperText={error}
-              disabled={loading}
-            />
-
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={loading || !bggUrl.trim()}
-                sx={{ minWidth: 120 }}
-              >
-                {loading ? <CircularProgress size={24} /> : "登録"}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => router.back()}
-                disabled={loading}
-              >
-                戻る
-              </Button>
-            </Box>
-          </form>
-
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              使い方
-            </Typography>
-            <Typography variant="body2" component="div">
-              <ol>
-                <li>BoardGameGeekで登録したいゲームのページを開きます</li>
-                <li>URLをコピーするか、ゲームIDをコピーします</li>
-                <li>上のフォームに貼り付けて「登録」をクリックします</li>
-              </ol>
-            </Typography>
-          </Box>
-        </Paper>
-      </Box>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          ゲームを登録する
+        </Typography>
+        <Typography variant="body1" paragraph>
+          BoardGameGeekに登録されているボードゲームを当サイトに登録できます。
+          基本ゲームだけでなく、拡張ゲームも登録可能です。
+        </Typography>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 3 }}>
+          <TextField
+            fullWidth
+            label="BoardGameGeekのURL または ゲームID"
+            variant="outlined"
+            value={bggUrl}
+            onChange={(e) => setBggUrl(e.target.value)}
+            helperText="例: https://boardgamegeek.com/boardgame/266192/wingspan または https://boardgamegeek.com/boardgameexpansion/363077/furnace-interbellum"
+            required
+            sx={{ mb: 2 }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={loading}
+            sx={{ mt: 2 }}
+          >
+            {loading ? <CircularProgress size={24} /> : "登録する"}
+          </Button>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </Box>
+      </Paper>
     </Container>
   );
 }

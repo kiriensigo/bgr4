@@ -31,7 +31,9 @@ export interface BGGGameDetails {
   japaneseReleaseDate?: string;
   japanesePublisher?: string;
   japaneseName?: string;
-  expansions?: Array<{ id: string; name: string }>;
+  expansions?: Array<{ id: string; name: string; type: string }>;
+  isExpansion: boolean;
+  baseGame?: { id: string; name: string };
 }
 
 async function sleep(ms: number) {
@@ -203,11 +205,35 @@ async function getVersionDetails(versionId: string): Promise<{
       const titleMatch = titleText.match(/^([^\|]+)/);
       if (titleMatch && titleMatch[1]) {
         const potentialName = titleMatch[1].trim();
-        // 実際に日本語文字を含むか確認
-        if (potentialName.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)) {
+
+        // ひらがなまたはカタカナを含むか確認（最優先）
+        const hasKana = !!potentialName.match(/[\u3040-\u309F\u30A0-\u30FF]/);
+
+        // 漢字のみを含むか確認
+        const hasKanjiOnly =
+          !hasKana && !!potentialName.match(/[\u4E00-\u9FAF]/);
+
+        // 「Japanese」「Japan」などの英語表記を含むか確認
+        const containsJapanKeyword =
+          potentialName.toLowerCase().includes("japanese") ||
+          potentialName.toLowerCase().includes("japan") ||
+          potentialName.toLowerCase().includes("日本語");
+
+        // 優先順位に基づいて日本語名を設定
+        if (hasKana) {
           japaneseName = potentialName;
           console.log(
-            `Found Japanese name from version page title: ${japaneseName}`
+            `Found Japanese name with kana from version page title: ${japaneseName}`
+          );
+        } else if (containsJapanKeyword) {
+          // 「Japanese edition」などの英語表記のみの場合は、後でバージョン情報から日本語名を探す
+          console.log(`Found version with Japan keyword: ${potentialName}`);
+          // 一時的に保存しておく
+          japaneseName = potentialName;
+        } else if (hasKanjiOnly) {
+          japaneseName = potentialName;
+          console.log(
+            `Found Japanese name with kanji only from version page title: ${japaneseName}`
           );
         }
       }
@@ -319,6 +345,11 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
     const item = Array.isArray(result.items.item)
       ? result.items.item[0]
       : result.items.item;
+
+    // ゲームタイプを確認（基本ゲームか拡張ゲームか）
+    const gameType = item["@_type"] || "boardgame";
+    const isExpansion = gameType === "boardgameexpansion";
+    console.log("Game type:", gameType, "Is expansion:", isExpansion);
 
     // プレイ人数の投票データを解析
     const numplayersPoll = item.poll?.find(
@@ -610,7 +641,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       ? [item.thumbnail]
       : []; */
 
-    // 日本語版の情報を取得
+    // 日本語版情報を取得
     let japaneseVersionInfo: any = null;
     if (item.versions && item.versions.item) {
       try {
@@ -624,6 +655,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
         // 日本語版を探す
         let japaneseVersion = null;
         let versionId = null;
+        let highestPriority = 0;
 
         for (const version of versions) {
           const versionName = version.name?.["@_value"] || "";
@@ -632,7 +664,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
           // ひらがなまたはカタカナを含むか確認（最優先）
           const hasKana = !!versionName.match(/[\u3040-\u309F\u30A0-\u30FF]/);
 
-          // 漢字のみを含むか確認（次点）
+          // 漢字のみを含むか確認
           const hasKanjiOnly =
             !hasKana && !!versionName.match(/[\u4E00-\u9FAF]/);
 
@@ -661,7 +693,18 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
                   ) ||
                   publisherName.includes("Hobby Japan") ||
                   publisherName.includes("Arclight") ||
-                  publisherName.includes("Ten Days Games")
+                  publisherName.includes("Ten Days Games") ||
+                  publisherName.includes("Kenbill") ||
+                  publisherName.includes("Japon Brand") ||
+                  publisherName.includes("Yellow Submarine") ||
+                  publisherName.includes("Capcom") ||
+                  publisherName.includes("Bandai") ||
+                  publisherName.includes("Konami") ||
+                  publisherName.includes("Sega") ||
+                  publisherName.includes("Nintendo") ||
+                  publisherName.includes("Square Enix") ||
+                  publisherName.includes("Taito") ||
+                  publisherName.includes("Namco")
                 ) {
                   hasJapanesePublisher = true;
                   break;
@@ -670,22 +713,45 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
             }
           }
 
-          // 日本語版と判定する条件
+          // 日本語版と判定する条件と優先順位
           // 1. ひらがな・カタカナを含む場合は最優先
-          // 2. 漢字のみの場合は次点
-          // 3. 「Japanese」などのキーワードと日本の出版社の組み合わせも考慮
-          const isJapaneseVersion =
-            hasKana ||
-            hasKanjiOnly ||
-            (containsJapanKeyword && hasJapanesePublisher);
+          // 2. 「Japanese」などのキーワードと日本の出版社の組み合わせ
+          // 3. 「Japanese」などのキーワードを含むが、日本語の出版社がないもの
+          // 4. 漢字のみの場合は最後
+          let priority = 0;
+          let isJapaneseVersion = false;
 
-          if (isJapaneseVersion) {
-            console.log("Found Japanese version:", version);
+          if (hasKana) {
+            isJapaneseVersion = true;
+            priority = 4; // 最高優先度
+          } else if (containsJapanKeyword && hasJapanesePublisher) {
+            isJapaneseVersion = true;
+            priority = 3;
+          } else if (containsJapanKeyword) {
+            isJapaneseVersion = true;
+            priority = 2;
+          } else if (hasKanjiOnly) {
+            isJapaneseVersion = true;
+            priority = 1;
+          }
+
+          if (isJapaneseVersion && priority > highestPriority) {
+            console.log(
+              `Found Japanese version: ${versionName} (Priority: ${priority})`
+            );
             console.log("Version has kana:", hasKana);
+            console.log("Version has Japan keyword:", containsJapanKeyword);
+            console.log(
+              "Version has Japanese publisher:",
+              hasJapanesePublisher
+            );
             console.log("Version has kanji only:", hasKanjiOnly);
             japaneseVersion = version;
             versionId = version["@_id"];
-            break;
+            highestPriority = priority;
+
+            // ひらがな・カタカナを含む場合は即座に採用して検索終了
+            if (hasKana) break;
           }
         }
 
@@ -698,124 +764,149 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
             let versionJapaneseName = japaneseVersion.name?.["@_value"];
 
             // nameidから日本語名を取得（BGGのバージョンページでは「Name」フィールドに相当）
-            if (japaneseVersion.nameid) {
-              const nameids = Array.isArray(japaneseVersion.nameid)
-                ? japaneseVersion.nameid
-                : [japaneseVersion.nameid];
-
-              for (const nameid of nameids) {
-                const nameidType = nameid["@_type"];
-                const nameidValue = nameid["#text"];
-
+            if (
+              japaneseVersion.nameid &&
+              Array.isArray(japaneseVersion.nameid)
+            ) {
+              const primaryNameId = japaneseVersion.nameid.find(
+                (n: any) => n["@_type"] === "primary"
+              );
+              if (
+                primaryNameId &&
+                primaryNameId["#text"] &&
+                primaryNameId["#text"].match(
+                  /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/
+                )
+              ) {
+                versionJapaneseName = primaryNameId["#text"];
                 console.log(
-                  `Checking nameid: ${nameidValue}, type: ${nameidType}`
+                  "Found Japanese name from nameid:",
+                  versionJapaneseName
                 );
+              }
+            }
 
-                // 「primary」タイプのnameidが実際の日本語名の可能性が高い
+            // 出版社情報を取得
+            let japanesePublisher = null;
+            if (japaneseVersion.link) {
+              const publisherLinks = Array.isArray(japaneseVersion.link)
+                ? japaneseVersion.link.filter(
+                    (l: any) => l["@_type"] === "boardgamepublisher"
+                  )
+                : japaneseVersion.link["@_type"] === "boardgamepublisher"
+                ? [japaneseVersion.link]
+                : [];
+
+              for (const link of publisherLinks) {
+                const publisherName = link["@_value"];
                 if (
-                  nameidType === "primary" &&
-                  nameidValue &&
-                  nameidValue.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)
+                  publisherName.match(
+                    /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/
+                  ) ||
+                  publisherName.includes("Hobby Japan") ||
+                  publisherName.includes("Arclight") ||
+                  publisherName.includes("Ten Days Games") ||
+                  publisherName.includes("Kenbill") ||
+                  publisherName.includes("Japon Brand") ||
+                  publisherName.includes("Yellow Submarine") ||
+                  publisherName.includes("Capcom") ||
+                  publisherName.includes("Bandai") ||
+                  publisherName.includes("Konami") ||
+                  publisherName.includes("Sega") ||
+                  publisherName.includes("Nintendo") ||
+                  publisherName.includes("Square Enix") ||
+                  publisherName.includes("Taito") ||
+                  publisherName.includes("Namco")
                 ) {
-                  versionJapaneseName = nameidValue;
-                  console.log(
-                    `Found actual Japanese name from nameid: ${versionJapaneseName}`
-                  );
+                  japanesePublisher = publisherName;
+                  console.log("Found Japanese publisher:", japanesePublisher);
                   break;
                 }
               }
             }
 
-            // 出版社情報を取得
-            const versionPublishers = [];
-
-            if (japaneseVersion.link) {
-              const links = Array.isArray(japaneseVersion.link)
-                ? japaneseVersion.link
-                : [japaneseVersion.link];
-
-              for (const link of links) {
-                if (link["@_type"] === "boardgamepublisher") {
-                  versionPublishers.push(link["@_value"]);
-                }
+            // 発売日を取得
+            let japaneseReleaseDate = null;
+            if (japaneseVersion.yearpublished) {
+              const year =
+                japaneseVersion.yearpublished["@_value"] ||
+                japaneseVersion.yearpublished;
+              if (year) {
+                japaneseReleaseDate = `${year}-01-01`;
+                console.log(
+                  "Found Japanese release date:",
+                  japaneseReleaseDate
+                );
               }
-            }
-
-            // 発売日の処理を改善
-            let versionReleaseDate = undefined;
-            if (japaneseVersion.yearpublished?.["@_value"]) {
-              // 年だけの場合は1月1日を追加
-              versionReleaseDate = `${japaneseVersion.yearpublished["@_value"]}-01-01`;
-              console.log("Version release date:", versionReleaseDate);
             }
 
             // 画像URLを取得
-            let versionImageUrl =
-              japaneseVersion.image?.["#text"] ||
-              japaneseVersion.thumbnail?.["#text"];
-            console.log("Version image URL:", versionImageUrl);
-
-            // バージョンIDがあれば、バージョン詳細ページから追加情報を取得
-            if (versionId) {
-              console.log(
-                `Fetching additional details for version ID: ${versionId}`
-              );
-              const versionDetails = await getVersionDetails(versionId);
-
-              if (versionDetails) {
-                // バージョン詳細から取得した情報で上書き（undefinedでない場合のみ）
-                if (versionDetails.name) {
-                  versionJapaneseName = versionDetails.name;
+            let japaneseImageUrl = null;
+            if (japaneseVersion.image) {
+              japaneseImageUrl = japaneseVersion.image;
+              console.log("Found Japanese image URL:", japaneseImageUrl);
+            } else if (versionId) {
+              // バージョンIDがある場合は、バージョン詳細ページから画像URLを取得
+              try {
+                const versionDetails = await getVersionDetails(versionId);
+                if (versionDetails?.imageUrl) {
+                  japaneseImageUrl = versionDetails.imageUrl;
                   console.log(
-                    `Updated Japanese name from version details: ${versionJapaneseName}`
+                    "Found Japanese image URL from version details:",
+                    japaneseImageUrl
                   );
                 }
-
-                if (versionDetails.publisher) {
-                  versionPublishers[0] = versionDetails.publisher;
-                  console.log(
-                    `Updated publisher from version details: ${versionDetails.publisher}`
-                  );
-                }
-
-                if (versionDetails.releaseDate) {
-                  versionReleaseDate = versionDetails.releaseDate;
-                  console.log(
-                    `Updated release date from version details: ${versionReleaseDate}`
-                  );
-                }
-
-                if (versionDetails.imageUrl) {
-                  versionImageUrl = versionDetails.imageUrl;
-                  console.log(
-                    `Updated image URL from version details: ${versionImageUrl}`
-                  );
-                }
+              } catch (error) {
+                console.error(
+                  "Error getting version details for image URL:",
+                  error
+                );
               }
             }
 
-            // 日本語版情報をまとめる
             japaneseVersionInfo = {
               name: versionJapaneseName,
-              publisher:
-                versionPublishers.length > 0 ? versionPublishers[0] : undefined,
-              releaseDate: versionReleaseDate,
-              imageUrl: versionImageUrl,
+              publisher: japanesePublisher,
+              releaseDate: japaneseReleaseDate,
+              imageUrl: japaneseImageUrl,
             };
 
-            console.log(
-              "Japanese version info from version list:",
-              japaneseVersionInfo
-            );
-          } catch (versionError) {
-            console.error(
-              "Error processing Japanese version info:",
-              versionError
-            );
+            console.log("Japanese version info:", japaneseVersionInfo);
+          } catch (error) {
+            console.error("Error processing Japanese version:", error);
           }
         }
       } catch (error) {
-        console.error("Error fetching Japanese version info:", error);
+        console.error("Error checking for Japanese version:", error);
+      }
+    }
+
+    // 拡張ゲームの場合は親ゲーム（基本ゲーム）の情報を取得
+    let baseGameInfo = null;
+    if (isExpansion) {
+      try {
+        console.log("Getting base game info for expansion");
+
+        // 親ゲームのリンクを探す
+        const baseGameLinks = item.link?.filter(
+          (link: any) =>
+            link["@_type"] === "boardgameexpansion" &&
+            link["@_inbound"] === "true"
+        );
+
+        if (baseGameLinks && baseGameLinks.length > 0) {
+          const baseGameId = baseGameLinks[0]["@_id"];
+          const baseGameName = baseGameLinks[0]["@_value"];
+
+          console.log(`Found base game: ${baseGameName} (ID: ${baseGameId})`);
+
+          baseGameInfo = {
+            id: baseGameId,
+            name: baseGameName,
+          };
+        }
+      } catch (error) {
+        console.error("Error getting base game info:", error);
       }
     }
 
@@ -904,6 +995,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
         name: link["@_value"],
       }));
 
+    // 最終的なゲーム情報を構築
     return {
       id: item["@_id"],
       name: primaryName,
@@ -920,15 +1012,15 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       yearPublished: parseInt(item.yearpublished?.["@_value"]) || 0,
       averageRating:
         parseFloat(item.statistics?.ratings?.average?.["@_value"]) || 0,
-      weight: weight,
-      bestPlayers,
-      recommendedPlayers,
       mechanics: (item.link || [])
         .filter((link: any) => link["@_type"] === "boardgamemechanic")
         .map((link: any) => link["@_value"]),
       categories: (item.link || [])
         .filter((link: any) => link["@_type"] === "boardgamecategory")
         .map((link: any) => link["@_value"]),
+      weight: weight,
+      bestPlayers,
+      recommendedPlayers,
       publisher: publishers.length > 0 ? publishers[0] : undefined,
       designer: designers.length > 0 ? designers[0] : undefined,
       releaseDate,
@@ -936,6 +1028,8 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
       japaneseReleaseDate: japaneseReleaseDate,
       japaneseName: finalJapaneseName,
       expansions: expansions.length > 0 ? expansions : undefined,
+      isExpansion: isExpansion,
+      baseGame: baseGameInfo,
     };
   } catch (error) {
     console.error("Error fetching BGG game details:", error);
@@ -1018,6 +1112,8 @@ export async function getHotGames(): Promise<BGGGameDetails[]> {
         bestPlayers: [],
         recommendedPlayers: [],
         expansions: expansions.length > 0 ? expansions : undefined,
+        isExpansion: false,
+        baseGame: undefined,
       };
     });
   } catch (error) {

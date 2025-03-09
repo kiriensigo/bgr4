@@ -110,6 +110,12 @@ module Api
         game_json['recommended_players'] = @game.recommended_players
         game_json['review_count'] = @game.user_review_count
         
+        # 評価値を追加
+        game_json['average_rule_complexity'] = @game.average_rule_complexity
+        game_json['average_luck_factor'] = @game.average_luck_factor
+        game_json['average_interaction'] = @game.average_interaction
+        game_json['average_downtime'] = @game.average_downtime
+        
         render json: game_json
       end
 
@@ -179,6 +185,12 @@ module Api
         @game.store_metadata(:recommended_num_players, bgg_game_info[:recommended_num_players]) if bgg_game_info[:recommended_num_players].present?
         @game.store_metadata(:categories, bgg_game_info[:categories]) if bgg_game_info[:categories].present?
         @game.store_metadata(:mechanics, bgg_game_info[:mechanics]) if bgg_game_info[:mechanics].present?
+        
+        # 拡張ゲームかどうかを保存
+        @game.store_metadata(:is_expansion, bgg_game_info[:is_expansion]) if bgg_game_info[:is_expansion].present?
+        
+        # 親ゲーム（基本ゲーム）の情報を保存
+        @game.store_metadata(:base_game, bgg_game_info[:base_game]) if bgg_game_info[:base_game].present?
         
         # 日本語版情報が取得できた場合は補完
         if japanese_version_info.present?
@@ -615,19 +627,40 @@ module Api
       end
 
       def expansions
-        # 登録済みの拡張のみを取得するかどうか
+        # 登録済みのみ表示するかどうか
         registered_only = params[:registered_only] == 'true'
         
         # 拡張情報を取得
         if registered_only
+          # 登録済みの拡張のみ取得
           expansions = @game.registered_expansions
           base_games = @game.registered_base_games
         else
+          # すべての拡張を取得
           expansions = @game.expansions
           base_games = @game.base_games
         end
         
-        # 拡張情報をJSON形式で返す
+        # 登録されていない拡張ゲームのIDを取得
+        unregistered_expansion_ids = []
+        if @game.base_game_expansions.exists?
+          registered_bgg_ids = Game.registered.pluck(:bgg_id)
+          unregistered_expansion_ids = @game.base_game_expansions
+            .where.not(expansion_id: registered_bgg_ids)
+            .pluck(:expansion_id, :relationship_type)
+            .map { |id, type| { id: id, type: type } }
+        end
+        
+        # 登録されていないベースゲームのIDを取得
+        unregistered_base_game_ids = []
+        if @game.expansion_base_games.exists?
+          registered_bgg_ids = Game.registered.pluck(:bgg_id)
+          unregistered_base_game_ids = @game.expansion_base_games
+            .where.not(base_game_id: registered_bgg_ids)
+            .pluck(:base_game_id, :relationship_type)
+            .map { |id, type| { id: id, type: type } }
+        end
+        
         render json: {
           expansions: expansions.map { |exp| 
             {
@@ -652,7 +685,9 @@ module Api
               registered_on_site: base.registered_on_site,
               relationship_type: @game.expansion_base_games.find_by(base_game_id: base.bgg_id)&.relationship_type
             }
-          }
+          },
+          unregistered_expansion_ids: unregistered_expansion_ids,
+          unregistered_base_game_ids: unregistered_base_game_ids
         }
       end
 
@@ -660,8 +695,28 @@ module Api
         # BGGから拡張情報を取得して保存
         if @game.fetch_and_save_expansions
           # 拡張情報を取得して返す
-          expansions = @game.expansions
-          base_games = @game.base_games
+          expansions = @game.registered_expansions
+          base_games = @game.registered_base_games
+          
+          # 登録されていない拡張ゲームのIDを取得
+          unregistered_expansion_ids = []
+          if @game.base_game_expansions.exists?
+            registered_bgg_ids = Game.registered.pluck(:bgg_id)
+            unregistered_expansion_ids = @game.base_game_expansions
+              .where.not(expansion_id: registered_bgg_ids)
+              .pluck(:expansion_id, :relationship_type)
+              .map { |id, type| { id: id, type: type } }
+          end
+          
+          # 登録されていないベースゲームのIDを取得
+          unregistered_base_game_ids = []
+          if @game.expansion_base_games.exists?
+            registered_bgg_ids = Game.registered.pluck(:bgg_id)
+            unregistered_base_game_ids = @game.expansion_base_games
+              .where.not(base_game_id: registered_bgg_ids)
+              .pluck(:base_game_id, :relationship_type)
+              .map { |id, type| { id: id, type: type } }
+          end
           
           render json: {
             expansions: expansions.map { |exp| 
@@ -687,7 +742,9 @@ module Api
                 registered_on_site: base.registered_on_site,
                 relationship_type: @game.expansion_base_games.find_by(base_game_id: base.bgg_id)&.relationship_type
               }
-            }
+            },
+            unregistered_expansion_ids: unregistered_expansion_ids,
+            unregistered_base_game_ids: unregistered_base_game_ids
           }
         else
           render json: { error: "拡張情報を更新できませんでした" }, status: :unprocessable_entity

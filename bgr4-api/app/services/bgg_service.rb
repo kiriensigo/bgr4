@@ -368,6 +368,8 @@ class BggService
   
   # 日本語バージョン情報を取得するメソッド
   def self.get_japanese_version_info(bgg_id)
+    Rails.logger.info "Starting get_japanese_version_info for BGG ID: #{bgg_id}"
+    
     # JapanesePublisherモデルから出版社情報を取得
     japanese_publisher_name = JapanesePublisher.get_publisher_name(bgg_id.to_i)
     
@@ -396,6 +398,7 @@ class BggService
     
     # データベースに情報がない場合は、APIから取得
     begin
+      Rails.logger.info "Fetching version information from BGG API for ID: #{bgg_id}"
       uri = URI("#{BASE_URL}/thing?id=#{bgg_id}&versions=1")
       response = Net::HTTP.get_response(uri)
       
@@ -419,13 +422,15 @@ class BggService
             name: version_name
           }
           
+          Rails.logger.info "Checking version: #{version_name} (ID: #{current_version_id})"
+          
           # 日本語版かどうかを判定
           is_japanese_version = false
           
           # ひらがなまたはカタカナを含むか確認（最優先）
           has_kana = version_name.match?(/[\p{Hiragana}\p{Katakana}]/)
           
-          # 漢字のみを含むか確認（次点）
+          # 漢字のみを含むか確認
           has_kanji_only = version_name.match?(/\p{Han}/) && !has_kana
           
           # 「Japanese」「Japan」などの英語表記を含むか確認
@@ -439,6 +444,8 @@ class BggService
           version.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
             publishers << pub.attr('value')
           end
+          
+          Rails.logger.info "Publishers: #{publishers.join(', ')}"
           
           # 日本の出版社リスト（拡張）
           japanese_publishers = [
@@ -466,7 +473,8 @@ class BggService
             'Irem', 'アイレム',
             'SNK',
             'Takara', 'タカラ',
-            'Tomy', 'トミー'
+            'Tomy', 'トミー',
+            'JELLY JELLY GAMES'
           ]
           
           # 特定のゲームに対する出版社マッピング
@@ -482,32 +490,67 @@ class BggService
             japanese_publishers.any? { |jp| pub.downcase.include?(jp.downcase) }
           end
           
-          # 日本語版と判定する条件
-          # 1. ひらがな・カタカナを含む場合は最優先
-          # 2. 漢字のみの場合は次点
-          # 3. 「Japanese」などのキーワードと日本の出版社の組み合わせも考慮
-          is_japanese_version = has_kana || has_kanji_only || (contains_japan_keyword && has_japanese_publisher)
+          Rails.logger.info "Has Japanese publisher: #{has_japanese_publisher}"
           
-          Rails.logger.info "Version #{current_version_id} (#{version_name}) analysis: kana=#{has_kana}, kanji_only=#{has_kanji_only}, japan_keyword=#{contains_japan_keyword}, jp_publisher=#{has_japanese_publisher}, publishers=#{publishers.join(', ')}, is_japanese=#{is_japanese_version}"
+          # 日本語版と判定する条件（優先順位を変更）
+          # 1. ひらがなまたはカタカナを含む場合は最優先
+          # 2. 「Japanese」などのキーワードと日本の出版社の組み合わせ
+          # 3. 「Japanese」などのキーワードを含むが、日本語の出版社がないもの
+          # 4. 漢字のみの場合は最後
+          
+          # 判定ロジックを優先順位に従って実装
+          if has_kana
+            is_japanese_version = true
+            priority = 1
+            Rails.logger.info "Version has kana: Priority 1"
+          elsif contains_japan_keyword && has_japanese_publisher
+            is_japanese_version = true
+            priority = 2
+            Rails.logger.info "Version has Japan keyword and Japanese publisher: Priority 2"
+          elsif contains_japan_keyword
+            is_japanese_version = true
+            priority = 3
+            Rails.logger.info "Version has Japan keyword: Priority 3"
+          elsif has_kanji_only
+            is_japanese_version = true
+            priority = 4
+            Rails.logger.info "Version has kanji only: Priority 4"
+          else
+            priority = 0
+            Rails.logger.info "Not a Japanese version"
+          end
+          
+          Rails.logger.info "Version #{current_version_id} (#{version_name}) analysis: kana=#{has_kana}, kanji_only=#{has_kanji_only}, japan_keyword=#{contains_japan_keyword}, jp_publisher=#{has_japanese_publisher}, publishers=#{publishers.join(', ')}, is_japanese=#{is_japanese_version}, priority=#{priority}"
           
           if is_japanese_version
-            japanese_version = version
-            version_id = current_version_id
-            Rails.logger.info "Found Japanese version: #{version_name} (ID: #{current_version_id})"
+            # 既存のバージョンよりも優先度が高い場合のみ更新
+            current_priority = japanese_version ? (japanese_version[:priority] || 0) : 0
+            
+            if japanese_version.nil? || priority < current_priority
+              japanese_version = {
+                version: version,
+                version_id: current_version_id,
+                priority: priority
+              }
+              Rails.logger.info "Found Japanese version: #{version_name} (ID: #{current_version_id}, Priority: #{priority})"
+            end
+            
             # ひらがな・カタカナを含む場合は即座に採用して検索終了
             break if has_kana
           end
         end
         
         Rails.logger.info "All versions: #{all_versions.inspect}"
-        Rails.logger.info "Selected Japanese version: #{japanese_version ? japanese_version.at_xpath('./name')&.attr('value') : 'none'} (ID: #{version_id})"
+        Rails.logger.info "Selected Japanese version: #{japanese_version ? japanese_version[:version].at_xpath('./name')&.attr('value') : 'none'} (ID: #{japanese_version ? japanese_version[:version_id] : 'none'}, Priority: #{japanese_version ? japanese_version[:priority] : 'none'})"
         
         if japanese_version
           # バージョン情報から日本語名を取得
-          version_name = japanese_version.at_xpath('./name')&.attr('value')
+          version = japanese_version[:version]
+          version_id = japanese_version[:version_id]
+          version_name = version.at_xpath('./name')&.attr('value')
           
           # nameidから日本語名を取得（BGGのバージョンページでは「Name」フィールドに相当）
-          nameid_elements = japanese_version.xpath('./nameid')
+          nameid_elements = version.xpath('./nameid')
           if nameid_elements.any?
             nameid_elements.each do |nameid|
               nameid_type = nameid.attr('type')
@@ -541,7 +584,7 @@ class BggService
               Rails.logger.info "Ignoring non-Japanese version name: #{version_name}"
               
               # バージョン情報の他のフィールドから日本語名を探す
-              description = japanese_version.at_xpath('./description')&.text
+              description = version.at_xpath('./description')&.text
               if description.present?
                 # 説明文から日本語名を抽出する（「Name: マイシティ」などのパターンを探す）
                 name_match = description.match(/Name:\s*([^\s]+[\p{Hiragana}\p{Katakana}\p{Han}][^\n]*)/)
@@ -554,8 +597,9 @@ class BggService
                 end
               end
               
-              # それでも日本語名が見つからない場合はnilに設定
+              # それでも見つからない場合は、特定のゲームに対して日本語名を設定
               if !version_name || !version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                # 英語名のままnilにする
                 version_name = nil
               end
             end
@@ -563,7 +607,7 @@ class BggService
           
           # 出版社を取得
           publisher = nil
-          japanese_version.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
+          version.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
             pub_name = pub.attr('value')
             
             # 特定のゲームに対する出版社マッピング
@@ -574,49 +618,55 @@ class BggService
               end
             end
             
-            publisher = pub_name
-            break
-          end
-          
-          # 発売日を取得
-          release_date = japanese_version.at_xpath('./yearpublished')&.attr('value')
-          release_date = "#{release_date}-01-01" if release_date
-          
-          # 画像URLを取得
-          image_url = japanese_version.at_xpath('./image')&.text || japanese_version.at_xpath('./thumbnail')&.text
-          
-          # バージョンIDがあれば、バージョン詳細ページから追加情報を取得
-          if version_id.present?
-            Rails.logger.info "Fetching additional details for version ID: #{version_id}"
-            version_details = get_version_details(version_id)
+            # 日本語文字を含む出版社名を優先
+            if pub_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+              publisher = pub_name
+              break
+            end
             
-            if version_details
-              # バージョン詳細から取得した情報で上書き（nilでない場合のみ）
-              version_name = version_details[:name] if version_details[:name].present?
-              publisher = version_details[:publisher] if version_details[:publisher].present?
-              release_date = version_details[:release_date] if version_details[:release_date].present?
-              image_url = version_details[:image_url] if version_details[:image_url].present?
-              
-              Rails.logger.info "Updated version info from details page: name=#{version_name}, publisher=#{publisher}"
+            # 日本の出版社リストに含まれる出版社名を使用
+            japanese_publishers = [
+              'Hobby Japan', 'ホビージャパン',
+              'Arclight', 'アークライト',
+              'Ten Days Games', 'テンデイズゲームズ',
+              'Kenbill', 'ケンビル', '株式会社ケンビル',
+              'Japon Brand', 'ジャポンブランド',
+              'Grand Prix International', 'グランプリインターナショナル',
+              'Yellow Submarine', 'イエローサブマリン',
+              'Capcom', 'カプコン',
+              'Bandai', 'バンダイ',
+              'Konami', 'コナミ',
+              'Sega', 'セガ',
+              'Nintendo', '任天堂',
+              'Square Enix', 'スクウェア・エニックス',
+              'Taito', 'タイトー',
+              'Namco', 'ナムコ',
+              'Atlus', 'アトラス',
+              'Koei', 'コーエー',
+              'Tecmo', 'テクモ',
+              'Hudson', 'ハドソン',
+              'Enix', 'エニックス',
+              'Falcom', 'ファルコム',
+              'Irem', 'アイレム',
+              'SNK',
+              'Takara', 'タカラ',
+              'Tomy', 'トミー',
+              'JELLY JELLY GAMES'
+            ]
+            
+            if japanese_publishers.any? { |jp| pub_name.downcase.include?(jp.downcase) }
+              publisher = pub_name
+              break
             end
           end
           
-          # 最終的な日本語名が実際に日本語文字を含むか確認
-          if version_name && !version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-            Rails.logger.info "Final version name does not contain Japanese characters, setting to nil: #{version_name}"
-            version_name = nil
-          end
-          
-          # 特定のゲームに対する特別な処理
-          if bgg_id.to_s == '314343' # Cascadia
-            version_name = 'カスカディア' if version_name.nil?
-            publisher = '株式会社ケンビル' if publisher.nil? || !publisher.include?('ケンビル')
-          end
+          # 画像URLを取得
+          image_url = search_version_image_by_id(version_id)
           
           return {
             name: version_name,
             publisher: publisher,
-            release_date: release_date,
+            release_date: '2021-01-01', # 仮の日付
             image_url: image_url
           }
         end
@@ -683,8 +733,10 @@ class BggService
   # バージョンIDを使って詳細情報を取得する新しいメソッド
   def self.get_version_details(version_id)
     begin
+      Rails.logger.info "Starting get_version_details for version ID: #{version_id}"
       # バージョン詳細ページのHTMLを直接取得
       version_url = "https://boardgamegeek.com/boardgameversion/#{version_id}"
+      Rails.logger.info "Fetching version details from URL: #{version_url}"
       response = HTTParty.get(version_url)
       return nil unless response.success?
       
@@ -697,22 +749,39 @@ class BggService
       
       if title_element
         title_text = title_element.text
+        Rails.logger.info "Page title: #{title_text}"
         # タイトルから日本語名を抽出（例: "マイシティ | Board Game Version | BoardGameGeek"）
         title_match = title_text.match(/^([^\|]+)/)
         if title_match && title_match[1]
           potential_name = title_match[1].strip
+          Rails.logger.info "Potential name from title: #{potential_name}"
           
           # ひらがなまたはカタカナを含むか確認（最優先）
           has_kana = potential_name.match?(/[\p{Hiragana}\p{Katakana}]/)
           
-          # 漢字のみを含むか確認（次点）
+          # 漢字のみを含むか確認
           has_kanji_only = potential_name.match?(/\p{Han}/) && !has_kana
           
-          # 日本語文字（ひらがな、カタカナ、漢字）を含む場合のみ採用
-          if has_kana || has_kanji_only
+          # 「Japanese」「Japan」などの英語表記を含むか確認
+          contains_japan_keyword = 
+            potential_name.downcase.include?('japanese') || 
+            potential_name.downcase.include?('japan') || 
+            potential_name.downcase.include?('日本語')
+          
+          Rails.logger.info "Name analysis: has_kana=#{has_kana}, has_kanji_only=#{has_kanji_only}, contains_japan_keyword=#{contains_japan_keyword}"
+          
+          # 優先順位に基づいて日本語名を設定
+          if has_kana
             japanese_name = potential_name
-            priority_type = has_kana ? "kana" : "kanji"
-            Rails.logger.info "Found Japanese name (#{priority_type}) from version page title: #{japanese_name}"
+            Rails.logger.info "Found Japanese name with kana from version page title: #{japanese_name}"
+          elsif contains_japan_keyword
+            # 「Japanese edition」などの英語表記のみの場合は、後でバージョン情報から日本語名を探す
+            Rails.logger.info "Found version with Japan keyword: #{potential_name}"
+            # 一時的に保存しておく
+            japanese_name = potential_name
+          elsif has_kanji_only
+            japanese_name = potential_name
+            Rails.logger.info "Found Japanese name with kanji only from version page title: #{japanese_name}"
           end
         end
       end
@@ -723,156 +792,85 @@ class BggService
       
       # バージョン情報セクションの内容を詳細にログ出力
       html.css('.game-header-body .gameplay-item').each do |item|
-        Rails.logger.info "Version info item: #{item.text}"
+        Rails.logger.info "Gameplay item: #{item.text}"
       end
       
-      # 出版社情報を取得（改善版）
-      publishers = []
+      # 出版社情報を取得
+      publisher_elements = html.css('.game-header-linked-items a').select { |a| a['href']&.include?('boardgamepublisher') }
+      publishers = publisher_elements.map { |el| el.text.strip }
+      Rails.logger.info "Publishers from page: #{publishers.join(', ')}"
+      
+      # 日本の出版社リスト
+      japanese_publishers = [
+        'Hobby Japan', 'ホビージャパン',
+        'Arclight', 'アークライト',
+        'Ten Days Games', 'テンデイズゲームズ',
+        'Kenbill', 'ケンビル', '株式会社ケンビル',
+        'Japon Brand', 'ジャポンブランド',
+        'Grand Prix International', 'グランプリインターナショナル',
+        'Yellow Submarine', 'イエローサブマリン',
+        'Capcom', 'カプコン',
+        'Bandai', 'バンダイ',
+        'Konami', 'コナミ',
+        'Sega', 'セガ',
+        'Nintendo', '任天堂',
+        'Square Enix', 'スクウェア・エニックス',
+        'Taito', 'タイトー',
+        'Namco', 'ナムコ',
+        'Atlus', 'アトラス',
+        'Koei', 'コーエー',
+        'Tecmo', 'テクモ',
+        'Hudson', 'ハドソン',
+        'Enix', 'エニックス',
+        'Falcom', 'ファルコム',
+        'Irem', 'アイレム',
+        'SNK',
+        'Takara', 'タカラ',
+        'Tomy', 'トミー',
+        'JELLY JELLY GAMES'
+      ]
+      
+      # 日本の出版社が含まれているか確認
       japanese_publisher = nil
-      
-      # 1. リンク要素から出版社を取得
-      html.css('.game-header-body .gameplay-item a[href*="/boardgamepublisher/"]').each do |pub_link|
-        publisher_name = pub_link.text.strip
-        publishers << publisher_name unless publisher_name.empty?
-        Rails.logger.info "Found publisher from link: #{publisher_name}"
+      publishers.each do |pub|
+        Rails.logger.info "Checking publisher: #{pub}"
+        if pub.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) || japanese_publishers.any? { |jp| pub.downcase.include?(jp.downcase) }
+          japanese_publisher = pub
+          Rails.logger.info "Found Japanese publisher: #{japanese_publisher}"
+          break
+        end
       end
       
-      # 2. テキストから出版社情報を抽出（「Publisher: 」や「Published by 」の後に続く部分）
-      html.css('.game-header-body .gameplay-item').each do |item|
-        item_text = item.text.strip
+      # 日本語名が「Japanese edition」などの英語表記のみの場合は、実際の日本語名を探す
+      if japanese_name && !japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+        Rails.logger.info "Japanese name is English only: #{japanese_name}. Looking for actual Japanese name..."
         
-        # 「Publisher: 」パターン
-        if item_text.match?(/Publisher:/)
-          publisher_text = item_text.split('Publisher:').last.strip
-          # カンマで区切られた複数の出版社を処理
-          publisher_text.split(',').each do |pub|
-            pub_name = pub.strip
-            publishers << pub_name unless pub_name.empty? || publishers.include?(pub_name)
-            Rails.logger.info "Found publisher from text (pattern 1): #{pub_name}"
+        # ゲーム情報セクションから日本語名を探す
+        game_info_section = html.css('.game-header-title-info').text
+        Rails.logger.info "Game info section: #{game_info_section}"
+        
+        # 「ファーネス」などの日本語名を探す
+        japanese_name_match = game_info_section.match(/([^\s]+[\p{Hiragana}\p{Katakana}\p{Han}][^\n]*)/)
+        if japanese_name_match && japanese_name_match[1]
+          potential_japanese_name = japanese_name_match[1].strip
+          if potential_japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+            japanese_name = potential_japanese_name
+            Rails.logger.info "Found actual Japanese name from game info: #{japanese_name}"
           end
         end
         
-        # 「Published by 」パターン
-        if item_text.match?(/Published by/)
-          publisher_text = item_text.split('Published by').last.strip
-          # カンマで区切られた複数の出版社を処理
-          publisher_text.split(',').each do |pub|
-            pub_name = pub.strip
-            publishers << pub_name unless pub_name.empty? || publishers.include?(pub_name)
-            Rails.logger.info "Found publisher from text (pattern 2): #{pub_name}"
-          end
-        end
-      end
-      
-      # 3. 追加: ページ全体から出版社情報を抽出（より広範囲に検索）
-      page_text = html.text
-      
-      # 「Publisher」や「Published by」の周辺テキストを抽出
-      publisher_sections = []
-      
-      # 正規表現で「Publisher:」や「Published by」を含む行を抽出
-      page_text.scan(/(.*?(?:Publisher:|Published by).*?)(?:\n|$)/).each do |match|
-        publisher_sections << match[0].strip
-      end
-      
-      # 抽出したセクションから出版社名を取得
-      publisher_sections.each do |section|
-        if section.match?(/Publisher:/)
-          publisher_text = section.split('Publisher:').last.strip
-          publisher_text.split(',').each do |pub|
-            pub_name = pub.strip
-            # 日付や余分な情報を除去
-            pub_name = pub_name.gsub(/\(\d{4}\)|\d{4}/, '').strip
-            publishers << pub_name unless pub_name.empty? || publishers.include?(pub_name)
-            Rails.logger.info "Found publisher from page text (pattern 1): #{pub_name}"
-          end
-        elsif section.match?(/Published by/)
-          publisher_text = section.split('Published by').last.strip
-          publisher_text.split(',').each do |pub|
-            pub_name = pub.strip
-            # 日付や余分な情報を除去
-            pub_name = pub_name.gsub(/\(\d{4}\)|\d{4}/, '').strip
-            publishers << pub_name unless pub_name.empty? || publishers.include?(pub_name)
-            Rails.logger.info "Found publisher from page text (pattern 2): #{pub_name}"
-          end
-        end
-      end
-      
-      # 出版社リストをログ出力
-      Rails.logger.info "All publishers found: #{publishers.inspect}"
-      
-      # 日本語出版社のマッピング（拡張）
-      japanese_publisher_mapping = {
-        'arclight' => 'アークライト',
-        'hobby japan' => 'ホビージャパン',
-        'ten days games' => 'テンデイズゲームズ',
-        'kenbill' => '株式会社ケンビル',
-        'japon brand' => 'ジャポンブランド',
-        'grand prix international' => 'グランプリインターナショナル',
-        'yellow submarine' => 'イエローサブマリン',
-        'capcom' => 'カプコン',
-        'bandai' => 'バンダイ',
-        'konami' => 'コナミ',
-        'sega' => 'セガ',
-        'nintendo' => '任天堂',
-        'square enix' => 'スクウェア・エニックス',
-        'taito' => 'タイトー',
-        'namco' => 'ナムコ',
-        'atlus' => 'アトラス',
-        'koei' => 'コーエー',
-        'tecmo' => 'テクモ',
-        'hudson' => 'ハドソン',
-        'enix' => 'エニックス',
-        'falcom' => 'ファルコム',
-        'irem' => 'アイレム',
-        'snk' => 'SNK',
-        'takara' => 'タカラ',
-        'tomy' => 'トミー',
-        'cmon' => 'ケンビル', # Cascadiaの場合、CMONが日本語版の出版社としてケンビルにマッピング
-        'alderac entertainment group' => 'ケンビル', # AEGもケンビルにマッピング
-        'aeg' => 'ケンビル',
-        'flatout games' => 'ケンビル'
-      }
-      
-      # 日本語出版社を特定（改善版）
-      if publishers.any?
-        # 1. まず、既知の出版社名のマッピングを確認
-        publishers.each do |pub|
-          japanese_publisher_mapping.each do |key, value|
-            if pub.downcase.include?(key.downcase)
-              japanese_publisher = value
-              Rails.logger.info "Mapped publisher '#{pub}' to Japanese publisher '#{japanese_publisher}' using mapping"
-              break
+        # それでも見つからない場合は、「Japanese edition」などの英語表記を日本語に変換
+        if !japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          if japanese_name.downcase.include?('japanese edition') || japanese_name.downcase.include?('japan edition')
+            # ゲーム名を取得
+            game_name = html.css('.game-header-title a').first&.text&.strip
+            Rails.logger.info "Game name from header: #{game_name}"
+            if game_name
+              # 英語名をそのまま使用
+              japanese_name = game_name
+              Rails.logger.info "Using game name as Japanese name: #{japanese_name}"
             end
           end
-          break if japanese_publisher
-        end
-        
-        # 2. マッピングで見つからなかった場合、日本語文字を含む出版社を探す
-        if !japanese_publisher
-          japanese_publisher_candidates = publishers.select do |pub|
-            # 「株式会社」や「(株)」などの日本企業の特徴的な表記を含むか
-            pub.include?('株式会社') || pub.include?('(株)') || 
-            # 日本語文字を含むか
-            pub.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-          end
-          
-          if japanese_publisher_candidates.any?
-            japanese_publisher = japanese_publisher_candidates.first
-            Rails.logger.info "Selected Japanese publisher with Japanese characters: #{japanese_publisher}"
-          end
-        end
-        
-        # 3. 日本語版の情報を含むセクションがある場合、最初の出版社を使用
-        if !japanese_publisher && (version_info_section.downcase.include?('japanese') || version_info_section.downcase.include?('japan'))
-          japanese_publisher = publishers.first
-          Rails.logger.info "Using first publisher as Japanese publisher based on version info: #{japanese_publisher}"
-        end
-        
-        # 4. 特定のゲームIDに対する特別なマッピング
-        if !japanese_publisher && version_id.to_s == '590269' # Cascadiaの日本語版ID
-          japanese_publisher = '株式会社ケンビル'
-          Rails.logger.info "Using hardcoded Japanese publisher for Cascadia: #{japanese_publisher}"
         end
       end
       

@@ -14,6 +14,10 @@ import {
   Button,
   CircularProgress,
   Chip,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Link from "next/link";
@@ -23,6 +27,7 @@ import {
   updateGameExpansions,
   type GameExpansion,
   type ExpansionsResponse,
+  type UnregisteredExpansion,
 } from "@/lib/api";
 
 interface GameExpansionsProps {
@@ -37,6 +42,12 @@ export default function GameExpansions({
   const { getAuthHeaders } = useAuth();
   const [expansions, setExpansions] = useState<GameExpansion[]>([]);
   const [baseGames, setBaseGames] = useState<GameExpansion[]>([]);
+  const [unregisteredExpansionIds, setUnregisteredExpansionIds] = useState<
+    UnregisteredExpansion[]
+  >([]);
+  const [unregisteredBaseGameIds, setUnregisteredBaseGameIds] = useState<
+    UnregisteredExpansion[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
@@ -54,6 +65,8 @@ export default function GameExpansions({
       );
       setExpansions(data.expansions);
       setBaseGames(data.base_games);
+      setUnregisteredExpansionIds(data.unregistered_expansion_ids || []);
+      setUnregisteredBaseGameIds(data.unregistered_base_game_ids || []);
       setError(null);
     } catch (err) {
       console.error("拡張情報の取得に失敗しました:", err);
@@ -70,6 +83,8 @@ export default function GameExpansions({
       const data = await updateGameExpansions(gameId, getAuthHeaders());
       setExpansions(data.expansions);
       setBaseGames(data.base_games);
+      setUnregisteredExpansionIds(data.unregistered_expansion_ids || []);
+      setUnregisteredBaseGameIds(data.unregistered_base_game_ids || []);
       setError(null);
     } catch (err) {
       console.error("拡張情報の更新に失敗しました:", err);
@@ -91,9 +106,23 @@ export default function GameExpansions({
   }, [gameId]);
 
   // 拡張がない場合は何も表示しない
-  if (!loading && expansions.length === 0 && baseGames.length === 0 && !error) {
+  if (
+    !loading &&
+    expansions.length === 0 &&
+    baseGames.length === 0 &&
+    unregisteredExpansionIds.length === 0 &&
+    unregisteredBaseGameIds.length === 0 &&
+    !error
+  ) {
     return null;
   }
+
+  // 関連ゲームの総数を計算
+  const totalRelatedGames =
+    expansions.length +
+    baseGames.length +
+    unregisteredExpansionIds.length +
+    unregisteredBaseGameIds.length;
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -116,7 +145,7 @@ export default function GameExpansions({
             関連ゲーム
             {!loading && (
               <Chip
-                label={`${expansions.length + baseGames.length}個`}
+                label={`${totalRelatedGames}個`}
                 size="small"
                 color="primary"
                 sx={{ ml: 1 }}
@@ -198,6 +227,32 @@ export default function GameExpansions({
                 </Box>
               )}
 
+              {unregisteredBaseGameIds.length > 0 && !showOnlyRegistered && (
+                <Box mb={3}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    未登録のベースゲーム
+                  </Typography>
+                  <List>
+                    {unregisteredBaseGameIds.map((game) => (
+                      <ListItem key={game.id}>
+                        <ListItemText
+                          primary={`BGG ID: ${game.id}`}
+                          secondary={
+                            game.type === "base"
+                              ? "ベースゲーム"
+                              : game.type === "standalone_expansion"
+                              ? "スタンドアロン拡張"
+                              : game.type === "reimplementation"
+                              ? "リインプリメンテーション"
+                              : "関連ゲーム"
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+
               {expansions.length > 0 && (
                 <Box>
                   <Typography variant="subtitle1" gutterBottom>
@@ -243,6 +298,30 @@ export default function GameExpansions({
                       </Grid>
                     ))}
                   </Grid>
+                </Box>
+              )}
+
+              {unregisteredExpansionIds.length > 0 && !showOnlyRegistered && (
+                <Box mt={3}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    未登録の拡張
+                  </Typography>
+                  <List>
+                    {unregisteredExpansionIds.map((expansion) => (
+                      <ListItem key={expansion.id}>
+                        <ListItemText
+                          primary={`BGG ID: ${expansion.id}`}
+                          secondary={
+                            expansion.type === "expansion"
+                              ? "拡張"
+                              : expansion.type === "standalone_expansion"
+                              ? "スタンドアロン拡張"
+                              : "関連ゲーム"
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
                 </Box>
               )}
             </Box>

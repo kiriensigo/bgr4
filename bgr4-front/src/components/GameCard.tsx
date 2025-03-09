@@ -46,6 +46,7 @@ interface GameCardProps {
   useOverallScoreDisplay?: boolean;
   overallScoreVariant?: "default" | "compact" | "large";
   showOverallScoreOverlay?: boolean;
+  onReviewUpdated?: () => void;
 }
 
 export default function GameCard({
@@ -55,6 +56,7 @@ export default function GameCard({
   useOverallScoreDisplay = false,
   overallScoreVariant = "compact",
   showOverallScoreOverlay = false,
+  onReviewUpdated,
 }: GameCardProps) {
   // 日本語版の画像があればそれを優先、なければ通常の画像を使用
   const imageUrl =
@@ -92,14 +94,16 @@ export default function GameCard({
   // ゲームの平均点を取得（nullまたはundefinedの場合は表示しない）
   const hasRating = rating !== null && rating !== undefined && rating > 0;
 
-  // デバッグ情報を出力
-  console.log(`GameCard for ${displayName}:`, {
-    average_score: game.average_score,
-    averageRating: game.averageRating,
-    rating,
-    hasRating,
-    reviewsCount,
-  });
+  // デバッグ情報を出力（開発環境でのみ）
+  if (process.env.NODE_ENV === "development") {
+    console.log(`GameCard for ${displayName}:`, {
+      average_score: game.average_score,
+      averageRating: game.averageRating,
+      rating,
+      hasRating,
+      reviewsCount,
+    });
+  }
 
   return (
     <Paper

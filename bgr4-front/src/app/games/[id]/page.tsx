@@ -201,7 +201,10 @@ const getPopularMechanics = (reviews: any[]) => {
 const formatScore = (score: number | string | null | undefined): string => {
   if (score === null || score === undefined) return "未評価";
   const numScore = typeof score === "string" ? parseFloat(score) : score;
-  return Number.isNaN(numScore) ? "未評価" : numScore.toFixed(1);
+  // 0の場合は「未評価」と表示する（バックエンドでは評価値が存在しない場合に0を返している）
+  return Number.isNaN(numScore) || numScore === 0
+    ? "未評価"
+    : numScore.toFixed(1);
 };
 
 const getNumericScore = (score: number | string | null | undefined): number => {
@@ -212,54 +215,8 @@ const getNumericScore = (score: number | string | null | undefined): number => {
 
 // プレイ人数情報
 const PlayerCountInfo = ({ game }: { game: Game }) => {
-  const bestPlayers = game.best_num_players || [];
-  const recommendedPlayers = game.recommended_num_players || [];
-
-  if (bestPlayers.length === 0 && recommendedPlayers.length === 0) {
-    return null;
-  }
-
-  return (
-    <Box mt={2}>
-      {bestPlayers.length > 0 && (
-        <>
-          <Typography variant="subtitle2" color="text.secondary">
-            ベストプレイ人数:
-          </Typography>
-          <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5} mb={1}>
-            {bestPlayers.map((count) => (
-              <Chip
-                key={`best-${count}`}
-                label={`${count}人`}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-            ))}
-          </Box>
-        </>
-      )}
-
-      {recommendedPlayers.length > 0 && (
-        <>
-          <Typography variant="subtitle2" color="text.secondary">
-            おすすめプレイ人数:
-          </Typography>
-          <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
-            {recommendedPlayers.map((count) => (
-              <Chip
-                key={`rec-${count}`}
-                label={`${count}人`}
-                size="small"
-                color="success"
-                variant="outlined"
-              />
-            ))}
-          </Box>
-        </>
-      )}
-    </Box>
-  );
+  // 基本情報セクションを削除
+  return null;
 };
 
 // 出版社情報
@@ -419,6 +376,21 @@ export default function GamePage({ params }: GamePageProps) {
               : "no reviews",
             hasReviews: data.reviews && data.reviews.length > 0,
           });
+
+          // 評価値のデバッグ情報を追加
+          console.log("Game ratings:", {
+            rule_complexity: data.average_rule_complexity,
+            luck_factor: data.average_luck_factor,
+            interaction: data.average_interaction,
+            downtime: data.average_downtime,
+            formatted_rule_complexity: formatScore(
+              data.average_rule_complexity
+            ),
+            formatted_luck_factor: formatScore(data.average_luck_factor),
+            formatted_interaction: formatScore(data.average_interaction),
+            formatted_downtime: formatScore(data.average_downtime),
+          });
+
           setGame(data);
           if (data.japanese_name) {
             setJapaneseName(data.japanese_name);
@@ -1037,62 +1009,72 @@ export default function GamePage({ params }: GamePageProps) {
               </Button>
 
               {/* スコアと基本情報 */}
-              <Paper sx={{ p: 3, mb: 3, bgcolor: "grey.50" }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <GroupIcon color="primary" />
-                      <Typography>
-                        {game.min_players}～{game.max_players}人
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <AccessTimeIcon color="primary" />
-                      <Typography>
-                        {game.min_play_time &&
-                        game.play_time &&
-                        game.min_play_time !== game.play_time
-                          ? `${game.min_play_time}〜${game.play_time}分`
-                          : `${game.play_time}分`}
-                      </Typography>
-                    </Box>
-                  </Grid>
-
-                  {/* 出版社情報を追加 */}
-                  <Grid item xs={12} sm={6}>
-                    <PublisherInfo game={game} />
-                  </Grid>
-
-                  {/* デザイナー情報を追加 */}
-                  <Grid item xs={12} sm={6}>
-                    <DesignerInfo game={game} />
-                  </Grid>
-
-                  {/* 発売日情報を追加 */}
-                  {(game.release_date || game.japanese_release_date) && (
-                    <Grid item xs={12} sm={6}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          sx={{ minWidth: "80px" }}
-                        >
-                          発売日:
-                        </Typography>
+              <Paper sx={{ p: 2, mb: 3, bgcolor: "grey.50" }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <GroupIcon color="primary" sx={{ mr: 1 }} />
                         <Typography>
-                          {game.japanese_release_date
-                            ? formatDate(game.japanese_release_date)
-                            : formatDate(game.release_date)}
+                          {game.min_players}～{game.max_players}人
                         </Typography>
                       </Box>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <AccessTimeIcon color="primary" sx={{ mr: 1 }} />
+                        <Typography>
+                          {game.min_play_time &&
+                          game.min_play_time !== game.play_time
+                            ? `${game.min_play_time}〜${game.play_time}分`
+                            : `${game.play_time}分`}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+
+                  {/* 出版社と発売日情報 */}
+                  <Grid item xs={12}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      {game.japanese_publisher && (
+                        <Typography>
+                          出版社:{" "}
+                          <Link
+                            href={`/search/results?publisher=${encodeURIComponent(
+                              game.japanese_publisher
+                            )}`}
+                          >
+                            {game.japanese_publisher}
+                          </Link>
+                        </Typography>
+                      )}
+                      {(game.release_date || game.japanese_release_date) && (
+                        <Typography>
+                          発売:{" "}
+                          {game.japanese_release_date
+                            ? new Date(
+                                game.japanese_release_date || ""
+                              ).getFullYear()
+                            : game.release_date
+                            ? new Date(game.release_date).getFullYear()
+                            : "不明"}
+                          年
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+
+                  {/* デザイナー情報 */}
+                  {game.designer && (
+                    <Grid item xs={12}>
+                      <Typography>
+                        デザイナー:{" "}
+                        <Link
+                          href={`/games/designer/${encodeURIComponent(
+                            game.designer
+                          )}`}
+                        >
+                          {game.designer}
+                        </Link>
+                      </Typography>
                     </Grid>
                   )}
                 </Grid>
@@ -1102,7 +1084,7 @@ export default function GamePage({ params }: GamePageProps) {
               <Box sx={{ display: "flex", gap: 4, mb: 3 }}>
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">
-                    評価
+                    ユーザー評価
                   </Typography>
                   <GameRating
                     score={game.average_score}
@@ -1114,9 +1096,6 @@ export default function GamePage({ params }: GamePageProps) {
 
               {/* レビュー評価の平均 */}
               <Box sx={{ mt: 3, mb: 4 }}>
-                <Typography variant="h6" gutterBottom>
-                  レビュー評価の平均
-                </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
@@ -1152,9 +1131,6 @@ export default function GamePage({ params }: GamePageProps) {
                   </Grid>
                 </Grid>
               </Box>
-
-              {/* プレイ人数情報 */}
-              <PlayerCountInfo game={game} />
 
               {/* おすすめプレイ人数 */}
               {game.site_recommended_players &&
@@ -1206,9 +1182,6 @@ export default function GamePage({ params }: GamePageProps) {
                         }
                       )}
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      ※ レビュー投稿者の50%以上が推奨したプレイ人数です
-                    </Typography>
                   </Box>
                 )}
 
@@ -1261,9 +1234,6 @@ export default function GamePage({ params }: GamePageProps) {
                         );
                       })}
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      ※ レビュー投稿者が最も多く選択したカテゴリです
-                    </Typography>
                   </Box>
                 )}
 
@@ -1315,55 +1285,6 @@ export default function GamePage({ params }: GamePageProps) {
                       );
                     })}
                   </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    ※ レビュー投稿者が最も多く選択したメカニクスです
-                  </Typography>
-                </Box>
-              )}
-
-              {/* BGGカテゴリ */}
-              {game.categories && game.categories.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    カテゴリ
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {game.categories.map((category, index) => (
-                      <Chip
-                        key={`category-${index}`}
-                        label={category}
-                        color="primary"
-                        variant="outlined"
-                        sx={{ m: 0.5 }}
-                      />
-                    ))}
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    ※ BoardGameGeekに登録されているカテゴリです
-                  </Typography>
-                </Box>
-              )}
-
-              {/* BGGメカニクス */}
-              {game.mechanics && game.mechanics.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    メカニクス
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {game.mechanics.map((mechanic, index) => (
-                      <Chip
-                        key={`mechanic-${index}`}
-                        label={mechanic}
-                        color="secondary"
-                        variant="outlined"
-                        sx={{ m: 0.5 }}
-                      />
-                    ))}
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    ※ BoardGameGeekに登録されているメカニクスです
-                  </Typography>
                 </Box>
               )}
 
@@ -1408,50 +1329,6 @@ export default function GamePage({ params }: GamePageProps) {
 
               <ReviewList reviews={game.reviews || []} />
 
-              {/* ゲーム説明文（クリックで表示/非表示） */}
-              {game.japanese_description && (
-                <Box sx={{ mt: 4 }}>
-                  <Accordion>
-                    <AccordionSummary
-                      expandIcon={<ExpandMoreIcon />}
-                      aria-controls="game-description-content"
-                      id="game-description-header"
-                    >
-                      <Typography variant="h6">ゲーム説明</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Paper sx={{ p: 3, bgcolor: "grey.50" }}>
-                        <Typography
-                          variant="body1"
-                          sx={{ whiteSpace: "pre-wrap" }}
-                        >
-                          {game.japanese_description}
-                        </Typography>
-                      </Paper>
-                    </AccordionDetails>
-                  </Accordion>
-                </Box>
-              )}
-
-              {/* 人気のタグを追加 */}
-              {game.reviews && game.reviews.length > 0 && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    人気のタグ
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {getPopularCategories(game.reviews).map((tag) => (
-                      <Chip
-                        key={tag.name}
-                        label={tag.name}
-                        variant="outlined"
-                        size="small"
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
-
               {/* 拡張情報 */}
               {game && (
                 <GameExpansions gameId={game.bgg_id} isAdmin={user?.is_admin} />
@@ -1477,6 +1354,31 @@ export default function GamePage({ params }: GamePageProps) {
                   </Link>
                 </Box>
               )}
+
+              {/* ゲーム説明文（クリックで表示/非表示） */}
+              {(game.japanese_description || game.description) && (
+                <Box sx={{ mt: 4 }}>
+                  <Accordion>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      aria-controls="game-description-content"
+                      id="game-description-header"
+                    >
+                      <Typography variant="h6">ゲーム説明</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Paper sx={{ p: 3, bgcolor: "grey.50" }}>
+                        <Typography
+                          variant="body1"
+                          sx={{ whiteSpace: "pre-wrap" }}
+                        >
+                          {game.japanese_description || game.description}
+                        </Typography>
+                      </Paper>
+                    </AccordionDetails>
+                  </Accordion>
+                </Box>
+              )}
             </Grid>
           </Grid>
         </Paper>
@@ -1487,7 +1389,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseDialog}
           slotProps={{
             backdrop: {
-              inert: openDialog ? undefined : true,
+              inert: openDialog ? "true" : "false",
             },
           }}
         >
@@ -1527,7 +1429,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseUpdateDialog}
           slotProps={{
             backdrop: {
-              inert: openUpdateDialog ? undefined : true,
+              inert: openUpdateDialog ? "true" : "false",
             },
           }}
         >
@@ -1568,7 +1470,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseSystemReviewsDialog}
           slotProps={{
             backdrop: {
-              inert: openSystemReviewsDialog ? undefined : true,
+              inert: openSystemReviewsDialog ? "true" : "false",
             },
           }}
         >
