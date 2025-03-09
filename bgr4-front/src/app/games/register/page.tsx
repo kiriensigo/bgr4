@@ -123,7 +123,8 @@ export default function RegisterGamePage() {
       const data = await registerGame(gameData, authHeaders);
       console.log("Registered game data:", data);
 
-      router.push(`/games/${gameDetails.id}`);
+      // キャッシュをクリアするためにクエリパラメータを追加
+      router.push(`/games/${gameDetails.id}?refresh=true`);
     } catch (error) {
       console.error("Error registering game:", error);
       setError(

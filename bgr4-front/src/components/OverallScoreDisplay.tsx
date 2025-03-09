@@ -103,7 +103,7 @@ export default function OverallScoreDisplay({
           ...styles.reviews,
         }}
       >
-        {reviewsCount}件のユーザーレビュー
+        {reviewsCount}件
       </Typography>
     </Box>
   );

@@ -41,12 +41,28 @@ class Game < ApplicationRecord
   
   # 登録済みの拡張を取得
   def registered_expansions
-    expansions.where(registered_on_site: true)
+    # 配列に対してwhereメソッドは使用できないため、selectを使用
+    # expansionsがハッシュの場合とGameオブジェクトの場合の両方に対応
+    expansions.select do |expansion|
+      if expansion.is_a?(Hash) || expansion.is_a?(ActiveSupport::HashWithIndifferentAccess)
+        expansion['registered_on_site'] || expansion[:registered_on_site]
+      else
+        expansion.registered_on_site
+      end
+    end
   end
   
   # 登録済みのベースゲームを取得
   def registered_base_games
-    base_games.where(registered_on_site: true)
+    # 配列に対してwhereメソッドは使用できないため、selectを使用
+    # base_gamesがハッシュの場合とGameオブジェクトの場合の両方に対応
+    base_games.select do |base_game|
+      if base_game.is_a?(Hash) || base_game.is_a?(ActiveSupport::HashWithIndifferentAccess)
+        base_game['registered_on_site'] || base_game[:registered_on_site]
+      else
+        base_game.registered_on_site
+      end
+    end
   end
   
   # BGGから拡張情報を取得して保存
@@ -525,34 +541,46 @@ class Game < ApplicationRecord
       'Legacy Game' => 'レガシー・キャンペーン',
       'Memory' => '記憶',
       'Negotiation' => '交渉',
-      'Paper-and-Pencil' => '紙とペン',
-      'Pattern Recognition' => 'パターン認識',
-      'Player Elimination' => 'プレイヤー脱落',
-      'Role Playing' => 'ロールプレイ',
-      'Roll / Spin and Move' => 'サイコロ移動',
-      'Simulation' => 'シミュレーション',
-      'Storytelling' => 'ストーリーテリング',
-      'Team-Based Game' => 'チーム戦',
-      'Trading' => '交換',
-      'Trick-taking' => 'トリックテイキング',
-      'Voting' => '投票',
-      'Worker Placement' => 'ワーカープレイスメント',
-      'Area Control / Area Influence' => 'エリアコントロール',
-      'Area Movement' => 'エリア移動',
-      'Auction/Bidding' => 'オークション',
-      'Betting/Wagering' => '賭け',
-      'Campaign / Battle Card Driven' => 'カードドリブン',
-      'Card Drafting' => 'カードドラフト',
+      'Paper-and-Pencil' => '紙ペン',
+      'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
+      'Solo / Solitaire Game' => 'ソロ向き',
+      'Pattern Building' => 'パズル',
+      'Trick-taking' => 'トリテ'
+    }
+    
+    # BGGメカニクスから当サイトのメカニクスへの変換マップ
+    bgg_mechanic_to_site_mechanic_map = {
+      'Area Majority / Influence' => 'エリア支配',
+      'Auction / Bidding' => 'オークション',
+      'Auction Compensation' => 'オークション',
+      'Auction: Dexterity' => 'オークション',
+      'Auction: Dutch' => 'オークション',
+      'Auction: Dutch Priority' => 'オークション',
+      'Auction: English' => 'オークション',
+      'Auction: Fixed Placement' => 'オークション',
+      'Auction: Multiple Lot' => 'オークション',
+      'Auction: Once Around' => 'オークション',
+      'Auction: Sealed Bid' => 'オークション',
+      'Auction: Turn Order Until Pass' => 'オークション',
+      'Betting and Bluffing' => '賭け',
+      'Closed Drafting' => 'ドラフト',
       'Cooperative Game' => '協力',
-      'Deck, Bag, and Pool Building' => 'デッキ構築',
+      'Deck Construction' => 'デッキ/バッグビルド',
+      'Deck, Bag, and Pool Building' => 'デッキ/バッグビルド',
       'Dice Rolling' => 'ダイスロール',
-      'Hand Management' => 'ハンドマネジメント',
-      'Hexagon Grid' => 'ヘクス',
-      'Hidden Roles' => '隠し役職',
-      'Push Your Luck' => 'プッシュユアラック',
+      'Hidden Roles' => '正体隠匿',
+      'Modular Board' => 'モジュラーボード',
+      'Network and Route Building' => 'ルート構築',
+      'Open Drafting' => 'ドラフト',
+      'Push Your Luck' => 'バースト',
       'Set Collection' => 'セット収集',
+      'Simultaneous Action Selection' => '同時手番',
       'Tile Placement' => 'タイル配置',
-      'Variable Player Powers' => '可変プレイヤー能力'
+      'Variable Player Powers' => 'プレイヤー別能力',
+      'Variable Set-up' => 'プレイヤー別能力',
+      'Worker Placement' => 'ワカプレ',
+      'Worker Placement with Dice Workers' => 'ワカプレ',
+      'Worker Placement, Different Worker Types' => 'ワカプレ'
     }
     
     # BGGのベストプレイ人数からサイトのカテゴリーへの変換マップ
@@ -639,34 +667,11 @@ class Game < ApplicationRecord
       'Legacy Game' => 'レガシー・キャンペーン',
       'Memory' => '記憶',
       'Negotiation' => '交渉',
-      'Paper-and-Pencil' => '紙とペン',
-      'Pattern Recognition' => 'パターン認識',
-      'Player Elimination' => 'プレイヤー脱落',
-      'Role Playing' => 'ロールプレイ',
-      'Roll / Spin and Move' => 'サイコロ移動',
-      'Simulation' => 'シミュレーション',
-      'Storytelling' => 'ストーリーテリング',
-      'Team-Based Game' => 'チーム戦',
-      'Trading' => '交換',
-      'Trick-taking' => 'トリックテイキング',
-      'Voting' => '投票',
-      'Worker Placement' => 'ワーカープレイスメント',
-      'Area Control / Area Influence' => 'エリアコントロール',
-      'Area Movement' => 'エリア移動',
-      'Auction/Bidding' => 'オークション',
-      'Betting/Wagering' => '賭け',
-      'Campaign / Battle Card Driven' => 'カードドリブン',
-      'Card Drafting' => 'カードドラフト',
-      'Cooperative Game' => '協力',
-      'Deck, Bag, and Pool Building' => 'デッキ構築',
-      'Dice Rolling' => 'ダイスロール',
-      'Hand Management' => 'ハンドマネジメント',
-      'Hexagon Grid' => 'ヘクス',
-      'Hidden Roles' => '隠し役職',
-      'Push Your Luck' => 'プッシュユアラック',
-      'Set Collection' => 'セット収集',
-      'Tile Placement' => 'タイル配置',
-      'Variable Player Powers' => '可変プレイヤー能力'
+      'Paper-and-Pencil' => '紙ペン',
+      'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
+      'Solo / Solitaire Game' => 'ソロ向き',
+      'Pattern Building' => 'パズル',
+      'Trick-taking' => 'トリテ'
     }
     
     # BGGのメカニクスを当サイトのカテゴリーに変換（指定されたもののみ）
@@ -725,14 +730,14 @@ class Game < ApplicationRecord
       missing_categories = []
       
       bgg_game_info[:categories].each do |category|
-        site_mechanic = bgg_category_to_site_mechanic_map[category]
+        site_mechanic = bgg_mechanic_to_site_mechanic_map[category]
         if site_mechanic.present?
           mechanics << site_mechanic if !mechanics.include?(site_mechanic)
           converted_mechanics << "#{category} → #{site_mechanic}"
         else
-          missing_categories << category unless bgg_category_to_site_category_map[category].present?
+          missing_categories << category unless bgg_mechanic_to_site_category_map[category].present?
           # 未マッピングの項目を記録（カテゴリーとしても変換されていない場合のみ）
-          UnmappedBggItem.record_occurrence('category', category) unless bgg_category_to_site_category_map[category].present?
+          UnmappedBggItem.record_occurrence('category', category) unless bgg_mechanic_to_site_category_map[category].present?
         end
       end
       
@@ -826,341 +831,11 @@ class Game < ApplicationRecord
     system_user = User.find_by(email: 'system@boardgamereview.com')
     return false unless system_user
     
-    # BGGからゲーム情報を取得
-    bgg_game_info = BggService.get_game_details(bgg_id)
-    return false unless bgg_game_info
+    # システムユーザーのレビューを削除
+    reviews.where(user_id: system_user.id).destroy_all
     
-    # BGGのベストプレイ人数からサイトのカテゴリーへの変換マップ
-    bgg_best_player_to_site_category_map = {
-      '1' => 'ソロ向き',
-      '2' => 'ペア向き',
-      '6' => '多人数向き',
-      '7' => '多人数向き',
-      '8' => '多人数向き',
-      '9' => '多人数向き',
-      '10' => '多人数向き'
-    }
-    
-    # BGGカテゴリーから当サイトのカテゴリーへの変換マップ
-    bgg_category_to_site_category_map = {
-      'Animals' => '動物',
-      'Bluffing' => 'ブラフ',
-      'Card Game' => 'カードゲーム',
-      "Children's Game" => '子供向け',
-      'Deduction' => '推理',
-      'Memory' => '記憶',
-      'Negotiation' => '交渉',
-      'Party Game' => 'パーティー',
-      'Puzzle' => 'パズル',
-      'Wargame' => 'ウォーゲーム',
-      'Word Game' => 'ワードゲーム'
-    }
-    
-    # BGGカテゴリーから当サイトのメカニクスへの変換マップ
-    bgg_category_to_site_mechanic_map = {
-      'Dice' => 'ダイスロール'
-    }
-    
-    # BGGメカニクスから当サイトのカテゴリーへの変換マップ
-    bgg_mechanic_to_site_category_map = {
-      'Acting' => '演技',
-      'Deduction' => '推理',
-      'Legacy Game' => 'レガシー・キャンペーン',
-      'Memory' => '記憶',
-      'Negotiation' => '交渉',
-      'Paper-and-Pencil' => '紙とペン',
-      'Pattern Recognition' => 'パターン認識',
-      'Player Elimination' => 'プレイヤー脱落',
-      'Role Playing' => 'ロールプレイ',
-      'Roll / Spin and Move' => 'サイコロ移動',
-      'Simulation' => 'シミュレーション',
-      'Storytelling' => 'ストーリーテリング',
-      'Team-Based Game' => 'チーム戦',
-      'Trading' => '交換',
-      'Trick-taking' => 'トリックテイキング',
-      'Voting' => '投票',
-      'Worker Placement' => 'ワーカープレイスメント',
-      'Area Control / Area Influence' => 'エリアコントロール',
-      'Area Movement' => 'エリア移動',
-      'Auction/Bidding' => 'オークション',
-      'Betting/Wagering' => '賭け',
-      'Campaign / Battle Card Driven' => 'カードドリブン',
-      'Card Drafting' => 'カードドラフト',
-      'Cooperative Game' => '協力',
-      'Deck, Bag, and Pool Building' => 'デッキ構築',
-      'Dice Rolling' => 'ダイスロール',
-      'Hand Management' => 'ハンドマネジメント',
-      'Hexagon Grid' => 'ヘクス',
-      'Hidden Roles' => '隠し役職',
-      'Push Your Luck' => 'プッシュユアラック',
-      'Set Collection' => 'セット収集',
-      'Tile Placement' => 'タイル配置',
-      'Variable Player Powers' => '可変プレイヤー能力'
-    }
-    
-    # 変換マップの最終更新日
-    mapping_last_updated = '2023-03-07'
-    
-    # 変換マップが古い場合に警告を出す
-    days_since_update = (Date.today - Date.parse(mapping_last_updated)).to_i
-    if days_since_update > 180 # 6ヶ月以上経過
-      Rails.logger.warn "BGG変換マップが#{days_since_update}日間更新されていません。最新のBGGカテゴリー/メカニクスに対応しているか確認してください。"
-    end
-    
-    # BGGの評価を当サイトの評価に変換（BGGも10点満点）
-    bgg_rating = bgg_game_info[:average_score].to_f
-    return false if bgg_rating <= 0
-    
-    # 5点以上10点以下に制限
-    overall_score = [5.0, [bgg_rating, 10.0].min].max
-    
-    # BGGの重さを当サイトのルール複雑さに変換（5点満点に正規化）
-    weight = bgg_game_info[:weight].to_f
-    # 1点以上5点以下に制限
-    rule_complexity = [1.0, [weight, 5.0].min].max
-    
-    # その他の評価項目は固定値3に設定
-    luck_factor = 3
-    interaction = 3
-    downtime = 3
-    
-    # おすすめプレイ人数を設定
-    recommended_players = []
-    
-    # BGGのベストプレイ人数を変換
-    if bgg_game_info[:best_num_players].is_a?(Array)
-      bgg_game_info[:best_num_players].each do |num|
-        recommended_players << num if num.present?
-      end
-    end
-    
-    # BGGのレコメンドプレイ人数も追加
-    if bgg_game_info[:recommended_num_players].is_a?(Array)
-      bgg_game_info[:recommended_num_players].each do |num|
-        recommended_players << num if num.present? && !recommended_players.include?(num)
-      end
-    end
-    
-    # 最低でも1つはプレイ人数を設定
-    if recommended_players.empty?
-      if min_players == max_players
-        recommended_players << min_players.to_s
-      elsif min_players.present? && max_players.present?
-        # 最小と最大の間でランダムに選択
-        recommended_players << rand(min_players..max_players).to_s
-      end
-    end
-    
-    # タグを設定（BGGのベストプレイ人数から）
-    categories_list = []
-    
-    # BGGのベストプレイ人数からタグを追加
-    recommended_players.each do |num|
-      site_tag = bgg_best_player_to_site_category_map[num.to_s]
-      categories_list << site_tag if site_tag.present? && !categories_list.include?(site_tag)
-    end
-    
-    # カテゴリーを設定（BGGのメカニクスとカテゴリーから）
-    categories = []
-    missing_mechanics = []
-    
-    # BGGメカニクスから当サイトのカテゴリーへの変換マップ
-    bgg_mechanic_to_site_category_map = {
-      'Acting' => '演技',
-      'Deduction' => '推理',
-      'Legacy Game' => 'レガシー・キャンペーン',
-      'Memory' => '記憶',
-      'Negotiation' => '交渉',
-      'Paper-and-Pencil' => '紙とペン',
-      'Pattern Recognition' => 'パターン認識',
-      'Player Elimination' => 'プレイヤー脱落',
-      'Role Playing' => 'ロールプレイ',
-      'Roll / Spin and Move' => 'サイコロ移動',
-      'Simulation' => 'シミュレーション',
-      'Storytelling' => 'ストーリーテリング',
-      'Team-Based Game' => 'チーム戦',
-      'Trading' => '交換',
-      'Trick-taking' => 'トリックテイキング',
-      'Voting' => '投票',
-      'Worker Placement' => 'ワーカープレイスメント',
-      'Area Control / Area Influence' => 'エリアコントロール',
-      'Area Movement' => 'エリア移動',
-      'Auction/Bidding' => 'オークション',
-      'Betting/Wagering' => '賭け',
-      'Campaign / Battle Card Driven' => 'カードドリブン',
-      'Card Drafting' => 'カードドラフト',
-      'Cooperative Game' => '協力',
-      'Deck, Bag, and Pool Building' => 'デッキ構築',
-      'Dice Rolling' => 'ダイスロール',
-      'Hand Management' => 'ハンドマネジメント',
-      'Hexagon Grid' => 'ヘクス',
-      'Hidden Roles' => '隠し役職',
-      'Push Your Luck' => 'プッシュユアラック',
-      'Set Collection' => 'セット収集',
-      'Tile Placement' => 'タイル配置',
-      'Variable Player Powers' => '可変プレイヤー能力'
-    }
-    
-    # BGGのメカニクスを当サイトのカテゴリーに変換（指定されたもののみ）
-    if bgg_game_info[:mechanics].is_a?(Array)
-      Rails.logger.info "BGG Mechanics: #{bgg_game_info[:mechanics].inspect}"
-      converted_categories = []
-      
-      bgg_game_info[:mechanics].each do |mechanic|
-        site_category = bgg_mechanic_to_site_category_map[mechanic]
-        if site_category.present?
-          categories << site_category if !categories.include?(site_category)
-          converted_categories << "#{mechanic} → #{site_category}"
-        else
-          missing_mechanics << mechanic
-          # 未マッピングの項目を記録
-          UnmappedBggItem.record_occurrence('mechanic', mechanic)
-        end
-      end
-      
-      Rails.logger.info "Converted to site categories: #{converted_categories.inspect}"
-      Rails.logger.info "Mechanics not mapped to categories: #{missing_mechanics.inspect}" if missing_mechanics.present?
-    end
-    
-    # BGGのカテゴリーを当サイトのカテゴリーに変換（指定されたもののみ）
-    if bgg_game_info[:categories].is_a?(Array)
-      Rails.logger.info "BGG Categories: #{bgg_game_info[:categories].inspect}"
-      converted_categories_from_bgg_categories = []
-      missing_categories = []
-      
-      bgg_game_info[:categories].each do |category|
-        site_category = bgg_category_to_site_category_map[category]
-        if site_category.present?
-          categories << site_category if !categories.include?(site_category)
-          converted_categories_from_bgg_categories << "#{category} → #{site_category}"
-        else
-          missing_categories << category
-          # 未マッピングの項目を記録
-          UnmappedBggItem.record_occurrence('category', category)
-        end
-      end
-      
-      Rails.logger.info "Converted from BGG categories to site categories: #{converted_categories_from_bgg_categories.inspect}"
-      Rails.logger.info "Categories not mapped to site categories: #{missing_categories.inspect}" if missing_categories.present?
-    end
-    
-    # カテゴリーリストにカテゴリーを追加
-    categories_list.concat(categories)
-    
-    # メカニクスを設定（BGGのカテゴリーとメカニクスから）
-    mechanics = []
-    
-    # BGGのカテゴリーを当サイトのメカニクスに変換（指定されたもののみ）
-    if bgg_game_info[:categories].is_a?(Array)
-      Rails.logger.info "BGG Categories: #{bgg_game_info[:categories].inspect}"
-      converted_mechanics = []
-      missing_categories = []
-      
-      bgg_game_info[:categories].each do |category|
-        site_mechanic = bgg_category_to_site_mechanic_map[category]
-        if site_mechanic.present?
-          mechanics << site_mechanic if !mechanics.include?(site_mechanic)
-          converted_mechanics << "#{category} → #{site_mechanic}"
-        else
-          missing_categories << category unless bgg_category_to_site_category_map[category].present?
-          # 未マッピングの項目を記録（カテゴリーとしても変換されていない場合のみ）
-          UnmappedBggItem.record_occurrence('category', category) unless bgg_category_to_site_category_map[category].present?
-        end
-      end
-      
-      Rails.logger.info "Converted from BGG categories to site mechanics: #{converted_mechanics.inspect}"
-    end
-    
-    # BGGのメカニクスを当サイトのメカニクスに変換
-    if bgg_game_info[:mechanics].is_a?(Array)
-      converted_mechanics_from_bgg_mechanics = []
-      missing_mechanics = []
-      
-      bgg_game_info[:mechanics].each do |mechanic|
-        site_mechanic = bgg_mechanic_to_site_mechanic_map[mechanic]
-        if site_mechanic.present?
-          mechanics << site_mechanic if !mechanics.include?(site_mechanic)
-          converted_mechanics_from_bgg_mechanics << "#{mechanic} → #{site_mechanic}"
-        else
-          missing_mechanics << mechanic unless bgg_mechanic_to_site_category_map[mechanic].present?
-          # 未マッピングの項目を記録（カテゴリーとしても変換されていない場合のみ）
-          UnmappedBggItem.record_occurrence('mechanic', mechanic) unless bgg_mechanic_to_site_category_map[mechanic].present?
-        end
-      end
-      
-      Rails.logger.info "Converted from BGG mechanics to site mechanics: #{converted_mechanics_from_bgg_mechanics.inspect}" if converted_mechanics_from_bgg_mechanics.present?
-      Rails.logger.info "Mechanics not mapped to site mechanics: #{missing_mechanics.inspect}" if missing_mechanics.present?
-    end
-    
-    # 短いコメントのリスト
-    short_comments = [
-      "戦略性が高く、何度でも遊びたくなるゲームです。",
-      "シンプルなルールながら奥深い戦略性があります。",
-      "テーマと機構がうまく融合した素晴らしいゲームです。",
-      "初心者から上級者まで楽しめる万能な一作。",
-      "コンポーネントの質が高く、見た目も美しいゲームです。",
-      "プレイ時間の割に得られる満足感が大きいです。",
-      "テーブルに出すと必ず盛り上がる名作です。",
-      "戦略の幅が広く、リプレイ性に優れています。",
-      "バランスが取れた素晴らしいデザインのゲームです。",
-      "テンポよく進み、ダウンタイムが少ないのが魅力です。"
-    ]
-    
-    # システムユーザーのレビューを取得
-    system_reviews = reviews.where(user_id: system_user.id)
-    
-    # システムレビューが存在しない場合は新規作成
-    if system_reviews.empty?
-      # 10件のレビューを作成
-      10.times do |i|
-        # 各レビューで異なるコメントを使用
-        short_comment = short_comments[i % short_comments.length]
-        
-        Review.create(
-          user_id: system_user.id,
-          game_id: bgg_id,
-          overall_score: overall_score,
-          rule_complexity: rule_complexity,
-          luck_factor: luck_factor,
-          interaction: interaction,
-          downtime: downtime,
-          recommended_players: recommended_players,
-          mechanics: mechanics,
-          categories: categories_list,
-          short_comment: short_comment
-        )
-      end
-      
-      Rails.logger.info "Game #{name} (BGG ID: #{bgg_id}): Created 10 initial reviews"
-    else
-      # 既存のシステムレビューを更新
-      system_reviews.each_with_index do |review, i|
-        # 各レビューで異なるコメントを使用
-        short_comment = short_comments[i % short_comments.length]
-        
-        # 既存のカテゴリーとメカニクスを保持しつつ、新しい項目を追加
-        existing_categories = review.categories || []
-        existing_mechanics = review.mechanics || []
-        
-        # 新しいカテゴリーとメカニクスを追加
-        updated_categories = (existing_categories + categories_list).uniq
-        updated_mechanics = (existing_mechanics + mechanics).uniq
-        
-        review.update(
-          overall_score: overall_score,
-          rule_complexity: rule_complexity,
-          luck_factor: luck_factor,
-          interaction: interaction,
-          downtime: downtime,
-          recommended_players: recommended_players,
-          mechanics: updated_mechanics,
-          categories: updated_categories,
-          short_comment: short_comment
-        )
-      end
-      
-      Rails.logger.info "Game #{name} (BGG ID: #{bgg_id}): Updated #{system_reviews.count} system reviews"
-    end
+    # 初期レビューを作成
+    create_initial_reviews
     
     true
   end

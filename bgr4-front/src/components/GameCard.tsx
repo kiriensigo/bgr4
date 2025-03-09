@@ -170,18 +170,6 @@ export default function GameCard({
             </Typography>
           </Link>
 
-          {/* 日本語名がある場合で、かつ原題と異なる場合は原題も表示 */}
-          {game.japanese_name && game.japanese_name !== game.name && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              gutterBottom
-              noWrap
-            >
-              原題: {game.name}
-            </Typography>
-          )}
-
           {type === "review" && review && (
             <>
               <Typography variant="body2" color="text.secondary" gutterBottom>

@@ -19,13 +19,18 @@ export default function GameRating({
 }: GameRatingProps) {
   const numericScore = getNumericScore(score);
 
+  // サイズに応じたタイポグラフィのバリアントを設定
+  const scoreVariant =
+    size === "large" ? "h5" : size === "medium" ? "h6" : "body1";
+
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <Rating value={numericScore / 2} precision={0.5} readOnly size={size} />
-      <Typography variant="body2">
-        {numericScore.toFixed(1)}
-        {reviewsCount !== undefined && ` (${reviewsCount}件のユーザーレビュー)`}
-      </Typography>
+      {reviewsCount !== undefined ? (
+        <Typography variant="body2" color="text.secondary">
+          {reviewsCount}件のレビュー
+        </Typography>
+      ) : null}
     </Box>
   );
 }

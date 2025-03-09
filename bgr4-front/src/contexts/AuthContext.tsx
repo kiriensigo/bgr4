@@ -19,6 +19,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   isLoading: boolean;
   getAuthHeaders: () => Record<string, string>;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   isLoading: true,
   getAuthHeaders: () => ({}),
+  isAdmin: false,
 });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -333,7 +335,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, signIn, signUp, signOut, isLoading, getAuthHeaders }}
+      value={{
+        user,
+        signIn,
+        signUp,
+        signOut,
+        isLoading,
+        getAuthHeaders,
+        isAdmin: user?.is_admin || false,
+      }}
     >
       {children}
     </AuthContext.Provider>

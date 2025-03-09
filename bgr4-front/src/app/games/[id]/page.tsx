@@ -54,7 +54,7 @@ import GameCard from "@/components/GameCard";
 import ReviewList from "@/components/ReviewList";
 import GameRating from "@/components/GameRating";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { getAuthHeaders } from "@/lib/auth";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -280,9 +280,11 @@ const DesignerInfo = ({ game }: { game: Game }) => {
 };
 
 export default function GamePage({ params }: GamePageProps) {
-  const { user, getAuthHeaders } = useAuth();
-  const pathname = usePathname();
+  const { user, getAuthHeaders, isAdmin } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refresh = searchParams.get("refresh") === "true";
+
   const [game, setGame] = useState<ExtendedGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -342,6 +344,7 @@ export default function GamePage({ params }: GamePageProps) {
         // 有効なキャッシュがある場合はそれを使用（強制リフレッシュでない場合）
         if (
           !forceRefresh &&
+          !refresh &&
           cachedData &&
           now - cachedData.timestamp < CACHE_EXPIRY
         ) {
@@ -420,12 +423,13 @@ export default function GamePage({ params }: GamePageProps) {
         setLoading(false);
       }
     },
-    [params.id, user, getAuthHeaders]
+    [params.id, user, getAuthHeaders, refresh]
   );
 
   useEffect(() => {
-    fetchGameData();
-  }, [fetchGameData]);
+    // ゲームデータを取得
+    fetchGameData(refresh);
+  }, [fetchGameData, params.id, refresh]);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -643,7 +647,7 @@ export default function GamePage({ params }: GamePageProps) {
 
   // システムレビューを更新する
   const handleUpdateSystemReviews = async () => {
-    if (!user) return;
+    if (!isAdmin || !game) return;
 
     try {
       // 更新中フラグを設定
@@ -652,7 +656,7 @@ export default function GamePage({ params }: GamePageProps) {
       // 少し待ってローディングインジケーターが確実に表示されるようにする
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const authHeaders = await getAuthHeaders();
+      const authHeaders = getAuthHeaders();
 
       if (!authHeaders) {
         throw new Error("認証情報が取得できませんでした");
@@ -666,27 +670,25 @@ export default function GamePage({ params }: GamePageProps) {
       setSnackbarSeverity("info");
       setSnackbarOpen(true);
 
-      // タイムアウト処理を追加
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(
-          () => reject(new Error("更新処理がタイムアウトしました")),
-          15000
-        ); // 15秒でタイムアウト
-      });
+      // システムレビューを更新
+      await updateSystemReviews(game.bgg_id, authHeaders);
 
-      // 実際の更新処理
-      const updatePromise = updateSystemReviews(params.id, authHeaders);
-
-      // レース条件でどちらか早い方を採用
-      const result = await Promise.race([updatePromise, timeoutPromise]);
-
-      // 更新が成功した場合
-      setSnackbarMessage("システムレビューを更新しました");
+      // 成功メッセージを表示
+      setSnackbarMessage(
+        "システムレビューを更新しました。ページをリロードします..."
+      );
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
 
-      // ページをリロードして最新の情報を表示
-      window.location.reload();
+      // 少し待ってからページをリロード
+      setTimeout(() => {
+        // キャッシュをクリアしてからリロード
+        const cacheKey = `game-${params.id}`;
+        if (gameCache[cacheKey]) {
+          delete gameCache[cacheKey];
+        }
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("システムレビューの更新に失敗しました:", error);
       setSnackbarMessage(
@@ -934,30 +936,6 @@ export default function GamePage({ params }: GamePageProps) {
                 </Button>
               )}
 
-              {/* 管理者のみに表示するボタン */}
-              {user?.is_admin && (
-                <>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleOpenUpdateDialog}
-                    startIcon={<RefreshIcon />}
-                    sx={{ mt: 1, mb: 1 }}
-                  >
-                    BGGから更新
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleOpenSystemReviewsDialog}
-                    startIcon={<UpdateIcon />}
-                    sx={{ mt: 1, mb: 1, ml: 1 }}
-                  >
-                    システムレビュー更新
-                  </Button>
-                </>
-              )}
-
               {/* やりたいリストボタン */}
               {user && (
                 <Tooltip
@@ -996,17 +974,32 @@ export default function GamePage({ params }: GamePageProps) {
               )}
 
               {/* BGGリンク */}
-              <Button
-                variant="outlined"
-                color="primary"
-                href={`https://boardgamegeek.com/boardgame/${game.bgg_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                startIcon={<OpenInNewIcon />}
-                sx={{ mb: 2 }}
-              >
-                Board Game Geekで詳細を見る
-              </Button>
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  href={`https://boardgamegeek.com/boardgame/${game.bgg_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  startIcon={<OpenInNewIcon />}
+                >
+                  BGGで詳細を見る
+                </Button>
+
+                {/* レビューを書くボタン */}
+                <Link
+                  href={`/games/${game.bgg_id}/review`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<RateReviewIcon />}
+                  >
+                    レビューを書く
+                  </Button>
+                </Link>
+              </Box>
 
               {/* スコアと基本情報 */}
               <Paper sx={{ p: 2, mb: 3, bgcolor: "grey.50" }}>
@@ -1080,17 +1073,51 @@ export default function GamePage({ params }: GamePageProps) {
                 </Grid>
               </Paper>
 
+              {/* ゲーム説明文（クリックで表示/非表示） */}
+              {(game.japanese_description || game.description) && (
+                <Box sx={{ mb: 3 }}>
+                  <Accordion>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      aria-controls="game-description-content"
+                      id="game-description-header"
+                    >
+                      <Typography variant="h6">ゲーム説明</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Paper sx={{ p: 3, bgcolor: "grey.50" }}>
+                        <Typography
+                          variant="body1"
+                          sx={{ whiteSpace: "pre-wrap" }}
+                        >
+                          {game.japanese_description || game.description}
+                        </Typography>
+                      </Paper>
+                    </AccordionDetails>
+                  </Accordion>
+                </Box>
+              )}
+
               {/* 評価スコア */}
               <Box sx={{ display: "flex", gap: 4, mb: 3 }}>
                 <Box>
-                  <Typography variant="subtitle2" color="text.secondary">
+                  <Typography
+                    variant="subtitle1"
+                    color="text.secondary"
+                    fontWeight="bold"
+                  >
                     ユーザー評価
                   </Typography>
-                  <GameRating
-                    score={game.average_score}
-                    reviewsCount={game.reviews_count}
-                    size="medium"
-                  />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="h4" color="primary" fontWeight="bold">
+                      {formatScore(game.average_score)}
+                    </Typography>
+                    <GameRating
+                      score={game.average_score}
+                      reviewsCount={game.reviews_count}
+                      size="large"
+                    />
+                  </Box>
                 </Box>
               </Box>
 
@@ -1101,7 +1128,11 @@ export default function GamePage({ params }: GamePageProps) {
                     <Typography variant="subtitle2" color="text.secondary">
                       ルールの複雑さ
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
                       {formatScore(game.average_rule_complexity)}
                     </Typography>
                   </Grid>
@@ -1109,7 +1140,11 @@ export default function GamePage({ params }: GamePageProps) {
                     <Typography variant="subtitle2" color="text.secondary">
                       運要素
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
                       {formatScore(game.average_luck_factor)}
                     </Typography>
                   </Grid>
@@ -1117,7 +1152,11 @@ export default function GamePage({ params }: GamePageProps) {
                     <Typography variant="subtitle2" color="text.secondary">
                       相互作用
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
                       {formatScore(game.average_interaction)}
                     </Typography>
                   </Grid>
@@ -1125,7 +1164,11 @@ export default function GamePage({ params }: GamePageProps) {
                     <Typography variant="subtitle2" color="text.secondary">
                       ダウンタイム
                     </Typography>
-                    <Typography variant="body1">
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
                       {formatScore(game.average_downtime)}
                     </Typography>
                   </Grid>
@@ -1288,7 +1331,48 @@ export default function GamePage({ params }: GamePageProps) {
                 </Box>
               )}
 
-              <Divider sx={{ my: 4 }} />
+              {/* 関連ゲーム情報（拡張情報とベースゲーム情報）*/}
+              {(() => {
+                // ベースゲームがある場合のみベースゲーム情報を表示
+                const baseGameComponent = game.baseGame ? (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                      ベースゲーム
+                    </Typography>
+                    <Link
+                      href={`/games/${game.baseGame.id}`}
+                      style={{ textDecoration: "none" }}
+                    >
+                      <Chip
+                        label={game.baseGame.name}
+                        color="secondary"
+                        variant="outlined"
+                        sx={{ m: 0.5 }}
+                        clickable
+                      />
+                    </Link>
+                  </Box>
+                ) : null;
+
+                // GameExpansionsコンポーネントは内部で関連ゲームが0個の場合やエラーがある場合は
+                // nullを返すようになっているので、ここでは単純に呼び出すだけ
+                const expansionsComponent = game ? (
+                  <GameExpansions
+                    gameId={game.bgg_id}
+                    isAdmin={user?.is_admin}
+                  />
+                ) : null;
+
+                // いずれかのコンポーネントが表示される場合のみDividerを表示
+                // expansionsComponentがnullでない場合のみ表示（関連ゲームが0個の場合やエラーがある場合はnull）
+                return baseGameComponent || expansionsComponent ? (
+                  <>
+                    <Divider sx={{ my: 4 }} />
+                    {baseGameComponent}
+                    {expansionsComponent}
+                  </>
+                ) : null;
+              })()}
 
               {/* レビューセクション */}
               <Box
@@ -1300,18 +1384,6 @@ export default function GamePage({ params }: GamePageProps) {
                 }}
               >
                 <Typography variant="h6">レビュー</Typography>
-                <Link
-                  href={`/games/${game.bgg_id}/review`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <Button
-                    variant="outlined"
-                    startIcon={<RateReviewIcon />}
-                    size="small"
-                  >
-                    レビューを書く
-                  </Button>
-                </Link>
               </Box>
 
               {/* レビューデータのデバッグ情報 */}
@@ -1329,55 +1401,28 @@ export default function GamePage({ params }: GamePageProps) {
 
               <ReviewList reviews={game.reviews || []} />
 
-              {/* 拡張情報 */}
-              {game && (
-                <GameExpansions gameId={game.bgg_id} isAdmin={user?.is_admin} />
-              )}
-
-              {/* ベースゲーム情報 */}
-              {game.baseGame && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    ベースゲーム
-                  </Typography>
-                  <Link
-                    href={`/games/${game.baseGame.id}`}
-                    style={{ textDecoration: "none" }}
+              {/* 管理者のみに表示するボタン */}
+              {isAdmin && (
+                <>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={handleOpenUpdateDialog}
+                    startIcon={<RefreshIcon />}
+                    sx={{ mt: 1, mb: 1 }}
                   >
-                    <Chip
-                      label={game.baseGame.name}
-                      color="secondary"
-                      variant="outlined"
-                      sx={{ m: 0.5 }}
-                      clickable
-                    />
-                  </Link>
-                </Box>
-              )}
-
-              {/* ゲーム説明文（クリックで表示/非表示） */}
-              {(game.japanese_description || game.description) && (
-                <Box sx={{ mt: 4 }}>
-                  <Accordion>
-                    <AccordionSummary
-                      expandIcon={<ExpandMoreIcon />}
-                      aria-controls="game-description-content"
-                      id="game-description-header"
-                    >
-                      <Typography variant="h6">ゲーム説明</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Paper sx={{ p: 3, bgcolor: "grey.50" }}>
-                        <Typography
-                          variant="body1"
-                          sx={{ whiteSpace: "pre-wrap" }}
-                        >
-                          {game.japanese_description || game.description}
-                        </Typography>
-                      </Paper>
-                    </AccordionDetails>
-                  </Accordion>
-                </Box>
+                    BGGから更新
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleOpenSystemReviewsDialog}
+                    startIcon={<UpdateIcon />}
+                    sx={{ mt: 1, mb: 1, ml: 1 }}
+                  >
+                    システムレビュー更新
+                  </Button>
+                </>
               )}
             </Grid>
           </Grid>

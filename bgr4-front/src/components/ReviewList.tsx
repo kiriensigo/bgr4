@@ -114,9 +114,12 @@ export default function ReviewList({ reviews }: ReviewListProps) {
     );
   }
 
+  // 最大10件のレビューに制限
+  const limitedReviews = filteredReviews.slice(0, 10);
+
   return (
-    <Grid container spacing={2}>
-      {filteredReviews.map((review) => {
+    <Grid container spacing={1}>
+      {limitedReviews.map((review) => {
         const numScore =
           typeof review.overall_score === "string"
             ? parseFloat(review.overall_score)
@@ -126,16 +129,20 @@ export default function ReviewList({ reviews }: ReviewListProps) {
           <Grid item xs={12} key={review.id}>
             <Paper
               sx={{
-                p: 2,
+                p: 1.5,
                 "&:hover": {
                   bgcolor: "grey.50",
                 },
               }}
             >
               <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 0.5,
+                }}
               >
-                <Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Link
                     href={`/users/${review.user?.id}`}
                     style={{ textDecoration: "none" }}
@@ -153,8 +160,8 @@ export default function ReviewList({ reviews }: ReviewListProps) {
                       {review.user?.name}
                     </Typography>
                   </Link>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(review.created_at)}
+                  <Typography variant="body2">
+                    {formatScore(review.overall_score)}
                   </Typography>
                 </Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -164,12 +171,9 @@ export default function ReviewList({ reviews }: ReviewListProps) {
                     readOnly
                     size="small"
                   />
-                  <Typography variant="body2">
-                    {formatScore(review.overall_score)}
-                  </Typography>
                 </Box>
               </Box>
-              <Typography variant="body2" sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ mb: 0.5 }}>
                 {review.short_comment}
               </Typography>
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
@@ -183,6 +187,13 @@ export default function ReviewList({ reviews }: ReviewListProps) {
           </Grid>
         );
       })}
+      {filteredReviews.length > 10 && (
+        <Grid item xs={12}>
+          <Typography variant="body2" color="text.secondary" align="center">
+            他に{filteredReviews.length - 10}件のレビューがあります
+          </Typography>
+        </Grid>
+      )}
     </Grid>
   );
 }

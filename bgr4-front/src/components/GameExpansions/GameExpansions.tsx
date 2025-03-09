@@ -105,24 +105,17 @@ export default function GameExpansions({
     fetchExpansions(showOnlyRegistered);
   }, [gameId]);
 
-  // 拡張がない場合は何も表示しない
-  if (
-    !loading &&
-    expansions.length === 0 &&
-    baseGames.length === 0 &&
-    unregisteredExpansionIds.length === 0 &&
-    unregisteredBaseGameIds.length === 0 &&
-    !error
-  ) {
-    return null;
-  }
-
   // 関連ゲームの総数を計算
   const totalRelatedGames =
     expansions.length +
     baseGames.length +
     unregisteredExpansionIds.length +
     unregisteredBaseGameIds.length;
+
+  // 関連ゲームが0個の場合やエラーがある場合、またはローディング中は何も表示しない
+  if (totalRelatedGames === 0 || error || loading) {
+    return null;
+  }
 
   return (
     <Box sx={{ mt: 4 }}>
