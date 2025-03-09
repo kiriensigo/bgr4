@@ -140,9 +140,6 @@ module Api
           # 既存のゲームが見つかった場合は、登録済みフラグを更新
           existing_game.update(registered_on_site: true)
           
-          # 拡張情報を更新
-          existing_game.fetch_and_save_expansions
-          
           render json: existing_game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
           return
         end
@@ -205,9 +202,6 @@ module Api
         @game.normalize_japanese_publisher if @game.japanese_publisher.present?
         
         if @game.save
-          # 拡張情報を取得して保存
-          @game.fetch_and_save_expansions
-          
           # 初期レビューを作成
           @game.create_initial_reviews
           
@@ -251,7 +245,7 @@ module Api
           
           render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
-          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :not_found
+          render json: { error: "ゲーム情報の更新に失敗しました" }, status: :unprocessable_entity
         end
       end
 
