@@ -60,7 +60,6 @@ import { getAuthHeaders } from "@/lib/auth";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import GameExpansions from "@/components/GameExpansions";
 import UpdateIcon from "@mui/icons-material/Update";
 
 interface Review {
@@ -1110,10 +1109,10 @@ export default function GamePage({ params }: GamePageProps) {
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography variant="h4" color="primary" fontWeight="bold">
-                      {formatScore(game.average_score)}
+                      {formatScore(game.average_overall_score)}
                     </Typography>
                     <GameRating
-                      score={game.average_score}
+                      score={game.average_overall_score}
                       reviewsCount={game.reviews_count}
                       size="large"
                     />
@@ -1334,42 +1333,33 @@ export default function GamePage({ params }: GamePageProps) {
               {/* 関連ゲーム情報（拡張情報とベースゲーム情報）*/}
               {(() => {
                 // ベースゲームがある場合のみベースゲーム情報を表示
-                const baseGameComponent = game.baseGame ? (
+                const baseGameComponent = game?.baseGame ? (
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>
                       ベースゲーム
                     </Typography>
-                    <Link
-                      href={`/games/${game.baseGame.id}`}
-                      style={{ textDecoration: "none" }}
-                    >
-                      <Chip
-                        label={game.baseGame.name}
-                        color="secondary"
-                        variant="outlined"
-                        sx={{ m: 0.5 }}
-                        clickable
-                      />
-                    </Link>
+                    <Box sx={{ display: "flex", flexWrap: "wrap" }}>
+                      <Link
+                        href={`/games/${game.baseGame.id}`}
+                        style={{ textDecoration: "none" }}
+                      >
+                        <Chip
+                          label={game.baseGame.name}
+                          color="primary"
+                          variant="outlined"
+                          sx={{ m: 0.5 }}
+                          clickable
+                        />
+                      </Link>
+                    </Box>
                   </Box>
                 ) : null;
 
-                // GameExpansionsコンポーネントは内部で関連ゲームが0個の場合やエラーがある場合は
-                // nullを返すようになっているので、ここでは単純に呼び出すだけ
-                const expansionsComponent = game ? (
-                  <GameExpansions
-                    gameId={game.bgg_id}
-                    isAdmin={user?.is_admin}
-                  />
-                ) : null;
-
-                // いずれかのコンポーネントが表示される場合のみDividerを表示
-                // expansionsComponentがnullでない場合のみ表示（関連ゲームが0個の場合やエラーがある場合はnull）
-                return baseGameComponent || expansionsComponent ? (
+                // Dividerの表示条件を変更
+                return baseGameComponent ? (
                   <>
                     <Divider sx={{ my: 4 }} />
                     {baseGameComponent}
-                    {expansionsComponent}
                   </>
                 ) : null;
               })()}

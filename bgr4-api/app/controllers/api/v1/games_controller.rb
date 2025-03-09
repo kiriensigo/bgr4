@@ -1,8 +1,8 @@
 module Api
   module V1
     class GamesController < ApplicationController
-      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image, :expansions]
-      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :expansions, :update_expansions, :update_system_reviews]
+      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image]
+      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :update_system_reviews]
       before_action :authenticate_admin!, only: [:update_system_reviews]
 
       def index
@@ -115,6 +115,7 @@ module Api
         game_json['average_luck_factor'] = @game.average_luck_factor
         game_json['average_interaction'] = @game.average_interaction
         game_json['average_downtime'] = @game.average_downtime
+        game_json['average_overall_score'] = @game.average_overall_score
         
         render json: game_json
       end
@@ -626,145 +627,6 @@ module Api
         end
       end
 
-      def expansions
-        # 登録済みのみ表示するかどうか
-        registered_only = params[:registered_only] == 'true'
-        
-        # 拡張情報を取得
-        expansions = @game.expansions
-        base_games = @game.base_games
-        
-        # 登録済みのみ表示する場合はフィルタリング
-        if registered_only
-          # 登録済みの拡張のみ取得
-          expansions = expansions.select do |expansion|
-            if expansion.is_a?(Hash) || expansion.is_a?(ActiveSupport::HashWithIndifferentAccess)
-              expansion['registered_on_site'] || expansion[:registered_on_site]
-            else
-              expansion.registered_on_site
-            end
-          end
-          
-          # 登録済みのベースゲームのみ取得
-          base_games = base_games.select do |base_game|
-            if base_game.is_a?(Hash) || base_game.is_a?(ActiveSupport::HashWithIndifferentAccess)
-              base_game['registered_on_site'] || base_game[:registered_on_site]
-            else
-              base_game.registered_on_site
-            end
-          end
-        end
-        
-        # 登録されていない拡張ゲームのIDを取得
-        unregistered_expansion_ids = []
-        if @game.base_game_expansions.exists?
-          registered_bgg_ids = Game.registered.pluck(:bgg_id)
-          unregistered_expansion_ids = @game.base_game_expansions
-            .where.not(expansion_id: registered_bgg_ids)
-            .pluck(:expansion_id, :relationship_type)
-            .map { |id, type| { id: id, type: type } }
-        end
-        
-        # 登録されていないベースゲームのIDを取得
-        unregistered_base_game_ids = []
-        if @game.expansion_base_games.exists?
-          registered_bgg_ids = Game.registered.pluck(:bgg_id)
-          unregistered_base_game_ids = @game.expansion_base_games
-            .where.not(base_game_id: registered_bgg_ids)
-            .pluck(:base_game_id, :relationship_type)
-            .map { |id, type| { id: id, type: type } }
-        end
-        
-        render json: {
-          expansions: expansions.map { |exp| 
-            {
-              id: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['id'] || exp[:id] : exp.id,
-              bgg_id: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['bgg_id'] || exp[:bgg_id] : exp.bgg_id,
-              name: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['name'] || exp[:name] : exp.name,
-              japanese_name: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['japanese_name'] || exp[:japanese_name] : exp.japanese_name,
-              image_url: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['image_url'] || exp[:image_url] : exp.image_url,
-              japanese_image_url: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['japanese_image_url'] || exp[:japanese_image_url] : exp.japanese_image_url,
-              registered_on_site: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['registered_on_site'] || exp[:registered_on_site] : exp.registered_on_site,
-              relationship_type: @game.base_game_expansions.find_by(expansion_id: exp.is_a?(Hash) || exp.is_a?(ActiveSupport::HashWithIndifferentAccess) ? exp['bgg_id'] || exp[:bgg_id] : exp.bgg_id)&.relationship_type || 'expansion'
-            }
-          },
-          base_games: base_games.map { |base| 
-            {
-              id: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['id'] || base[:id] : base.id,
-              bgg_id: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['bgg_id'] || base[:bgg_id] : base.bgg_id,
-              name: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['name'] || base[:name] : base.name,
-              japanese_name: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['japanese_name'] || base[:japanese_name] : base.japanese_name,
-              image_url: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['image_url'] || base[:image_url] : base.image_url,
-              japanese_image_url: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['japanese_image_url'] || base[:japanese_image_url] : base.japanese_image_url,
-              registered_on_site: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['registered_on_site'] || base[:registered_on_site] : base.registered_on_site,
-              relationship_type: @game.expansion_base_games.find_by(base_game_id: base.is_a?(Hash) || base.is_a?(ActiveSupport::HashWithIndifferentAccess) ? base['bgg_id'] || base[:bgg_id] : base.bgg_id)&.relationship_type || 'base'
-            }
-          },
-          unregistered_expansion_ids: unregistered_expansion_ids,
-          unregistered_base_game_ids: unregistered_base_game_ids
-        }
-      end
-
-      def update_expansions
-        # BGGから拡張情報を取得して保存
-        if @game.fetch_and_save_expansions
-          # 拡張情報を取得して返す
-          expansions = @game.registered_expansions
-          base_games = @game.registered_base_games
-          
-          # 登録されていない拡張ゲームのIDを取得
-          unregistered_expansion_ids = []
-          if @game.base_game_expansions.exists?
-            registered_bgg_ids = Game.registered.pluck(:bgg_id)
-            unregistered_expansion_ids = @game.base_game_expansions
-              .where.not(expansion_id: registered_bgg_ids)
-              .pluck(:expansion_id, :relationship_type)
-              .map { |id, type| { id: id, type: type } }
-          end
-          
-          # 登録されていないベースゲームのIDを取得
-          unregistered_base_game_ids = []
-          if @game.expansion_base_games.exists?
-            registered_bgg_ids = Game.registered.pluck(:bgg_id)
-            unregistered_base_game_ids = @game.expansion_base_games
-              .where.not(base_game_id: registered_bgg_ids)
-              .pluck(:base_game_id, :relationship_type)
-              .map { |id, type| { id: id, type: type } }
-          end
-          
-          render json: {
-            expansions: expansions.map { |exp| 
-              {
-                id: exp.id,
-                bgg_id: exp.bgg_id,
-                name: exp.name,
-                japanese_name: exp.japanese_name,
-                image_url: exp.image_url,
-                japanese_image_url: exp.japanese_image_url,
-                registered_on_site: exp.registered_on_site,
-                relationship_type: @game.base_game_expansions.find_by(expansion_id: exp.bgg_id)&.relationship_type
-              }
-            },
-            base_games: base_games.map { |base| 
-              {
-                id: base.id,
-                bgg_id: base.bgg_id,
-                name: base.name,
-                japanese_name: base.japanese_name,
-                image_url: base.image_url,
-                japanese_image_url: base.japanese_image_url,
-                registered_on_site: base.registered_on_site,
-                relationship_type: @game.expansion_base_games.find_by(base_game_id: base.bgg_id)&.relationship_type
-              }
-            },
-            unregistered_expansion_ids: unregistered_expansion_ids,
-            unregistered_base_game_ids: unregistered_base_game_ids
-          }
-        else
-          render json: { error: "拡張情報を更新できませんでした" }, status: :unprocessable_entity
-        end
-      end
-
       # システムレビューを更新するアクション
       def update_system_reviews
         if @game.update_system_reviews
@@ -780,7 +642,7 @@ module Api
         @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
         
         unless @game
-          render json: { error: "ゲームが見つかりません。まだデータベースに登録されていません。" }, status: :not_found
+          render json: { error: 'ゲームが見つかりません' }, status: :not_found
         end
       end
 

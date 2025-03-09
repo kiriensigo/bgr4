@@ -5,13 +5,6 @@ class Game < ApplicationRecord
   # wishlist_itemsはgameカラムにbgg_idを持つ
   # has_many :wishlist_items, primary_key: :bgg_id, foreign_key: :game
 
-  # 拡張関連のアソシエーション
-  has_many :base_game_expansions, class_name: 'GameExpansion', primary_key: 'bgg_id', foreign_key: 'base_game_id'
-  has_many :expansions, through: :base_game_expansions, source: :expansion
-  
-  has_many :expansion_base_games, class_name: 'GameExpansion', primary_key: 'bgg_id', foreign_key: 'expansion_id'
-  has_many :base_games, through: :expansion_base_games, source: :base_game
-
   validates :name, presence: true
   validates :bgg_id, presence: true, uniqueness: true
   validates :min_players, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
@@ -39,57 +32,6 @@ class Game < ApplicationRecord
   # サイトに登録されているゲームのスコープ
   scope :registered, -> { where(registered_on_site: true) }
   
-  # 登録済みの拡張を取得
-  def registered_expansions
-    # 配列に対してwhereメソッドは使用できないため、selectを使用
-    # expansionsがハッシュの場合とGameオブジェクトの場合の両方に対応
-    expansions.select do |expansion|
-      if expansion.is_a?(Hash) || expansion.is_a?(ActiveSupport::HashWithIndifferentAccess)
-        expansion['registered_on_site'] || expansion[:registered_on_site]
-      else
-        expansion.registered_on_site
-      end
-    end
-  end
-  
-  # 登録済みのベースゲームを取得
-  def registered_base_games
-    # 配列に対してwhereメソッドは使用できないため、selectを使用
-    # base_gamesがハッシュの場合とGameオブジェクトの場合の両方に対応
-    base_games.select do |base_game|
-      if base_game.is_a?(Hash) || base_game.is_a?(ActiveSupport::HashWithIndifferentAccess)
-        base_game['registered_on_site'] || base_game[:registered_on_site]
-      else
-        base_game.registered_on_site
-      end
-    end
-  end
-  
-  # BGGから拡張情報を取得して保存
-  def fetch_and_save_expansions
-    # BGGから拡張情報を取得
-    expansion_data = BggService.get_expansions(bgg_id)
-    return unless expansion_data.present?
-    
-    # 既存の拡張情報を保存（メタデータとしてIDと名前のみ保持）
-    store_metadata(:expansions, expansion_data)
-    
-    # 拡張情報をGameExpansionモデルに保存（ゲームレコードは作成せず関連付けのみ）
-    expansion_data.each_with_index do |exp, index|
-      # 関連付けを作成または更新
-      relation = GameExpansion.find_or_initialize_by(
-        base_game_id: self.bgg_id,
-        expansion_id: exp[:id]
-      )
-      
-      relation.relationship_type = exp[:type] || GameExpansion::RELATIONSHIP_TYPES[:expansion]
-      relation.position = index
-      relation.save!
-    end
-    
-    save!
-  end
-  
   # BGGからゲーム情報を更新
   def update_from_bgg(force_update = false)
     # 特定のゲーム（カスカディア）の場合は特別な処理
@@ -100,29 +42,26 @@ class Game < ApplicationRecord
       self.japanese_release_date = '2022-01-01' if japanese_release_date.blank? || force_update
       save!
       
-      # 拡張情報も更新
-      fetch_and_save_expansions
-      
       return true
     end
     
     # BGGからゲーム情報を取得
-    bgg_data = BggService.get_game_details(bgg_id)
-    return false unless bgg_data
+    bgg_game_info = BggService.get_game_details(bgg_id)
+    return false unless bgg_game_info.present?
     
     # 基本情報を更新
-    self.name = bgg_data[:name] if name.blank? || force_update
-    self.description = bgg_data[:description] if description.blank? || force_update
-    self.image_url = bgg_data[:image_url] if image_url.blank? || force_update
-    self.min_players = bgg_data[:min_players] if min_players.blank? || force_update
-    self.max_players = bgg_data[:max_players] if max_players.blank? || force_update
-    self.play_time = bgg_data[:play_time] if play_time.blank? || force_update
-    self.min_play_time = bgg_data[:min_play_time] if min_play_time.blank? || force_update
-    self.average_score = bgg_data[:average_score] if average_score.blank? || force_update
-    self.weight = bgg_data[:weight] if weight.blank? || force_update
-    self.publisher = bgg_data[:publisher] if publisher.blank? || force_update
-    self.designer = bgg_data[:designer] if designer.blank? || force_update
-    self.release_date = bgg_data[:release_date] if release_date.blank? || force_update
+    self.name = bgg_game_info[:name] if name.blank? || force_update
+    self.description = bgg_game_info[:description] if description.blank? || force_update
+    self.image_url = bgg_game_info[:image_url] if image_url.blank? || force_update
+    self.min_players = bgg_game_info[:min_players] if min_players.blank? || force_update
+    self.max_players = bgg_game_info[:max_players] if max_players.blank? || force_update
+    self.play_time = bgg_game_info[:play_time] if play_time.blank? || force_update
+    self.min_play_time = bgg_game_info[:min_play_time] if min_play_time.blank? || force_update
+    self.average_score = bgg_game_info[:average_score] if average_score.blank? || force_update
+    self.weight = bgg_game_info[:weight] if weight.blank? || force_update
+    self.publisher = bgg_game_info[:publisher] if publisher.blank? || force_update
+    self.designer = bgg_game_info[:designer] if designer.blank? || force_update
+    self.release_date = bgg_game_info[:release_date] if release_date.blank? || force_update
     
     # JapanesePublisherモデルから日本語出版社情報を取得
     japanese_publisher_from_db = JapanesePublisher.get_publisher_name(bgg_id)
@@ -154,21 +93,21 @@ class Game < ApplicationRecord
       end
     else
       # BGGから直接取得した日本語情報を使用（get_japanese_version_infoで見つからなかった場合）
-      if bgg_data[:japanese_name].present? && (force_update || !has_japanese_name?)
-        self.japanese_name = bgg_data[:japanese_name]
+      if bgg_game_info[:japanese_name].present? && (force_update || !has_japanese_name?)
+        self.japanese_name = bgg_game_info[:japanese_name]
       end
       
       # 日本語出版社情報がデータベースから取得できなかった場合のみAPIの情報を使用
-      if japanese_publisher_from_db.blank? && bgg_data[:japanese_publisher].present? && (force_update || !has_japanese_publisher?)
-        self.japanese_publisher = bgg_data[:japanese_publisher]
+      if japanese_publisher_from_db.blank? && bgg_game_info[:japanese_publisher].present? && (force_update || !has_japanese_publisher?)
+        self.japanese_publisher = bgg_game_info[:japanese_publisher]
       end
       
-      if bgg_data[:japanese_release_date].present? && (force_update || !has_japanese_release_date?)
-        self.japanese_release_date = bgg_data[:japanese_release_date]
+      if bgg_game_info[:japanese_release_date].present? && (force_update || !has_japanese_release_date?)
+        self.japanese_release_date = bgg_game_info[:japanese_release_date]
       end
       
-      if bgg_data[:japanese_image_url].present? && (japanese_image_url.blank? || force_update)
-        self.japanese_image_url = bgg_data[:japanese_image_url]
+      if bgg_game_info[:japanese_image_url].present? && (japanese_image_url.blank? || force_update)
+        self.japanese_image_url = bgg_game_info[:japanese_image_url]
       end
     end
     
@@ -176,30 +115,27 @@ class Game < ApplicationRecord
     normalize_japanese_publisher
     
     # メタデータを更新
-    if bgg_data[:expansions].present?
-      store_metadata(:expansions, bgg_data[:expansions])
+    if bgg_game_info[:expansions].present?
+      store_metadata(:expansions, bgg_game_info[:expansions])
     end
     
-    if bgg_data[:best_num_players].present?
-      store_metadata(:best_num_players, bgg_data[:best_num_players])
+    if bgg_game_info[:best_num_players].present?
+      store_metadata(:best_num_players, bgg_game_info[:best_num_players])
     end
     
-    if bgg_data[:recommended_num_players].present?
-      store_metadata(:recommended_num_players, bgg_data[:recommended_num_players])
+    if bgg_game_info[:recommended_num_players].present?
+      store_metadata(:recommended_num_players, bgg_game_info[:recommended_num_players])
     end
     
-    if bgg_data[:categories].present?
-      store_metadata(:categories, bgg_data[:categories])
+    if bgg_game_info[:categories].present?
+      store_metadata(:categories, bgg_game_info[:categories])
     end
     
-    if bgg_data[:mechanics].present?
-      store_metadata(:mechanics, bgg_data[:mechanics])
+    if bgg_game_info[:mechanics].present?
+      store_metadata(:mechanics, bgg_game_info[:mechanics])
     end
     
     save!
-    
-    # 拡張情報も更新
-    fetch_and_save_expansions
     
     true
   end
@@ -295,9 +231,29 @@ class Game < ApplicationRecord
     japanese_image_url.presence || image_url
   end
 
-  # レビューの平均スコアを計算
-  def calculate_average_score
-    reviews.average(:score)&.round(1) || 0
+  # レビューの平均ルール複雑度を計算（システムユーザーのレビューも含める）
+  def average_rule_complexity
+    reviews.average(:rule_complexity)&.round(1) || 0
+  end
+  
+  # レビューの平均運要素を計算（ユーザーレビューのみ）
+  def average_luck_factor
+    reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
+  end
+  
+  # レビューの平均インタラクションを計算（ユーザーレビューのみ）
+  def average_interaction
+    reviews.exclude_system_user.average(:interaction)&.round(1) || 0
+  end
+  
+  # レビューの平均ダウンタイムを計算（ユーザーレビューのみ）
+  def average_downtime
+    reviews.exclude_system_user.average(:downtime)&.round(1) || 0
+  end
+  
+  # 総合評価の平均を計算（システムユーザーのレビューも含める）
+  def average_overall_score
+    reviews.average(:overall_score)&.round(1) || 0
   end
   
   # レビュー数を取得（システムユーザーを除く）
@@ -321,64 +277,6 @@ class Game < ApplicationRecord
     # モデルからは直接スコープにアクセスできないため、常にfalseを返す
     # 実際の実装はGameSerializerクラスで行う
     false
-  end
-  
-  # レビューの平均ルール複雑度を計算
-  def average_rule_complexity
-    reviews.average(:rule_complexity)&.round(1) || 0
-  end
-  
-  # レビューの平均運要素を計算（ユーザーレビューのみ）
-  def average_luck_factor
-    reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
-  end
-  
-  # レビューの平均インタラクションを計算（ユーザーレビューのみ）
-  def average_interaction
-    reviews.exclude_system_user.average(:interaction)&.round(1) || 0
-  end
-  
-  # レビューの平均ダウンタイムを計算（ユーザーレビューのみ）
-  def average_downtime
-    reviews.exclude_system_user.average(:downtime)&.round(1) || 0
-  end
-  
-  # ベースゲーム情報を返す
-  def base_game
-    metadata&.dig('base_game')
-  end
-  
-  # 人気のタグを取得
-  def popular_categories
-    categories_count = {}
-    
-    reviews.each do |review|
-      # カテゴリーとカスタムタグを結合
-      all_categories = (review.categories || []) + (review.custom_tags || [])
-      
-      all_categories.each do |category|
-        next unless category.present?
-        categories_count[category] = (categories_count[category] || 0) + 1
-      end
-    end
-    
-    # 出現回数でソート
-    categories_count.sort_by { |_, count| -count }.map { |category, count| { name: category, count: count } }
-  end
-  
-  # 人気のメカニクスを取得
-  def popular_mechanics
-    mechanics = {}
-    
-    reviews.each do |review|
-      (review.mechanics || []).each do |mechanic|
-        next unless mechanic.present?
-        mechanics[mechanic] = (mechanics[mechanic] || 0) + 1
-      end
-    end
-    
-    # 出現回数でソート
-    mechanics.sort_by { |_, count| -count }.map { |mechanic, count| { name: mechanic, count: count } }
   end
   
   # おすすめプレイ人数を取得
@@ -838,5 +736,43 @@ class Game < ApplicationRecord
     create_initial_reviews
     
     true
+  end
+
+  # ベースゲーム情報を返す
+  def base_game
+    metadata&.dig('base_game')
+  end
+  
+  # 人気のタグを取得
+  def popular_categories
+    categories_count = {}
+    
+    reviews.each do |review|
+      # カテゴリーとカスタムタグを結合
+      all_categories = (review.categories || []) + (review.custom_tags || [])
+      
+      all_categories.each do |category|
+        next unless category.present?
+        categories_count[category] = (categories_count[category] || 0) + 1
+      end
+    end
+    
+    # 出現回数でソート
+    categories_count.sort_by { |_, count| -count }.map { |category, count| { name: category, count: count } }
+  end
+  
+  # 人気のメカニクスを取得
+  def popular_mechanics
+    mechanics = {}
+    
+    reviews.each do |review|
+      (review.mechanics || []).each do |mechanic|
+        next unless mechanic.present?
+        mechanics[mechanic] = (mechanics[mechanic] || 0) + 1
+      end
+    end
+    
+    # 出現回数でソート
+    mechanics.sort_by { |_, count| -count }.map { |mechanic, count| { name: mechanic, count: count } }
   end
 end 

@@ -23,6 +23,7 @@ export interface Game {
   play_time?: number;
   min_play_time?: number;
   average_score?: number;
+  average_overall_score?: number;
   weight?: number;
   publisher?: string;
   designer?: string;
