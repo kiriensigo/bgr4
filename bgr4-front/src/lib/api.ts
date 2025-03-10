@@ -340,7 +340,10 @@ export async function getGame(
   authHeaders?: Record<string, string>
 ): Promise<Game> {
   try {
-    const response = await fetch(`${API_BASE_URL}/games/${id}`, {
+    // IDが日本語の場合はエンコードする
+    const encodedId = id.match(/[^\x00-\x7F]/) ? encodeURIComponent(id) : id;
+
+    const response = await fetch(`${API_BASE_URL}/games/${encodedId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -491,80 +494,164 @@ export const socialLogin = async (provider: "google" | "twitter") => {
 export async function registerGame(
   gameDetails: any,
   authHeaders?: Record<string, string>,
-  autoRegister: boolean = false
+  autoRegister: boolean = false,
+  manualRegistration: boolean = false
 ) {
   try {
     console.log("Sending game details to API:", gameDetails);
     console.log("Auth headers for game registration:", authHeaders);
-    console.log("Japanese name being sent:", gameDetails.japaneseName);
-    console.log(
-      "Japanese publisher being sent:",
-      gameDetails.japanesePublisher
-    );
-    console.log(
-      "Japanese release date being sent:",
-      gameDetails.japaneseReleaseDate
-    );
-    console.log("Best players being sent:", gameDetails.bestPlayers);
-    console.log(
-      "Recommended players being sent:",
-      gameDetails.recommendedPlayers
-    );
+    console.log("Manual registration mode:", manualRegistration);
 
-    // ゲームデータを整形
-    const gameData = {
-      bgg_id: gameDetails.id,
-      name: gameDetails.name,
-      japanese_name: gameDetails.japaneseName,
-      description: gameDetails.description,
-      image_url: gameDetails.image,
-      japanese_image_url: gameDetails.japaneseImage,
-      min_players: gameDetails.minPlayers,
-      max_players: gameDetails.maxPlayers,
-      min_play_time: gameDetails.minPlayTime,
-      play_time: gameDetails.maxPlayTime,
-      average_score: gameDetails.averageRating,
-      weight: gameDetails.weight,
-      publisher: gameDetails.publisher,
-      designer: gameDetails.designer,
-      release_date: gameDetails.releaseDate,
-      japanese_release_date: gameDetails.japaneseReleaseDate,
-      japanese_publisher: gameDetails.japanesePublisher,
-      expansions: gameDetails.expansions,
-      best_num_players: gameDetails.bestPlayers,
-      recommended_num_players: gameDetails.recommendedPlayers,
-    };
+    if (manualRegistration) {
+      console.log("Using manual registration mode");
+      // 手動登録モードの場合は、gameDetailsをそのまま使用
+      const gameData = {
+        name: gameDetails.name,
+        japanese_name: gameDetails.japanese_name,
+        japanese_description: gameDetails.japanese_description,
+        japanese_image_url: gameDetails.japanese_image_url,
+        min_players: gameDetails.min_players,
+        max_players: gameDetails.max_players,
+        play_time: gameDetails.play_time,
+        min_play_time: gameDetails.min_play_time,
+        weight: gameDetails.weight,
+        japanese_publisher: gameDetails.japanese_publisher,
+        japanese_release_date: gameDetails.japanese_release_date,
+      };
 
-    console.log("Formatted game data for API:", gameData);
+      // リクエストヘッダーを作成
+      const headers = {
+        "Content-Type": "application/json",
+        Referer: `${window.location.origin}/games/register`,
+        ...(authHeaders || {}),
+      };
 
-    // リクエストヘッダーを作成
-    const headers = {
-      "Content-Type": "application/json",
-      Referer: `${window.location.origin}/games/register`,
-      ...(authHeaders || {}),
-    };
+      console.log("Manual game data for API:", gameData);
+      console.log("Final request headers:", headers);
 
-    console.log("Final request headers:", headers);
-
-    const response = await fetch(`${API_BASE_URL}/games`, {
-      method: "POST",
-      headers,
-      credentials: "include",
-      body: JSON.stringify({
+      // リクエストボディをログに出力
+      const requestBody = {
         game: gameData,
-        auto_register: autoRegister,
-      }),
-    });
+        manual_registration: true,
+        use_japanese_name_as_id: true, // 日本語名をIDとして使用するフラグを追加
+      };
+      console.log("Request body:", JSON.stringify(requestBody));
 
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ error: "Unknown error" }));
-      console.error("Error response from API:", errorData);
-      throw new Error(errorData.error || "ゲームの登録に失敗しました");
+      const response = await fetch(`${API_BASE_URL}/games`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        console.error("Error response from API:", errorData);
+
+        // エラーの詳細を表示（オブジェクトの内容を完全に展開）
+        console.error("Error details:", JSON.stringify(errorData, null, 2));
+        throw new Error(errorData.error || "ゲームの登録に失敗しました");
+      }
+
+      // レスポンスデータを取得
+      const responseData = await response.json().catch((err) => {
+        console.error("Error parsing JSON response:", err);
+        return {};
+      });
+
+      console.log("Response JSON:", JSON.stringify(responseData, null, 2));
+
+      // データの構造を確認し、必要なプロパティを確実に返す
+      if (responseData && typeof responseData === "object") {
+        // ゲームIDが含まれていることを確認
+        if (!responseData.id && !responseData.bgg_id && responseData.game) {
+          // gameオブジェクト内にIDがある場合
+          return {
+            ...responseData,
+            id: responseData.game.id || null,
+            bgg_id: responseData.game.bgg_id || null,
+          };
+        }
+      }
+
+      return responseData;
+    } else {
+      // BGG登録モード（既存のコード）
+      console.log("Japanese name being sent:", gameDetails.japaneseName);
+      console.log(
+        "Japanese publisher being sent:",
+        gameDetails.japanesePublisher
+      );
+      console.log(
+        "Japanese release date being sent:",
+        gameDetails.japaneseReleaseDate
+      );
+      console.log("Best players being sent:", gameDetails.bestPlayers);
+      console.log(
+        "Recommended players being sent:",
+        gameDetails.recommendedPlayers
+      );
+
+      // ゲームデータを整形
+      const gameData = {
+        bgg_id: gameDetails.id,
+        name: gameDetails.name,
+        japanese_name: gameDetails.japaneseName,
+        description: gameDetails.description,
+        image_url: gameDetails.image,
+        japanese_image_url: gameDetails.japaneseImage,
+        min_players: gameDetails.minPlayers,
+        max_players: gameDetails.maxPlayers,
+        min_play_time: gameDetails.minPlayTime,
+        play_time: gameDetails.maxPlayTime,
+        average_score: gameDetails.averageRating,
+        weight: gameDetails.weight,
+        publisher: gameDetails.publisher,
+        designer: gameDetails.designer,
+        release_date: gameDetails.releaseDate,
+        japanese_release_date: gameDetails.japaneseReleaseDate,
+        japanese_publisher: gameDetails.japanesePublisher,
+        expansions: gameDetails.expansions,
+        best_num_players: gameDetails.bestPlayers,
+        recommended_num_players: gameDetails.recommendedPlayers,
+      };
+
+      console.log("Formatted game data for API:", gameData);
+
+      // リクエストヘッダーを作成
+      const headers = {
+        "Content-Type": "application/json",
+        Referer: `${window.location.origin}/games/register`,
+        ...(authHeaders || {}),
+      };
+
+      console.log("Final request headers:", headers);
+
+      const response = await fetch(`${API_BASE_URL}/games`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({
+          game: gameData,
+          auto_register: autoRegister,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        console.error("Error response from API:", errorData);
+
+        // エラーの詳細を表示（オブジェクトの内容を完全に展開）
+        console.error("Error details:", JSON.stringify(errorData, null, 2));
+        throw new Error(errorData.error || "ゲームの登録に失敗しました");
+      }
+
+      return response.json();
     }
-
-    return response.json();
   } catch (error) {
     console.error("Error registering game:", error);
     throw error;

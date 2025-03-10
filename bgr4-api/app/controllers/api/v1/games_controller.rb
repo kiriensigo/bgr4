@@ -121,8 +121,23 @@ module Api
       end
 
       def create
+        # デバッグログ - 受け取ったパラメータを記録
+        Rails.logger.info "Received params: #{params.inspect}"
+        
         # フロントエンドから送信されたパラメータを取得
         game_params = params[:game]
+        
+        # 手動登録モードかどうかを確認（文字列の'true'またはboolean値のtrueを受け付ける）
+        manual_registration = params[:manual_registration] == 'true' || params[:manual_registration] == true
+        
+        # デバッグログ
+        Rails.logger.info "Manual registration flag: #{params[:manual_registration].inspect}, Evaluated as: #{manual_registration}"
+        
+        if manual_registration
+          # 手動登録の場合
+          create_manual_game
+          return
+        end
         
         # パラメータが不足している場合はエラーを返す
         if game_params.blank? || game_params[:bgg_id].blank?
@@ -148,7 +163,7 @@ module Api
         bgg_game_info = BggService.get_game_details(bgg_id)
         
         if bgg_game_info.nil?
-          render json: { error: "BGGからゲーム情報を取得できませんでした" }, status: :not_found
+          render json: { error: "ゲーム情報の更新に失敗しました" }, status: :not_found
           return
         end
         
@@ -208,6 +223,93 @@ module Api
           render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
           render json: { errors: @game.errors }, status: :unprocessable_entity
+        end
+      end
+
+      # 手動登録用のメソッド
+      def create_manual_game
+        # フロントエンドから送信されたパラメータを取得
+        game_params = params[:game]
+        
+        # デバッグログ
+        Rails.logger.info "Manual game params: #{game_params.inspect}"
+        Rails.logger.info "Manual registration flag: #{params[:manual_registration].inspect}"
+        
+        # パラメータが不足している場合はエラーを返す
+        if game_params.blank? || game_params[:japanese_name].blank?
+          render json: { error: "ゲーム名が必要です" }, status: :bad_request
+          return
+        end
+        
+        # 必須項目のチェック
+        if game_params[:japanese_image_url].blank?
+          render json: { error: "日本語版画像URLが必要です" }, status: :bad_request
+          return
+        end
+        
+        if game_params[:min_players].blank?
+          render json: { error: "最少プレイ人数が必要です" }, status: :bad_request
+          return
+        end
+        
+        if game_params[:max_players].blank?
+          render json: { error: "最大プレイ人数が必要です" }, status: :bad_request
+          return
+        end
+        
+        if game_params[:play_time].blank?
+          render json: { error: "プレイ時間が必要です" }, status: :bad_request
+          return
+        end
+        
+        # 独自のBGG IDを生成（BGGと被らないように'manual-'プレフィックスをつける）
+        timestamp = Time.now.to_i
+        random_suffix = SecureRandom.hex(4)
+        manual_bgg_id = "manual-#{timestamp}-#{random_suffix}"
+        
+        # 英語名の処理（空の場合は日本語名を使用）
+        name_to_use = game_params[:name].present? ? game_params[:name] : game_params[:japanese_name]
+        Rails.logger.info "Using name: #{name_to_use} (original name: #{game_params[:name].inspect}, japanese_name: #{game_params[:japanese_name].inspect})"
+        
+        # ゲームを作成
+        @game = Game.new(
+          bgg_id: manual_bgg_id,
+          name: name_to_use,
+          japanese_name: game_params[:japanese_name],
+          japanese_description: game_params[:japanese_description],
+          japanese_image_url: game_params[:japanese_image_url],
+          min_players: game_params[:min_players],
+          max_players: game_params[:max_players],
+          play_time: game_params[:play_time],
+          min_play_time: game_params[:min_play_time],
+          japanese_publisher: game_params[:japanese_publisher],
+          japanese_release_date: game_params[:japanese_release_date],
+          registered_on_site: true
+        )
+        
+        # 日本語出版社名を正規化
+        @game.normalize_japanese_publisher if @game.japanese_publisher.present?
+        
+        # 保存前にバリデーションチェック
+        if @game.valid?
+          Rails.logger.info "Game is valid, saving..."
+        else
+          Rails.logger.error "Game validation failed: #{@game.errors.full_messages.join(', ')}"
+        end
+        
+        if @game.save
+          # 初期レビューを作成（手動登録フラグをtrueで渡す）
+          @game.create_initial_reviews(true)
+          
+          # 編集履歴を作成
+          @game.create_edit_history({}, @game.attributes, current_user)
+          
+          render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
+        else
+          # より詳細なエラーメッセージを返す
+          Rails.logger.error "Game save failed: #{@game.errors.full_messages.join(', ')}"
+          Rails.logger.error "Game attributes: #{@game.attributes.inspect}"
+          render json: { errors: @game.errors.messages }, status: :unprocessable_entity
         end
       end
 

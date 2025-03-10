@@ -364,6 +364,14 @@ export default function GamePage({ params }: GamePageProps) {
           // まずAPIからゲーム情報の取得を試みる
           const headers = user ? getAuthHeaders() : {};
 
+          // パラメータのIDをログに出力
+          console.log("Game ID from params:", params.id);
+
+          // IDが存在しない場合はエラーを投げる
+          if (!params.id) {
+            throw new Error("ゲームIDが指定されていません");
+          }
+
           // キャッシュを無効化するオプションを追加
           const options = {
             headers,

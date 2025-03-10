@@ -233,56 +233,17 @@ export default function RegisterGamePage() {
       // 手動登録フラグを追加
       const response = await registerGame(gameData, authHeaders, false, true);
 
-      // レスポンスの詳細をログに出力
+      // レスポンスをログに出力
       console.log("Registration response:", response);
-      console.log("Response type:", typeof response);
-      console.log("Response keys:", Object.keys(response));
-      console.log("Response JSON:", JSON.stringify(response, null, 2));
 
-      // レスポンス内のゲームオブジェクトを確認
-      if (response.game) {
-        console.log("Game object in response:", response.game);
-        console.log("Game ID in game object:", response.game.id);
-        console.log("BGG ID in game object:", response.game.bgg_id);
-      }
-
-      // レスポンスからゲームIDを取得（bgg_id、id、または他のプロパティ）
-      // 手動登録の場合は日本語名をIDとして使用することもできる
-      const gameId =
-        response?.bgg_id ||
-        response?.id ||
-        response?.game?.id ||
-        response?.game?.bgg_id ||
-        (manualRegistration ? manualForm.japanese_name : null);
-
-      console.log("Extracted game ID:", gameId);
-
-      if (!response || !gameId) {
-        console.error("Invalid response or missing game ID:", response);
-        setError(
-          "ゲームの登録に成功しましたが、IDの取得に失敗しました。ホームページにリダイレクトします。"
-        );
-
-        // 3秒後にホームページにリダイレクト
-        setTimeout(() => {
-          router.push("/");
-        }, 3000);
-
-        return;
+      if (!response || !response.bgg_id) {
+        console.error("Invalid response or missing bgg_id:", response);
+        throw new Error("ゲームの登録に成功しましたが、IDの取得に失敗しました");
       }
 
       // 登録成功後、ゲーム詳細ページに遷移
-      console.log("Redirecting to game page with ID:", gameId);
-
-      // 日本語名をIDとして使用する場合はエンコードする
-      const encodedGameId =
-        typeof gameId === "string" && gameId.match(/[^\x00-\x7F]/)
-          ? encodeURIComponent(gameId)
-          : gameId;
-
-      router.push(`/games/${encodedGameId}?refresh=true`);
+      router.push(`/games/${response.bgg_id}?refresh=true`);
     } catch (err) {
-      console.error("Manual registration error:", err);
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"
       );

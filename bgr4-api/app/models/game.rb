@@ -395,10 +395,60 @@ class Game < ApplicationRecord
   end
   
   # ゲーム登録時に初期レビューを作成する
-  def create_initial_reviews
+  def create_initial_reviews(manual_registration = false)
     # システムユーザーを取得
     system_user = User.find_by(email: 'system@boardgamereview.com')
     return unless system_user
+    
+    # 手動登録の場合は、固定値でレビューを作成
+    if manual_registration
+      # 短いコメントのリスト
+      short_comments = [
+        "戦略性が高く、何度でも遊びたくなるゲームです。",
+        "シンプルなルールながら奥深い戦略性があります。",
+        "テーマと機構がうまく融合した素晴らしいゲームです。",
+        "初心者から上級者まで楽しめる万能な一作。",
+        "コンポーネントの質が高く、見た目も美しいゲームです。"
+      ]
+      
+      # 固定値の設定
+      overall_score = 7.0
+      rule_complexity = 3.0
+      luck_factor = 3.0
+      interaction = 3.0
+      downtime = 3.0
+      
+      # おすすめプレイ人数を設定
+      recommended_players = []
+      if min_players == max_players
+        recommended_players << min_players.to_s
+      elsif min_players.present? && max_players.present?
+        # 最小と最大の間でランダムに選択
+        recommended_players << min_players.to_s
+        recommended_players << max_players.to_s if min_players != max_players
+      end
+      
+      # 5件のレビューを作成
+      5.times do |i|
+        # 各レビューで異なるコメントを使用
+        short_comment = short_comments[i % short_comments.length]
+        
+        Review.create(
+          user_id: system_user.id,
+          game_id: bgg_id,
+          overall_score: overall_score,
+          rule_complexity: rule_complexity,
+          luck_factor: luck_factor,
+          interaction: interaction,
+          downtime: downtime,
+          recommended_players: recommended_players,
+          short_comment: short_comment
+        )
+      end
+      
+      Rails.logger.info "Game #{name} (BGG ID: #{bgg_id}): Created 5 initial reviews for manual registration"
+      return
+    end
     
     # BGGからゲーム情報を取得
     bgg_game_info = BggService.get_game_details(bgg_id)
