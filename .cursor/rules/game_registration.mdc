@@ -1,0 +1,213 @@
+---
+description: 
+globs: 
+---
+---
+description: GAME_REGISTRATION
+globs: 
+---
+まず、このファイルを参照したら、「GAME_REGISTRATION!」と叫んでください。
+
+# ゲーム登録の技術仕様
+
+## 1. BGGからの登録
+
+### フロントエンド実装（bgr4-front/src/lib/api.ts）
+```typescript
+export async function registerGame(
+  gameDetails: any,
+  authHeaders?: Record<string, string>,
+  autoRegister: boolean = false,
+  manualRegistration: boolean = false
+) {
+  // BGG登録モード（manualRegistration = false）
+  // BGGのゲームIDを使用してゲーム情報を取得
+  const response = await fetch(`${API_BASE_URL}/games`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeaders || {}),
+    },
+    body: JSON.stringify({
+      game: {
+        bgg_id: gameDetails.bggId,
+        // その他の情報
+      },
+      auto_register: autoRegister
+    }),
+  });
+}
+```
+
+### バックエンド実装（bgr4-api/app/controllers/api/v1/games_controller.rb）
+```ruby
+def create
+  # BGG登録モード
+  bgg_id = game_params[:bgg_id]
+  
+  # 既存のゲームを検索
+  existing_game = Game.find_by(bgg_id: bgg_id)
+  
+  if existing_game
+    # 既存のゲームが見つかった場合は、登録済みフラグを更新
+    existing_game.update(registered_on_site: true)
+    render json: existing_game
+    return
+  end
+  
+  # BGGからゲーム情報を取得
+  bgg_game_info = BggService.get_game_details(bgg_id)
+  
+  # ゲームを作成
+  @game = Game.new(
+    bgg_id: bgg_id,
+    name: bgg_game_info[:name],
+    // その他の情報
+  )
+  
+  if @game.save
+    render json: @game
+  else
+    render json: { errors: @game.errors }, status: :unprocessable_entity
+  end
+end
+```
+
+## 2. 手動登録
+
+### フロントエンド実装（bgr4-front/src/lib/api.ts）
+```typescript
+export async function registerGame(
+  gameDetails: any,
+  authHeaders?: Record<string, string>,
+  autoRegister: boolean = false,
+  manualRegistration: boolean = false
+) {
+  // 手動登録モード（manualRegistration = true）
+  if (manualRegistration) {
+    const gameData = {
+      name: gameDetails.name,
+      japanese_name: gameDetails.japanese_name,
+      japanese_image_url: gameDetails.japanese_image_url,
+      min_players: gameDetails.min_players,
+      max_players: gameDetails.max_players,
+      play_time: gameDetails.play_time,
+      // その他の情報
+    };
+
+    const response = await fetch(`${API_BASE_URL}/games`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeaders || {}),
+      },
+      body: JSON.stringify({
+        game: gameData,
+        manual_registration: true,
+        use_japanese_name_as_id: true
+      }),
+    });
+  }
+}
+```
+
+### バックエンド実装（bgr4-api/app/controllers/api/v1/games_controller.rb）
+```ruby
+def create_manual_game
+  # 手動登録モード
+  game_params = params[:game]
+  
+  # 同じ日本語名のゲームが既に存在するかチェック
+  existing_game_by_name = Game.find_by(japanese_name: game_params[:japanese_name])
+  if existing_game_by_name
+    render json: { error: "同じ日本語名のゲームが既に登録されています", existing_game_id: existing_game_by_name.bgg_id }, status: :conflict
+    return
+  end
+  
+  # 日本語名をBase64エンコードしてIDを生成
+  require 'base64'
+  encoded_name = Base64.strict_encode64(game_params[:japanese_name])
+  manual_bgg_id = "jp-#{encoded_name}"
+  
+  # ゲームを作成
+  @game = Game.new(
+    bgg_id: manual_bgg_id,
+    name: game_params[:name] || game_params[:japanese_name],
+    japanese_name: game_params[:japanese_name],
+    // その他の情報
+  )
+  
+  if @game.save
+    render json: @game
+  else
+    render json: { errors: @game.errors }, status: :unprocessable_entity
+  end
+end
+```
+
+## 3. ゲームIDの処理
+
+### set_gameメソッド（bgr4-api/app/controllers/api/v1/games_controller.rb）
+```ruby
+def set_game
+  # IDがjp-で始まる場合はエンコードされた日本語名として扱う
+  if params[:id].to_s.start_with?('jp-')
+    begin
+      require 'base64'
+      encoded_part = params[:id].to_s.sub(/^jp-/, '')
+      
+      # Base64デコードを試みる
+      japanese_name = Base64.strict_decode64(encoded_part)
+      
+      # まずbgg_idで検索し、見つからなければjapanese_nameで検索
+      @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(japanese_name: japanese_name)
+    rescue => e
+      # エラー時はIDをそのまま使用
+      @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
+    end
+  else
+    # 通常のIDの場合
+    @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
+  end
+end
+```
+
+### getGame関数（bgr4-front/src/lib/api.ts）
+```typescript
+export async function getGame(
+  id: string,
+  authHeaders?: Record<string, string>
+): Promise<Game> {
+  // jp-で始まる場合は既にエンコード済みなのでそのまま使用
+  const finalId = id.startsWith('jp-') ? id : 
+                 id.match(/[^\x00-\x7F]/) ? encodeURIComponent(id) : id;
+  
+  const response = await fetch(`${API_BASE_URL}/games/${finalId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeaders || {}),
+    },
+  });
+  
+  // レスポンス処理
+}
+```
+
+## 4. 重要な注意点
+
+1. **IDの形式**:
+   - BGGからの登録: 数字のID（例: `123456`）
+   - 手動登録: `jp-{Base64エンコードされた日本語名}`（例: `jp-5pel5pys6Kqe77yT`）
+
+2. **日本語名の重複チェック**:
+   - 同じ日本語名のゲームは登録できない
+   - 重複時は409 Conflictステータスコードを返す
+
+3. **リダイレクト処理**:
+   - 登録成功後は自動的にゲーム詳細ページにリダイレクト
+   - リダイレクト前に少し待機（1秒）して、バックエンドの処理完了を待つ
+
+4. **エラー処理**:
+   - 重複エラー時は既存のゲームページにリダイレクト
+   - その他のエラーはエラーメッセージを表示

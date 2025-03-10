@@ -307,7 +307,7 @@ async function createGame(bggGame: BGGGameDetails): Promise<Game> {
           image_url: bggGame.image,
           min_players: bggGame.minPlayers,
           max_players: bggGame.maxPlayers,
-          play_time: bggGame.playTime,
+          play_time: bggGame.minPlayTime,
           average_score: bggGame.averageRating || 0,
           weight: bggGame.weight || 1,
           best_num_players: bggGame.bestPlayers || [],
@@ -349,12 +349,11 @@ export async function getGame(
 
     // IDが日本語の場合はエンコードする
     // jp-で始まる場合は既にエンコード済みなのでそのまま使用
-    const finalId =
-      id.startsWith("jp-") || id.startsWith("manual-jp-")
-        ? id
-        : id.match(/[^\x00-\x7F]/)
-        ? encodeURIComponent(id)
-        : id;
+    const finalId = id.startsWith("jp-")
+      ? id
+      : id.match(/[^\x00-\x7F]/)
+      ? encodeURIComponent(id)
+      : id;
 
     console.log("Fetching game with ID:", id);
     console.log("Final ID used for API call:", finalId);
@@ -528,7 +527,7 @@ export async function registerGame(
         japanese_image_url: gameDetails.japanese_image_url,
         min_players: gameDetails.min_players,
         max_players: gameDetails.max_players,
-        play_time: gameDetails.play_time,
+        play_time: gameDetails.min_play_time,
         min_play_time: gameDetails.min_play_time,
         weight: gameDetails.weight,
         japanese_publisher: gameDetails.japanese_publisher,

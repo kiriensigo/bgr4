@@ -273,7 +273,7 @@ export default function RegisterGamePage() {
         // 登録成功後、ゲーム詳細ページに遷移
         console.log("Redirecting to game page with ID:", gameId);
 
-        // IDが既にmanual-jp-で始まる場合はエンコード済みなのでそのまま使用
+        // IDが既にjp-で始まる場合はエンコード済みなのでそのまま使用
         const encodedGameId = gameId;
 
         // リダイレクト前に少し待機して、バックエンドの処理が完了するのを待つ

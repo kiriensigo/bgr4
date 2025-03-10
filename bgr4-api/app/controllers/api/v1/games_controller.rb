@@ -798,26 +798,6 @@ module Api
             Rails.logger.error "Error processing ID: #{e.message}"
             @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
           end
-        # 従来のmanual-jp-プレフィックスの処理（互換性のため）
-        elsif params[:id].to_s.start_with?('manual-jp-')
-          begin
-            require 'base64'
-            encoded_part = params[:id].to_s.sub(/^manual-jp-/, '')
-            japanese_name = Base64.strict_decode64(encoded_part)
-            Rails.logger.info "Decoded Japanese name from ID: #{japanese_name}"
-            
-            # まずbgg_idで検索し、見つからなければjapanese_nameで検索
-            @game = Game.find_by(bgg_id: params[:id])
-            
-            unless @game
-              # japanese_nameで検索
-              @game = Game.find_by(japanese_name: japanese_name)
-              Rails.logger.info "Found game by Japanese name: #{@game.inspect}"
-            end
-          rescue => e
-            Rails.logger.error "Error decoding ID: #{e.message}"
-            @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
-          end
         else
           @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
           Rails.logger.info "Found game by ID: #{@game.inspect}"
