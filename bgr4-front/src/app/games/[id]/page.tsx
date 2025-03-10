@@ -366,6 +366,8 @@ export default function GamePage({ params }: GamePageProps) {
 
           // パラメータのIDをログに出力
           console.log("Game ID from params:", params.id);
+          console.log("Params object:", params);
+          console.log("URL path:", window.location.pathname);
 
           // IDが存在しない場合はエラーを投げる
           if (!params.id) {

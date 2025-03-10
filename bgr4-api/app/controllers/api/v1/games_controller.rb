@@ -84,6 +84,14 @@ module Api
       end
 
       def show
+        # @gameはset_gameメソッドで設定済み
+        
+        # ゲームが見つからない場合は404エラーを返す
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+        
         # レビューにユーザー情報を含める（システムユーザーのレビューを除外）
         reviews_with_users = @game.reviews.exclude_system_user.includes(:user).map do |review|
           review_json = review.as_json
@@ -234,10 +242,19 @@ module Api
         # デバッグログ
         Rails.logger.info "Manual game params: #{game_params.inspect}"
         Rails.logger.info "Manual registration flag: #{params[:manual_registration].inspect}"
+        Rails.logger.info "Use Japanese name as ID flag: #{params[:use_japanese_name_as_id].inspect}"
         
         # パラメータが不足している場合はエラーを返す
         if game_params.blank? || game_params[:japanese_name].blank?
           render json: { error: "ゲーム名が必要です" }, status: :bad_request
+          return
+        end
+        
+        # 同じ日本語名のゲームが既に存在するかチェック
+        existing_game_by_name = Game.find_by(japanese_name: game_params[:japanese_name])
+        if existing_game_by_name
+          Rails.logger.info "Game with the same Japanese name already exists: #{existing_game_by_name.bgg_id}"
+          render json: { error: "同じ日本語名のゲームが既に登録されています", existing_game_id: existing_game_by_name.bgg_id }, status: :conflict
           return
         end
         
@@ -262,10 +279,23 @@ module Api
           return
         end
         
-        # 独自のBGG IDを生成（BGGと被らないように'manual-'プレフィックスをつける）
-        timestamp = Time.now.to_i
-        random_suffix = SecureRandom.hex(4)
-        manual_bgg_id = "manual-#{timestamp}-#{random_suffix}"
+        # 常に日本語名をIDとして使用する
+        use_japanese_name_as_id = true
+        
+        if use_japanese_name_as_id && game_params[:japanese_name].present?
+          # 日本語名をIDとして使用する場合は、ASCII文字列に変換する
+          # 日本語名をBase64エンコードしてASCII文字列に変換
+          require 'base64'
+          encoded_name = Base64.strict_encode64(game_params[:japanese_name])
+          manual_bgg_id = "jp-#{encoded_name}"
+          Rails.logger.info "Using encoded Japanese name as ID: #{manual_bgg_id}"
+        else
+          # 従来の方法でIDを生成
+          timestamp = Time.now.to_i
+          random_suffix = SecureRandom.hex(4)
+          manual_bgg_id = "manual-#{timestamp}-#{random_suffix}"
+          Rails.logger.info "Using generated ID: #{manual_bgg_id}"
+        end
         
         # 英語名の処理（空の場合は日本語名を使用）
         name_to_use = game_params[:name].present? ? game_params[:name] : game_params[:japanese_name]
@@ -735,7 +765,63 @@ module Api
       private
 
       def set_game
-        @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
+        # IDのデバッグログを出力
+        Rails.logger.info "Finding game with ID: #{params[:id]}"
+        
+        # IDがjp-で始まる場合はエンコードされた日本語名として扱う
+        if params[:id].to_s.start_with?('jp-')
+          begin
+            require 'base64'
+            encoded_part = params[:id].to_s.sub(/^jp-/, '')
+            
+            # Base64デコードを試みる（エンコードされた日本語名の場合）
+            begin
+              japanese_name = Base64.strict_decode64(encoded_part)
+              Rails.logger.info "Decoded Japanese name from ID: #{japanese_name}"
+              
+              # まずbgg_idで検索し、見つからなければjapanese_nameで検索
+              @game = Game.find_by(bgg_id: params[:id])
+              
+              unless @game
+                # japanese_nameで検索
+                @game = Game.find_by(japanese_name: japanese_name)
+                Rails.logger.info "Found game by Japanese name: #{@game.inspect}"
+              end
+            rescue => e
+              # デコードに失敗した場合は、従来の方法（jp-プレフィックスの直接の日本語名）を試す
+              Rails.logger.info "Failed to decode as Base64, trying direct Japanese name"
+              japanese_name = encoded_part
+              @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(japanese_name: japanese_name)
+              Rails.logger.info "Found game by direct Japanese name: #{@game.inspect}"
+            end
+          rescue => e
+            Rails.logger.error "Error processing ID: #{e.message}"
+            @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
+          end
+        # 従来のmanual-jp-プレフィックスの処理（互換性のため）
+        elsif params[:id].to_s.start_with?('manual-jp-')
+          begin
+            require 'base64'
+            encoded_part = params[:id].to_s.sub(/^manual-jp-/, '')
+            japanese_name = Base64.strict_decode64(encoded_part)
+            Rails.logger.info "Decoded Japanese name from ID: #{japanese_name}"
+            
+            # まずbgg_idで検索し、見つからなければjapanese_nameで検索
+            @game = Game.find_by(bgg_id: params[:id])
+            
+            unless @game
+              # japanese_nameで検索
+              @game = Game.find_by(japanese_name: japanese_name)
+              Rails.logger.info "Found game by Japanese name: #{@game.inspect}"
+            end
+          rescue => e
+            Rails.logger.error "Error decoding ID: #{e.message}"
+            @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
+          end
+        else
+          @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
+          Rails.logger.info "Found game by ID: #{@game.inspect}"
+        end
         
         unless @game
           render json: { error: 'ゲームが見つかりません' }, status: :not_found

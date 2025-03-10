@@ -230,57 +230,82 @@ export default function RegisterGamePage() {
       // AuthContextのgetAuthHeaders関数を使用
       const authHeaders = user ? getAuthHeaders() : {};
 
-      // 手動登録フラグを追加
-      const response = await registerGame(gameData, authHeaders, false, true);
+      try {
+        // 手動登録フラグを追加
+        const response = await registerGame(gameData, authHeaders, false, true);
 
-      // レスポンスの詳細をログに出力
-      console.log("Registration response:", response);
-      console.log("Response type:", typeof response);
-      console.log("Response keys:", Object.keys(response));
-      console.log("Response JSON:", JSON.stringify(response, null, 2));
+        // レスポンスの詳細をログに出力
+        console.log("Registration response:", response);
+        console.log("Response type:", typeof response);
+        console.log("Response keys:", Object.keys(response));
+        console.log("Response JSON:", JSON.stringify(response, null, 2));
 
-      // レスポンス内のゲームオブジェクトを確認
-      if (response.game) {
-        console.log("Game object in response:", response.game);
-        console.log("Game ID in game object:", response.game.id);
-        console.log("BGG ID in game object:", response.game.bgg_id);
-      }
+        // レスポンス内のゲームオブジェクトを確認
+        if (response.game) {
+          console.log("Game object in response:", response.game);
+          console.log("Game ID in game object:", response.game.id);
+          console.log("BGG ID in game object:", response.game.bgg_id);
+        }
 
-      // レスポンスからゲームIDを取得（bgg_id、id、または他のプロパティ）
-      // 手動登録の場合は日本語名をIDとして使用することもできる
-      const gameId =
-        response?.bgg_id ||
-        response?.id ||
-        response?.game?.id ||
-        response?.game?.bgg_id ||
-        (manualRegistration ? manualForm.japanese_name : null);
+        // レスポンスからゲームIDを取得（bgg_id、id、または他のプロパティ）
+        let gameId =
+          response?.bgg_id ||
+          response?.id ||
+          response?.game?.id ||
+          response?.game?.bgg_id;
 
-      console.log("Extracted game ID:", gameId);
+        console.log("Extracted game ID:", gameId);
 
-      if (!response || !gameId) {
-        console.error("Invalid response or missing game ID:", response);
-        setError(
-          "ゲームの登録に成功しましたが、IDの取得に失敗しました。ホームページにリダイレクトします。"
-        );
+        if (!gameId) {
+          console.error("Invalid response or missing game ID:", response);
+          setError(
+            "ゲームの登録に成功しましたが、IDの取得に失敗しました。ホームページにリダイレクトします。"
+          );
 
-        // 3秒後にホームページにリダイレクト
+          // 3秒後にホームページにリダイレクト
+          setTimeout(() => {
+            router.push("/");
+          }, 3000);
+
+          return;
+        }
+
+        // 登録成功後、ゲーム詳細ページに遷移
+        console.log("Redirecting to game page with ID:", gameId);
+
+        // IDが既にmanual-jp-で始まる場合はエンコード済みなのでそのまま使用
+        const encodedGameId = gameId;
+
+        // リダイレクト前に少し待機して、バックエンドの処理が完了するのを待つ
         setTimeout(() => {
-          router.push("/");
-        }, 3000);
+          console.log(
+            "Now redirecting to:",
+            `/games/${encodedGameId}?refresh=true`
+          );
+          router.push(`/games/${encodedGameId}?refresh=true`);
+        }, 1000);
+      } catch (err) {
+        // エラーメッセージを解析して、重複エラーの場合は既存のゲームページにリダイレクト
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error("Registration error:", errorMessage);
 
-        return;
+        // 重複エラーの場合（エラーメッセージに | が含まれている）
+        if (errorMessage.includes("|")) {
+          const [message, existingGameId] = errorMessage.split("|");
+          setError(`${message} 既存のゲームページにリダイレクトします。`);
+
+          // 3秒後に既存のゲームページにリダイレクト
+          setTimeout(() => {
+            const encodedGameId = existingGameId.match(/[^\x00-\x7F]/)
+              ? encodeURIComponent(existingGameId)
+              : existingGameId;
+            router.push(`/games/${encodedGameId}?refresh=true`);
+          }, 3000);
+        } else {
+          // 通常のエラー
+          setError(errorMessage);
+        }
       }
-
-      // 登録成功後、ゲーム詳細ページに遷移
-      console.log("Redirecting to game page with ID:", gameId);
-
-      // 日本語名をIDとして使用する場合はエンコードする
-      const encodedGameId =
-        typeof gameId === "string" && gameId.match(/[^\x00-\x7F]/)
-          ? encodeURIComponent(gameId)
-          : gameId;
-
-      router.push(`/games/${encodedGameId}?refresh=true`);
     } catch (err) {
       console.error("Manual registration error:", err);
       setError(

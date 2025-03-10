@@ -340,10 +340,26 @@ export async function getGame(
   authHeaders?: Record<string, string>
 ): Promise<Game> {
   try {
-    // IDが日本語の場合はエンコードする
-    const encodedId = id.match(/[^\x00-\x7F]/) ? encodeURIComponent(id) : id;
+    // IDが未定義の場合はエラーを投げる
+    if (!id) {
+      throw new Error(
+        "ゲームIDが指定されていません。ゲーム登録後のリダイレクトに問題がある可能性があります。"
+      );
+    }
 
-    const response = await fetch(`${API_BASE_URL}/games/${encodedId}`, {
+    // IDが日本語の場合はエンコードする
+    // jp-で始まる場合は既にエンコード済みなのでそのまま使用
+    const finalId =
+      id.startsWith("jp-") || id.startsWith("manual-jp-")
+        ? id
+        : id.match(/[^\x00-\x7F]/)
+        ? encodeURIComponent(id)
+        : id;
+
+    console.log("Fetching game with ID:", id);
+    console.log("Final ID used for API call:", finalId);
+
+    const response = await fetch(`${API_BASE_URL}/games/${finalId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -552,6 +568,12 @@ export async function registerGame(
 
         // エラーの詳細を表示（オブジェクトの内容を完全に展開）
         console.error("Error details:", JSON.stringify(errorData, null, 2));
+
+        // 409 Conflictの場合は、既存のゲームIDを含めたエラーを投げる
+        if (response.status === 409 && errorData.existing_game_id) {
+          throw new Error(`${errorData.error}|${errorData.existing_game_id}`);
+        }
+
         throw new Error(errorData.error || "ゲームの登録に失敗しました");
       }
 
@@ -647,6 +669,12 @@ export async function registerGame(
 
         // エラーの詳細を表示（オブジェクトの内容を完全に展開）
         console.error("Error details:", JSON.stringify(errorData, null, 2));
+
+        // 409 Conflictの場合は、既存のゲームIDを含めたエラーを投げる
+        if (response.status === 409 && errorData.existing_game_id) {
+          throw new Error(`${errorData.error}|${errorData.existing_game_id}`);
+        }
+
         throw new Error(errorData.error || "ゲームの登録に失敗しました");
       }
 
