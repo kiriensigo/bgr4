@@ -527,11 +527,12 @@ export async function registerGame(
         japanese_image_url: gameDetails.japanese_image_url,
         min_players: gameDetails.min_players,
         max_players: gameDetails.max_players,
-        play_time: gameDetails.min_play_time,
+        play_time: gameDetails.play_time,
         min_play_time: gameDetails.min_play_time,
         weight: gameDetails.weight,
         japanese_publisher: gameDetails.japanese_publisher,
         japanese_release_date: gameDetails.japanese_release_date,
+        designer: gameDetails.designer, // デザイナー情報を追加
       };
 
       // リクエストヘッダーを作成

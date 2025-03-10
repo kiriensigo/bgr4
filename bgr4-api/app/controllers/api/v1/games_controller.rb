@@ -327,6 +327,7 @@ module Api
           min_play_time: game_params[:min_play_time],
           japanese_publisher: game_params[:japanese_publisher],
           japanese_release_date: game_params[:japanese_release_date],
+          designer: game_params[:designer],
           registered_on_site: true
         )
         

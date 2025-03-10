@@ -71,6 +71,7 @@ export default function RegisterGamePage() {
     play_time: "", // プレイ時間（必須）
     min_play_time: "", // 最小プレイ時間
     japanese_publisher: "", // 日本語版出版社
+    designer: "", // デザイナー（任意）
     japanese_release_date: null as Date | null, // 日本語版発売日
   });
 
@@ -595,6 +596,16 @@ export default function RegisterGamePage() {
                     name="japanese_publisher"
                     variant="outlined"
                     value={manualForm.japanese_publisher}
+                    onChange={handleManualFormChange}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="デザイナー（任意）"
+                    name="designer"
+                    variant="outlined"
+                    value={manualForm.designer}
                     onChange={handleManualFormChange}
                   />
                 </Grid>
