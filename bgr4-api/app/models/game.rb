@@ -403,23 +403,11 @@ class Game < ApplicationRecord
     
     # 手動登録の場合は、特別なルールでレビューを作成
     if manual_registration
-      # 短いコメントのリスト
-      short_comments = [
-        "戦略性が高く、何度でも遊びたくなるゲームです。",
-        "シンプルなルールながら奥深い戦略性があります。",
-        "テーマと機構がうまく融合した素晴らしいゲームです。",
-        "初心者から上級者まで楽しめる万能な一作。",
-        "コンポーネントの質が高く、見た目も美しいゲームです。"
-      ]
-      
       # 固定値の設定
       overall_score = 7.0
       
       # 5件のレビューを作成
       5.times do |i|
-        # 各レビューで異なるコメントを使用
-        short_comment = short_comments[i % short_comments.length]
-        
         # おすすめプレイ人数を設定（最初の2件のみ1〜7を選択、残りは空）
         recommended_players = []
         if i < 2
@@ -436,7 +424,7 @@ class Game < ApplicationRecord
           interaction: nil,
           downtime: nil,
           recommended_players: recommended_players,
-          short_comment: short_comment
+          short_comment: nil
         )
       end
       
@@ -717,25 +705,8 @@ class Game < ApplicationRecord
       Rails.logger.info "Mechanics not mapped to site mechanics: #{missing_mechanics.inspect}" if missing_mechanics.present?
     end
     
-    # 短いコメントのリスト
-    short_comments = [
-      "戦略性が高く、何度でも遊びたくなるゲームです。",
-      "シンプルなルールながら奥深い戦略性があります。",
-      "テーマと機構がうまく融合した素晴らしいゲームです。",
-      "初心者から上級者まで楽しめる万能な一作。",
-      "コンポーネントの質が高く、見た目も美しいゲームです。",
-      "プレイ時間の割に得られる満足感が大きいです。",
-      "テーブルに出すと必ず盛り上がる名作です。",
-      "戦略の幅が広く、リプレイ性に優れています。",
-      "バランスが取れた素晴らしいデザインのゲームです。",
-      "テンポよく進み、ダウンタイムが少ないのが魅力です。"
-    ]
-    
     # 10件のレビューを作成
     10.times do |i|
-      # 各レビューで異なるコメントを使用
-      short_comment = short_comments[i % short_comments.length]
-      
       Review.create(
         user_id: system_user.id,
         game_id: bgg_id,
@@ -747,7 +718,7 @@ class Game < ApplicationRecord
         recommended_players: recommended_players,
         mechanics: mechanics,
         categories: categories_list,
-        short_comment: short_comment
+        short_comment: nil
       )
     end
     

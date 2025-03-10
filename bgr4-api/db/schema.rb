@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_07_120127) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_10_135813) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -102,7 +102,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_07_120127) do
     t.string "mechanics", default: [], array: true
     t.string "categories", default: [], array: true
     t.string "custom_tags", default: [], array: true
-    t.text "short_comment", null: false
+    t.text "short_comment"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["game_id"], name: "index_reviews_on_game_id"

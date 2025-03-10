@@ -27,7 +27,7 @@ class Review < ApplicationRecord
   validates :downtime, presence: true,
             numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: 5 },
             allow_nil: true
-  validates :short_comment, presence: true
+  validates :short_comment, presence: true, unless: -> { user&.email == 'system@boardgamereview.com' }
   
   # システムユーザー以外は同じゲームに対して1つのレビューのみ許可
   validate :validate_one_review_per_game_for_non_system_user

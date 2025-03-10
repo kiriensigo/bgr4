@@ -613,7 +613,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
               <Grid item xs={12} md={12}>
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom>
-                    必須項目: ５０文字以内のコメント
+                    必須項目: １００文字以内のコメント
                     <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>
                       *
                     </Box>
@@ -626,8 +626,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     value={review.short_comment}
                     onChange={handleChange}
                     placeholder="このゲームの魅力を一言で表現してください（必須）"
-                    inputProps={{ maxLength: 50 }}
-                    helperText={`${review.short_comment.length}/50文字`}
+                    inputProps={{ maxLength: 100 }}
+                    helperText={`${review.short_comment.length}/100文字`}
                   />
                 </Box>
               </Grid>
