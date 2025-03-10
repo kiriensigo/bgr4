@@ -568,7 +568,11 @@ export default function SearchResultsPage() {
                                       } else {
                                         // プリミティブ値の場合はそのまま使用
                                         displayText = `${count}人`;
-                                        key = `player-${index}`;
+                                        // 7の場合は「7人以上」と表示
+                                        if (count === "7") {
+                                          displayText = "7人以上";
+                                        }
+                                        key = `player-${count}-${index}`;
                                       }
                                     } catch (e) {
                                       console.error(

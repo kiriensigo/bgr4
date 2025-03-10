@@ -12,23 +12,25 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     user_reviews = game.reviews.where.not(user: system_user)
     user_reviews_count = user_reviews.count
     
-    # ユーザーレビューがない場合は更新しない
-    return if user_reviews_count == 0
+    # システムユーザーのレビューを含む全レビュー数を取得
+    all_reviews = game.reviews
+    total_reviews_count = all_reviews.count
+    
+    # レビューが全くない場合は更新しない
+    return if total_reviews_count == 0
 
-    Rails.logger.info "Updating popular features for game #{game.name} (#{game_id}) with #{user_reviews_count} user reviews"
+    Rails.logger.info "Updating popular features for game #{game.name} (#{game_id}) with #{user_reviews_count} user reviews and #{total_reviews_count - user_reviews_count} system reviews"
 
     # 1. 平均スコアの計算 - すべてのレビューから（システムユーザー含む）
     update_average_score(game)
     
     # 2. 人気カテゴリーの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
-    update_popular_categories(game, game.reviews)
+    update_popular_categories(game, all_reviews)
     
     # 3. 人気メカニクスの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
-    update_popular_mechanics(game, game.reviews)
+    update_popular_mechanics(game, all_reviews)
     
     # 4. おすすめプレイ人数の計算（50%以上の支持があるもの）- すべてのレビューから（システムユーザー含む）
-    all_reviews = game.reviews
-    total_reviews_count = all_reviews.count
     update_recommended_players(game, all_reviews, total_reviews_count)
     
     # 変更を保存
@@ -90,7 +92,14 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     
     # 全レビューからおすすめプレイ人数を集計
     all_recommended_players = reviews_with_players.pluck(:recommended_players).flatten
-    player_counts = all_recommended_players.group_by(&:itself).transform_values(&:count)
+    
+    # 7以上を「7」に変換（既に「7」になっているものもあるため、重複に注意）
+    normalized_players = all_recommended_players.map do |player|
+      player_num = player.to_i
+      player_num >= 7 ? "7" : player
+    end
+    
+    player_counts = normalized_players.group_by(&:itself).transform_values(&:count)
     
     # 50%以上選択された人数を抽出
     threshold = total_reviews_count * 0.5

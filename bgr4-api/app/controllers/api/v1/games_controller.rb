@@ -116,6 +116,7 @@ module Api
         game_json['popular_categories'] = @game.popular_categories
         game_json['popular_mechanics'] = @game.popular_mechanics
         game_json['recommended_players'] = @game.recommended_players
+        game_json['site_recommended_players'] = @game.site_recommended_players
         game_json['review_count'] = @game.user_review_count
         
         # 評価値を追加
@@ -178,13 +179,25 @@ module Api
         # 日本語版情報を取得
         japanese_version_info = BggService.get_japanese_version_info(bgg_id)
         
+        # 説明文を翻訳（DeepL APIを使用）
+        japanese_description = nil
+        if game_params[:japanese_description].blank? && bgg_game_info[:description].present?
+          begin
+            # 説明文を翻訳
+            japanese_description = DeeplTranslationService.translate(bgg_game_info[:description])
+            Rails.logger.info "Translated description using DeepL API"
+          rescue => e
+            Rails.logger.error "Failed to translate description: #{e.message}"
+          end
+        end
+        
         # ゲームを作成
         @game = Game.new(
           bgg_id: bgg_id,
           name: game_params[:name] || bgg_game_info[:name],
           japanese_name: game_params[:japanese_name] || bgg_game_info[:japanese_name],
           description: game_params[:description] || bgg_game_info[:description],
-          japanese_description: game_params[:japanese_description],
+          japanese_description: game_params[:japanese_description] || japanese_description,
           image_url: game_params[:image_url] || bgg_game_info[:image_url],
           japanese_image_url: game_params[:japanese_image_url] || bgg_game_info[:japanese_image_url],
           min_players: game_params[:min_players] || bgg_game_info[:min_players],

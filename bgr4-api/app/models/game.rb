@@ -283,6 +283,7 @@ class Game < ApplicationRecord
   def recommended_players
     player_counts = {}
     
+    # すべてのレビュー（システムユーザーのレビューも含む）
     reviews.each do |review|
       (review.recommended_players || []).each do |count|
         next unless count.present?
@@ -574,14 +575,24 @@ class Game < ApplicationRecord
     # BGGのベストプレイ人数を変換
     if bgg_game_info[:best_num_players].is_a?(Array)
       bgg_game_info[:best_num_players].each do |num|
-        recommended_players << num if num.present?
+        if num.present?
+          # 7以上の値は「7」に変換
+          player_num = num.to_i
+          normalized_num = player_num >= 7 ? "7" : num
+          recommended_players << normalized_num
+        end
       end
     end
     
     # BGGのレコメンドプレイ人数も追加
     if bgg_game_info[:recommended_num_players].is_a?(Array)
       bgg_game_info[:recommended_num_players].each do |num|
-        recommended_players << num if num.present? && !recommended_players.include?(num)
+        if num.present? && !recommended_players.include?(num)
+          # 7以上の値は「7」に変換
+          player_num = num.to_i
+          normalized_num = player_num >= 7 ? "7" : num
+          recommended_players << normalized_num if !recommended_players.include?(normalized_num)
+        end
       end
     end
     

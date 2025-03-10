@@ -495,29 +495,36 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                     </Box>
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {[1, 2, 3, 4, 5, "6人以上"].map((num) => (
-                      <Chip
-                        key={num}
-                        label={`${num}人`}
-                        onClick={() => {
-                          setReview((prev) => ({
-                            ...prev,
-                            recommended_players:
-                              prev.recommended_players.includes(String(num))
-                                ? prev.recommended_players.filter(
-                                    (p) => p !== String(num)
-                                  )
-                                : [...prev.recommended_players, String(num)],
-                          }));
-                        }}
-                        color={
-                          review.recommended_players.includes(String(num))
-                            ? "primary"
-                            : "default"
-                        }
-                        sx={{ m: 0.5 }}
-                      />
-                    ))}
+                    {[1, 2, 3, 4, 5, 6, "7人以上"].map((num) => {
+                      // 表示用のラベル
+                      const label = num === "7人以上" ? num : `${num}人`;
+                      // 値として保存する文字列（7人以上は "7" として保存）
+                      const value = num === "7人以上" ? "7" : String(num);
+
+                      return (
+                        <Chip
+                          key={num}
+                          label={label}
+                          onClick={() => {
+                            setReview((prev) => ({
+                              ...prev,
+                              recommended_players:
+                                prev.recommended_players.includes(value)
+                                  ? prev.recommended_players.filter(
+                                      (p) => p !== value
+                                    )
+                                  : [...prev.recommended_players, value],
+                            }));
+                          }}
+                          color={
+                            review.recommended_players.includes(value)
+                              ? "primary"
+                              : "default"
+                          }
+                          sx={{ m: 0.5 }}
+                        />
+                      );
+                    })}
                   </Box>
                   {review.recommended_players.length === 0 && (
                     <Typography

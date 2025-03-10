@@ -100,6 +100,10 @@ interface ExtendedGame extends Game {
   japanese_publisher?: string;
   expansions?: Array<{ id: string; name: string }>;
   baseGame?: { id: string; name: string };
+  popular_categories?: any[];
+  popular_mechanics?: any[];
+  site_recommended_players?: string[];
+  recommended_players?: any[];
 }
 
 // レビューの平均点を計算する関数
@@ -1193,41 +1197,16 @@ export default function GamePage({ params }: GamePageProps) {
                     </Typography>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                       {game.site_recommended_players.map(
-                        (count: any, index: number) => {
-                          // countがオブジェクトの場合の処理
-                          let displayText;
-                          let key = `player-${index}`;
-
-                          if (typeof count === "object" && count !== null) {
-                            // nameプロパティがある場合はそれを使用
-                            if (count.name) {
-                              displayText = count.name;
-                              key = `player-name-${count.name}-${index}`;
-                            }
-                            // countプロパティがある場合はそれを使用
-                            else if (count.count) {
-                              displayText = `${count.count}人`;
-                              key = `player-count-${count.count}-${index}`;
-                            }
-                            // どちらもない場合はJSONを文字列化
-                            else {
-                              try {
-                                displayText = JSON.stringify(count);
-                              } catch (e) {
-                                displayText = "不明";
-                              }
-                            }
-                          } else {
-                            // プリミティブ値の場合はそのまま使用
-                            displayText = `${count}人`;
-                            key = `player-${count}-${index}`;
-                          }
-
+                        (count: string, index: number) => {
+                          // 7の場合は「7人以上」と表示
+                          const displayText =
+                            count === "7" ? "7人以上" : `${count}人`;
                           return (
                             <Chip
-                              key={key}
+                              key={`player-${count}-${index}`}
                               label={displayText}
                               color="primary"
+                              variant="outlined"
                               sx={{ m: 0.5 }}
                             />
                           );
