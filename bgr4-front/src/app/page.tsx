@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getHotGames } from "@/lib/bggApi";
-import { Typography, Container, Box, CircularProgress } from "@mui/material";
+import {
+  Typography,
+  Container,
+  Box,
+  CircularProgress,
+  Skeleton,
+} from "@mui/material";
 import { getGames } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import GameCarousel from "@/components/GameCarousel";
 import type { Game } from "@/lib/api";
 import { shuffleArray } from "@/lib/utils";
+
+// キャッシュキー
+const CACHE_KEY = "home_page_data";
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5分
 
 export default function Home() {
   const [recentReviewGames, setRecentReviewGames] = useState<Game[]>([]);
@@ -16,30 +25,126 @@ export default function Home() {
   const [randomGames, setRandomGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getAuthHeaders } = useAuth();
+  const [sectionsLoaded, setSectionsLoaded] = useState({
+    recent: false,
+    new: false,
+    popular: false,
+    random: false,
+  });
 
   useEffect(() => {
-    const fetchGames = async () => {
+    // キャッシュからデータを取得
+    const checkCache = () => {
+      if (typeof window === "undefined") return null;
+
       try {
-        setLoading(true);
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          // キャッシュが有効期限内かチェック
+          if (Date.now() - timestamp < CACHE_EXPIRY) {
+            return data;
+          }
+        }
+      } catch (e) {
+        console.error("キャッシュの読み込みに失敗しました:", e);
+      }
+      return null;
+    };
 
-        // レビュー新着ゲームを取得（review_dateでソート）
-        const recentReviewsResponse = await getGames(1, 8, "review_date");
-        setRecentReviewGames(recentReviewsResponse.games);
+    const cachedData = checkCache();
+    if (cachedData) {
+      // キャッシュからデータを設定
+      setRecentReviewGames(cachedData.recentReviewGames || []);
+      setNewlyRegisteredGames(cachedData.newlyRegisteredGames || []);
+      setMostReviewedGames(cachedData.mostReviewedGames || []);
+      setRandomGames(cachedData.randomGames || []);
+      setSectionsLoaded({
+        recent: true,
+        new: true,
+        popular: true,
+        random: true,
+      });
+      setLoading(false);
+      return;
+    }
 
-        // 新規登録ゲームを取得（created_atでソート）
-        const newlyRegisteredResponse = await getGames(1, 8, "created_at");
-        setNewlyRegisteredGames(newlyRegisteredResponse.games);
+    // 各セクションのデータを並列で取得
+    const fetchGames = async () => {
+      setLoading(true);
 
-        // レビュー投稿数の多いゲームを取得（reviews_countでソート）
-        const mostReviewedResponse = await getGames(1, 8, "reviews_count");
-        setMostReviewedGames(mostReviewedResponse.games);
+      // 並列でデータを取得
+      const fetchRecentReviews = getGames(1, 8, "review_date")
+        .then((response) => {
+          setRecentReviewGames(response.games);
+          setSectionsLoaded((prev) => ({ ...prev, recent: true }));
+          return response.games;
+        })
+        .catch((err) => {
+          console.error("レビュー新着ゲームの取得に失敗しました:", err);
+          return [];
+        });
 
-        // ランダムゲームを取得（より多くのゲームを取得してシャッフル）
-        const randomResponse = await getGames(1, 24, "created_at");
-        // 取得したゲームリストをシャッフルして最初の8件を使用
-        const shuffledGames = shuffleArray(randomResponse.games).slice(0, 8);
-        setRandomGames(shuffledGames);
+      const fetchNewlyRegistered = getGames(1, 8, "created_at")
+        .then((response) => {
+          setNewlyRegisteredGames(response.games);
+          setSectionsLoaded((prev) => ({ ...prev, new: true }));
+          return response.games;
+        })
+        .catch((err) => {
+          console.error("新規登録ゲームの取得に失敗しました:", err);
+          return [];
+        });
+
+      const fetchMostReviewed = getGames(1, 8, "reviews_count")
+        .then((response) => {
+          setMostReviewedGames(response.games);
+          setSectionsLoaded((prev) => ({ ...prev, popular: true }));
+          return response.games;
+        })
+        .catch((err) => {
+          console.error("レビュー投稿数の多いゲームの取得に失敗しました:", err);
+          return [];
+        });
+
+      const fetchRandom = getGames(1, 16, "created_at")
+        .then((response) => {
+          const shuffledGames = shuffleArray(response.games).slice(0, 8);
+          setRandomGames(shuffledGames);
+          setSectionsLoaded((prev) => ({ ...prev, random: true }));
+          return shuffledGames;
+        })
+        .catch((err) => {
+          console.error("ランダムゲームの取得に失敗しました:", err);
+          return [];
+        });
+
+      try {
+        // すべてのリクエストを並列で実行
+        const [recent, newGames, popular, random] = await Promise.all([
+          fetchRecentReviews,
+          fetchNewlyRegistered,
+          fetchMostReviewed,
+          fetchRandom,
+        ]);
+
+        // キャッシュにデータを保存
+        try {
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              data: {
+                recentReviewGames: recent,
+                newlyRegisteredGames: newGames,
+                mostReviewedGames: popular,
+                randomGames: random,
+              },
+              timestamp: Date.now(),
+            })
+          );
+        } catch (e) {
+          console.error("キャッシュの保存に失敗しました:", e);
+        }
 
         setLoading(false);
       } catch (err) {
@@ -82,28 +187,28 @@ export default function Home() {
       <GameCarousel
         title="レビュー新着ゲーム"
         games={recentReviewGames}
-        loading={loading}
+        loading={!sectionsLoaded.recent}
       />
 
       {/* 新規登録ゲーム */}
       <GameCarousel
         title="新規登録ゲーム"
         games={newlyRegisteredGames}
-        loading={loading}
+        loading={!sectionsLoaded.new}
       />
 
       {/* レビュー投稿数 */}
       <GameCarousel
         title="レビュー投稿数の多いゲーム"
         games={mostReviewedGames}
-        loading={loading}
+        loading={!sectionsLoaded.popular}
       />
 
       {/* ランダムゲーム */}
       <GameCarousel
         title="おすすめランダムゲーム"
         games={randomGames}
-        loading={loading}
+        loading={!sectionsLoaded.random}
       />
     </Container>
   );

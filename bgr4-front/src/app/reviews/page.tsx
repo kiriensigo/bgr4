@@ -19,17 +19,20 @@ import {
   CircularProgress,
 } from "@mui/material";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
 import LikeButton from "@/components/LikeButton";
 import RateReviewIcon from "@mui/icons-material/RateReview";
+import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import { usePathname } from "next/navigation";
 import GameRating from "@/components/GameRating";
 import OverallScoreDisplay from "@/components/OverallScoreDisplay";
 import ReviewScoreDisplay from "@/components/ReviewScoreDisplay";
 import GameInfo from "@/components/GameInfo";
 import GameTags from "@/components/GameTags";
+import { getGame } from "@/lib/api";
 
 type Review = {
   id: number;
@@ -63,6 +66,7 @@ type Review = {
     play_time: number;
     average_score: number;
     reviews_count?: number;
+    japanese_image_url?: string;
   };
 };
 
@@ -76,6 +80,109 @@ const reviewsCache: { data: any[]; timestamp: number; page: number } = {
 const CACHE_EXPIRY = 5 * 60 * 1000;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+// ゲーム画像コンポーネント
+const GameImage = ({
+  imageUrl,
+  gameName,
+}: {
+  imageUrl: string;
+  gameName: string;
+}) => {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  // 画像URLが無効な場合は最初からエラー状態にする
+  useEffect(() => {
+    if (!imageUrl || imageUrl === "null" || imageUrl === "undefined") {
+      setImageLoading(false);
+      setImageError(true);
+    }
+  }, [imageUrl]);
+
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        width: "100%",
+        paddingTop: "100%", // アスペクト比1:1
+        backgroundColor: "grey.100",
+      }}
+    >
+      {imageUrl &&
+      !imageError &&
+      imageUrl !== "null" &&
+      imageUrl !== "undefined" ? (
+        <Image
+          src={imageUrl}
+          alt={gameName}
+          fill
+          sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
+          style={{
+            objectFit: "contain",
+            objectPosition: "center",
+          }}
+          onLoad={() => {
+            setImageLoading(false);
+            setImageError(false);
+          }}
+          onError={(e) => {
+            console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+            setImageLoading(false);
+            setImageError(true);
+
+            // エラー処理
+            const target = e.target as HTMLImageElement;
+            target.onerror = null; // 無限ループを防ぐ
+            target.style.display = "none"; // 画像を非表示に
+          }}
+        />
+      ) : null}
+
+      {/* 画像読み込み中またはエラー時の表示 */}
+      {(imageLoading || imageError) && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "grey.100",
+            padding: 2, // パディングを追加
+          }}
+        >
+          {imageLoading && !imageError ? (
+            <CircularProgress size={30} />
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center", // テキストを中央揃えに
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <ImageNotSupportedIcon
+                sx={{ fontSize: 40, color: "text.secondary", mb: 1 }}
+              />
+              <Typography variant="body2" color="text.secondary" align="center">
+                画像なし
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
+};
 
 export default function ReviewsPage() {
   const { getAuthHeaders } = useAuth();
@@ -127,13 +234,46 @@ export default function ReviewsPage() {
 
         const data = await response.json();
 
+        // デバッグ用：最初のレビューのゲーム情報をログに出力
+        if (data.length > 0) {
+          console.log("First review game data:", data[0].game);
+        }
+
+        // ゲームのjapanese_image_urlが存在しない場合、ゲーム詳細を取得して補完
+        const processedData = await Promise.all(
+          data.map(async (review: Review) => {
+            // ゲーム画像URLがない場合、ゲーム詳細を取得
+            if (!review.game.japanese_image_url && review.game.bgg_id) {
+              try {
+                // ゲーム詳細を取得
+                const gameDetails = await getGame(
+                  review.game.bgg_id,
+                  getAuthHeaders()
+                );
+                // japanese_image_urlを補完
+                review.game.japanese_image_url = gameDetails.japanese_image_url;
+                console.log(
+                  `Updated game ${review.game.name} with japanese_image_url:`,
+                  gameDetails.japanese_image_url
+                );
+              } catch (error) {
+                console.error(
+                  `Failed to fetch details for game ${review.game.name}:`,
+                  error
+                );
+              }
+            }
+            return review;
+          })
+        );
+
         if (append) {
-          setReviews((prev) => [...prev, ...data]);
+          setReviews((prev) => [...prev, ...processedData]);
         } else {
-          setReviews(data);
+          setReviews(processedData);
           // 最初のページのデータをキャッシュ
           if (pageNum === 1) {
-            reviewsCache.data = data;
+            reviewsCache.data = processedData;
             reviewsCache.timestamp = now;
             reviewsCache.page = 1;
           }
@@ -310,15 +450,11 @@ export default function ReviewsPage() {
                     href={`/games/${review.game.bgg_id}`}
                     sx={{ flexGrow: 1 }}
                   >
-                    <CardMedia
-                      component="img"
-                      image={review.game.image_url || "/images/no-image.png"}
-                      alt={review.game.name}
-                      sx={{
-                        aspectRatio: "1",
-                        objectFit: "contain",
-                        bgcolor: "grey.100",
-                      }}
+                    <GameImage
+                      imageUrl={
+                        review.game.japanese_image_url || review.game.image_url
+                      }
+                      gameName={review.game.japanese_name || review.game.name}
                     />
                     <CardContent>
                       <Typography

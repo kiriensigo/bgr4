@@ -5,8 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import EditIcon from "@mui/icons-material/Edit";
+import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import GameRating from "./GameRating";
 import OverallScoreDisplay from "./OverallScoreDisplay";
+import { useState } from "react";
+import CircularProgress from "@mui/material/CircularProgress";
 
 interface Game {
   id?: string;
@@ -58,12 +61,12 @@ export default function GameCard({
   showOverallScoreOverlay = false,
   onReviewUpdated,
 }: GameCardProps) {
+  // 画像読み込み状態を管理するステート
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
   // 日本語版の画像があればそれを優先、なければ通常の画像を使用
-  const imageUrl =
-    game.japanese_image_url ||
-    game.image_url ||
-    game.thumbnail ||
-    "/images/no-image.png";
+  const imageUrl = game.japanese_image_url || game.image_url || game.thumbnail;
   // 日本語名があればそれを優先、なければ通常の名前を使用
   const displayName = game.japanese_name || game.name;
   const rating =
@@ -146,20 +149,72 @@ export default function GameCard({
               mb: 2,
               overflow: "hidden",
               borderRadius: 1,
+              backgroundColor: "grey.100",
             }}
           >
-            {imageUrl && (
+            {imageUrl && !imageError ? (
               <Image
                 src={imageUrl}
                 alt={displayName}
                 fill
                 sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
-                priority={type === "game"}
+                priority={false}
+                loading="lazy"
                 style={{
                   objectFit: "cover",
                   objectPosition: "center",
                 }}
+                onLoad={() => {
+                  setImageLoading(false);
+                  setImageError(false);
+                }}
+                onError={(e) => {
+                  // 画像の読み込みに失敗した場合の処理
+                  console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+                  setImageLoading(false);
+                  setImageError(true);
+
+                  // エラー処理
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null; // 無限ループを防ぐ
+                  target.style.display = "none"; // 画像を非表示に
+                }}
               />
+            ) : null}
+
+            {/* 画像読み込み中またはエラー時の表示 */}
+            {(imageLoading || imageError) && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "grey.100",
+                }}
+              >
+                {imageLoading && !imageError ? (
+                  <CircularProgress size={30} />
+                ) : (
+                  <>
+                    <ImageNotSupportedIcon
+                      sx={{ fontSize: 40, color: "text.secondary", mb: 1 }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      align="center"
+                    >
+                      画像なし
+                    </Typography>
+                  </>
+                )}
+              </Box>
             )}
           </Box>
         </Link>

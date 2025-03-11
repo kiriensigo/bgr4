@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   getGame,
   updateJapaneseName,
@@ -38,6 +38,7 @@ import {
   FormControlLabel,
   Checkbox,
   LinearProgress,
+  Link as MuiLink,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,12 +59,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { getAuthHeaders } from "@/lib/auth";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import EditIcon from "@mui/icons-material/Edit";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import UpdateIcon from "@mui/icons-material/Update";
-import EditIcon from "@mui/icons-material/Edit";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 
 interface Review {
   id: number;
@@ -366,6 +369,8 @@ export default function GamePage({ params }: GamePageProps) {
   const [openSystemReviewsDialog, setOpenSystemReviewsDialog] = useState(false);
   const [updatingSystemReviews, setUpdatingSystemReviews] = useState(false);
   const [reviewCount, setReviewCount] = useState(0);
+  const [imageLoading, setImageLoading] = useState(true); // 画像読み込み状態を管理
+  const [imageError, setImageError] = useState(false); // 画像読み込みエラー状態を管理
 
   // ローディングの進捗状態を更新するタイマー
   useEffect(() => {
@@ -1003,11 +1008,19 @@ export default function GamePage({ params }: GamePageProps) {
                     height={500}
                     style={{ width: "100%", height: "auto" }}
                     priority={true}
+                    onLoad={() => {
+                      setImageLoading(false);
+                      setImageError(false);
+                    }}
                     onError={(e) => {
                       // 画像の読み込みに失敗した場合の処理
+                      console.error("画像の読み込みに失敗しました", e);
                       const target = e.target as HTMLImageElement;
                       target.onerror = null; // 無限ループを防ぐ
-                      target.src = "/images/no-image.png"; // デフォルト画像を表示
+                      // デフォルト画像のパスを修正（no-image.pngが存在しないため）
+                      target.style.display = "none"; // 画像を非表示に
+                      setImageLoading(false);
+                      setImageError(true);
                     }}
                   />
                   {/* 画像の読み込み中に表示するオーバーレイ */}
@@ -1022,29 +1035,100 @@ export default function GamePage({ params }: GamePageProps) {
                       justifyContent: "center",
                       alignItems: "center",
                       backgroundColor: "rgba(255, 255, 255, 0.7)",
-                      opacity:
-                        game.japanese_image_url || game.image_url ? 0 : 1,
+                      opacity: imageLoading && !imageError ? 1 : 0,
                       transition: "opacity 0.5s ease",
+                      pointerEvents:
+                        imageLoading && !imageError ? "auto" : "none",
                     }}
                   >
                     <CircularProgress />
                   </Box>
+                  {/* 画像エラー時に表示するコンテンツ */}
+                  {imageError && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        backgroundColor: "grey.100",
+                        borderRadius: 1,
+                        padding: 2, // パディングを追加
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          textAlign: "center", // テキストを中央揃えに
+                          width: "100%",
+                          height: "100%",
+                        }}
+                      >
+                        <ImageNotSupportedIcon
+                          sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+                        />
+                        <Typography variant="body1" color="text.secondary">
+                          画像を読み込めませんでした
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
               ) : (
+                // 画像がない場合の表示
                 <Box
                   sx={{
                     width: "100%",
-                    height: 300,
+                    paddingTop: "100%",
+                    position: "relative",
+                    backgroundColor: "grey.100",
+                    borderRadius: 1,
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
-                    bgcolor: "grey.100",
-                    borderRadius: 1,
                   }}
                 >
-                  <Typography color="text.secondary">
-                    画像がありません
-                  </Typography>
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      padding: 2, // パディングを追加
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        textAlign: "center", // テキストを中央揃えに
+                        width: "100%",
+                        height: "100%",
+                      }}
+                    >
+                      <ImageNotSupportedIcon
+                        sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+                      />
+                      <Typography variant="body1" color="text.secondary">
+                        画像がありません
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Box>
               )}
             </Grid>
@@ -1528,19 +1612,19 @@ export default function GamePage({ params }: GamePageProps) {
                   >
                     システムレビュー更新
                   </Button>
+
+                  {/* サイト登録済みチェックボックス（管理者のみ表示） */}
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={Boolean(game.registered_on_site)}
+                        disabled
+                      />
+                    }
+                    label="サイト登録済み"
+                  />
                 </>
               )}
-
-              {/* サイト登録済みチェックボックス */}
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={Boolean(game.registered_on_site)}
-                    disabled
-                  />
-                }
-                label="サイト登録済み"
-              />
             </Grid>
           </Grid>
         </Paper>

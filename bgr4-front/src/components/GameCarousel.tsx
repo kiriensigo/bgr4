@@ -2,7 +2,13 @@
 
 import React from "react";
 import Slider from "react-slick";
-import { Box, Typography, useTheme, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  Typography,
+  useTheme,
+  useMediaQuery,
+  Skeleton,
+} from "@mui/material";
 import GameCard from "./GameCard";
 import { Game } from "@/lib/api";
 
@@ -34,6 +40,7 @@ export default function GameCarousel({
     slidesToScroll: 1,
     autoplay: false,
     arrows: !isMobile,
+    lazyLoad: "ondemand" as const,
     responsive: [
       {
         breakpoint: 1024,
@@ -61,12 +68,38 @@ export default function GameCarousel({
     ],
   };
 
+  // ローディング中のスケルトン表示
+  const renderSkeletons = () => {
+    const skeletons = [];
+    for (let i = 0; i < slidesToShow; i++) {
+      skeletons.push(
+        <Box key={i} sx={{ px: 1 }}>
+          <Box sx={{ p: 2 }}>
+            <Skeleton
+              variant="rectangular"
+              width="100%"
+              height={0}
+              sx={{ paddingTop: "100%", mb: 2, borderRadius: 1 }}
+            />
+            <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1 }} />
+            <Skeleton variant="text" width="60%" height={24} />
+          </Box>
+        </Box>
+      );
+    }
+    return skeletons;
+  };
+
   return (
     <Box sx={{ mb: 6 }}>
       <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 2 }}>
         {title}
       </Typography>
-      {games.length > 0 ? (
+      {loading ? (
+        <Box sx={{ display: "flex", overflow: "hidden" }}>
+          {renderSkeletons()}
+        </Box>
+      ) : games.length > 0 ? (
         <Slider {...settings}>
           {games.map((game) => (
             <Box key={game.id || game.bgg_id} sx={{ px: 1 }}>
@@ -82,7 +115,7 @@ export default function GameCarousel({
         </Slider>
       ) : (
         <Typography variant="body1" color="text.secondary" align="center">
-          {loading ? "読み込み中..." : "表示するゲームがありません"}
+          表示するゲームがありません
         </Typography>
       )}
     </Box>
