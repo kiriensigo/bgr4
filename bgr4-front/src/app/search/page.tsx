@@ -21,6 +21,9 @@ import {
   Select,
   MenuItem,
   ListSubheader,
+  Stack,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import { useRouter, usePathname } from "next/navigation";
 import { searchGames } from "@/lib/api";
@@ -29,6 +32,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
 import Link from "next/link";
 import { EvaluationSection } from "@/components/GameEvaluationForm/EvaluationSection";
+import { CustomToggleButton } from "@/components/GameEvaluationForm/CustomToggleButton";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import { PLAYER_COUNT_OPTIONS } from "@/components/GameEvaluationForm/constants";
 
@@ -54,7 +58,10 @@ interface LocalSearchParams {
   // 検索モードの設定
   useReviewsMechanics: boolean;
   useReviewsCategories: boolean;
-  useReviewsRecommendedPlayers: boolean;
+  // AND検索フラグ
+  categoriesMatchAll: boolean;
+  mechanicsMatchAll: boolean;
+  recommendedPlayersMatchAll: boolean;
   publisher?: string;
 }
 
@@ -107,7 +114,9 @@ export default function SearchPage() {
     // デフォルトでは人気ベースの検索を使用
     useReviewsMechanics: false,
     useReviewsCategories: false,
-    useReviewsRecommendedPlayers: false,
+    categoriesMatchAll: false,
+    mechanicsMatchAll: false,
+    recommendedPlayersMatchAll: false,
   });
 
   // ページロード時にキャッシュから復元
@@ -183,7 +192,7 @@ export default function SearchPage() {
             searchParams.playTimeMin,
             searchParams.playTimeMax,
             1,
-            5
+            13
           )
             ? undefined
             : searchParams.playTimeMin,
@@ -191,7 +200,7 @@ export default function SearchPage() {
             searchParams.playTimeMin,
             searchParams.playTimeMax,
             1,
-            5
+            13
           )
             ? undefined
             : searchParams.playTimeMax,
@@ -289,11 +298,22 @@ export default function SearchPage() {
               : undefined,
           publisher: searchParams.publisher,
           // 検索モード設定
-          use_reviews_mechanics: searchParams.useReviewsMechanics || undefined,
-          use_reviews_categories:
-            searchParams.useReviewsCategories || undefined,
-          use_reviews_recommended_players:
-            searchParams.useReviewsRecommendedPlayers || undefined,
+          use_reviews_mechanics: searchParams.useReviewsMechanics
+            ? "true"
+            : undefined,
+          use_reviews_categories: searchParams.useReviewsCategories
+            ? "true"
+            : undefined,
+          // AND検索フラグ
+          categories_match_all: searchParams.categoriesMatchAll
+            ? "true"
+            : undefined,
+          mechanics_match_all: searchParams.mechanicsMatchAll
+            ? "true"
+            : undefined,
+          recommended_players_match_all: searchParams.recommendedPlayersMatchAll
+            ? "true"
+            : undefined,
         };
 
         // プレイ時間の値を実際の分数に変換
@@ -614,20 +634,6 @@ export default function SearchPage() {
                       }
                       label="メカニクス検索で全レビューから検索（チェックなしの場合は人気メカニクスから検索）"
                     />
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={searchParams.useReviewsRecommendedPlayers}
-                          onChange={(e) =>
-                            handleSearchModeChange(
-                              "useReviewsRecommendedPlayers",
-                              e.target.checked
-                            )
-                          }
-                        />
-                      }
-                      label="おすすめプレイ人数検索で全レビューから検索（チェックなしの場合は人気おすすめプレイ人数から検索）"
-                    />
                   </Box>
                 </Grid>
 
@@ -708,8 +714,12 @@ export default function SearchPage() {
                     >
                       <CardMedia
                         component="img"
-                        image={game.image_url || "/images/no-image.png"}
-                        alt={game.name}
+                        image={
+                          game.japanese_image_url ||
+                          game.image_url ||
+                          "/images/no-image.png"
+                        }
+                        alt={game.japanese_name || game.name}
                         sx={{
                           aspectRatio: "1",
                           objectFit: "contain",
@@ -730,7 +740,7 @@ export default function SearchPage() {
                             minHeight: "3.6em",
                           }}
                         >
-                          {game.name}
+                          {game.japanese_name || game.name}
                         </Typography>
                         <Box
                           sx={{

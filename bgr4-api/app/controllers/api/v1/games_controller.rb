@@ -438,7 +438,29 @@ module Api
         # レビュー関連のパラメータ
         use_reviews_categories = params[:use_reviews_categories] == 'true'
         use_reviews_mechanics = params[:use_reviews_mechanics] == 'true'
-        use_reviews_recommended_players = params[:use_reviews_recommended_players] == 'true'
+        
+        # AND検索フラグ
+        categories_match_all = params[:categories_match_all] == 'true'
+        mechanics_match_all = params[:mechanics_match_all] == 'true'
+        recommended_players_match_all = params[:recommended_players_match_all] == 'true'
+        
+        # カテゴリーとメカニクスとおすすめプレイ人数のパラメータ
+        # 文字列またはカンマ区切りの文字列を配列に変換
+        categories = params[:categories]
+        categories = categories.split(',') if categories.is_a?(String) && categories.include?(',')
+        categories = [categories] if categories.is_a?(String)
+        
+        mechanics = params[:mechanics]
+        mechanics = mechanics.split(',') if mechanics.is_a?(String) && mechanics.include?(',')
+        mechanics = [mechanics] if mechanics.is_a?(String)
+        
+        recommended_players = params[:recommended_players]
+        recommended_players = recommended_players.split(',') if recommended_players.is_a?(String) && recommended_players.include?(',')
+        recommended_players = [recommended_players] if recommended_players.is_a?(String)
+        
+        # デバッグログ
+        Rails.logger.info "検索パラメータ: categories=#{categories.inspect}, mechanics=#{mechanics.inspect}, recommended_players=#{recommended_players.inspect}"
+        Rails.logger.info "AND検索フラグ: categories_match_all=#{categories_match_all}, mechanics_match_all=#{mechanics_match_all}, recommended_players_match_all=#{recommended_players_match_all}"
         
         # ページネーションパラメータを取得
         page = params[:page].present? ? params[:page].to_i : 1
@@ -498,9 +520,169 @@ module Api
           end
         end
         
+        # カテゴリー、メカニクス、おすすめプレイ人数の検索
+        # 各条件ごとに検索結果を保持する
+        categories_game_ids = []
+        mechanics_game_ids = []
+        recommended_players_game_ids = []
+        
+        # カテゴリー検索
+        if categories.present?
+          categories_array = categories.is_a?(Array) ? categories : [categories]
+          
+          if use_reviews_categories
+            # レビューのカテゴリーから検索
+            if categories_match_all
+              # AND検索：すべてのカテゴリーを含むゲームを検索
+              # 最初のカテゴリーで検索
+              first_category = categories_array.first
+              reviews_with_category = Review.where("categories @> ARRAY[?]::varchar[]", first_category)
+              game_ids = reviews_with_category.pluck(:game_id).uniq
+              
+              # 残りのカテゴリーで絞り込み
+              categories_array[1..-1].each do |category|
+                reviews_with_category = Review.where("categories @> ARRAY[?]::varchar[]", category)
+                category_game_ids = reviews_with_category.pluck(:game_id).uniq
+                game_ids &= category_game_ids # AND演算（共通するIDのみ残す）
+              end
+              
+              categories_game_ids = game_ids
+            else
+              # OR検索：いずれかのカテゴリーを含むゲームを検索
+              categories_array.each do |category|
+                reviews_with_category = Review.where("categories @> ARRAY[?]::varchar[]", category)
+                game_ids = reviews_with_category.pluck(:game_id).uniq
+                categories_game_ids += game_ids
+              end
+              categories_game_ids.uniq! # 重複を削除
+            end
+          else
+            # 人気カテゴリーから検索
+            Game.find_each do |game|
+              popular_cats = game.popular_categories
+              popular_cat_names = popular_cats.map { |cat| cat[:name] }
+              
+              if categories_match_all
+                # AND検索：すべてのカテゴリーを含むゲームを検索
+                if categories_array.all? { |cat| popular_cat_names.include?(cat) }
+                  categories_game_ids << game.bgg_id
+                end
+              else
+                # OR検索：いずれかのカテゴリーを含むゲームを検索
+                if categories_array.any? { |cat| popular_cat_names.include?(cat) }
+                  categories_game_ids << game.bgg_id
+                end
+              end
+            end
+          end
+        end
+        
+        # メカニクス検索
+        if mechanics.present?
+          mechanics_array = mechanics.is_a?(Array) ? mechanics : [mechanics]
+          
+          if use_reviews_mechanics
+            # レビューのメカニクスから検索
+            if mechanics_match_all
+              # AND検索：すべてのメカニクスを含むゲームを検索
+              # 最初のメカニクスで検索
+              first_mechanic = mechanics_array.first
+              reviews_with_mechanic = Review.where("mechanics @> ARRAY[?]::varchar[]", first_mechanic)
+              game_ids = reviews_with_mechanic.pluck(:game_id).uniq
+              
+              # 残りのメカニクスで絞り込み
+              mechanics_array[1..-1].each do |mechanic|
+                reviews_with_mechanic = Review.where("mechanics @> ARRAY[?]::varchar[]", mechanic)
+                mechanic_game_ids = reviews_with_mechanic.pluck(:game_id).uniq
+                game_ids &= mechanic_game_ids # AND演算（共通するIDのみ残す）
+              end
+              
+              mechanics_game_ids = game_ids
+            else
+              # OR検索：いずれかのメカニクスを含むゲームを検索
+              mechanics_array.each do |mechanic|
+                reviews_with_mechanic = Review.where("mechanics @> ARRAY[?]::varchar[]", mechanic)
+                game_ids = reviews_with_mechanic.pluck(:game_id).uniq
+                mechanics_game_ids += game_ids
+              end
+              mechanics_game_ids.uniq! # 重複を削除
+            end
+          else
+            # 人気メカニクスから検索
+            Game.find_each do |game|
+              popular_mechs = game.popular_mechanics
+              popular_mech_names = popular_mechs.map { |mech| mech[:name] }
+              
+              if mechanics_match_all
+                # AND検索：すべてのメカニクスを含むゲームを検索
+                if mechanics_array.all? { |mech| popular_mech_names.include?(mech) }
+                  mechanics_game_ids << game.bgg_id
+                end
+              else
+                # OR検索：いずれかのメカニクスを含むゲームを検索
+                if mechanics_array.any? { |mech| popular_mech_names.include?(mech) }
+                  mechanics_game_ids << game.bgg_id
+                end
+              end
+            end
+          end
+        end
+        
+        # おすすめプレイ人数検索
+        if recommended_players.present?
+          recommended_players_array = recommended_players.is_a?(Array) ? recommended_players : [recommended_players]
+          
+          # おすすめプレイ人数を含むゲームを検索
+          Game.find_each do |game|
+            recommended = game.recommended_players
+            recommended_counts = recommended.map { |rec| rec[:count] }
+            
+            if recommended_players_match_all
+              # AND検索：すべてのおすすめプレイ人数を含むゲームを検索
+              if recommended_players_array.all? { |count| recommended_counts.include?(count) }
+                recommended_players_game_ids << game.bgg_id
+              end
+            else
+              # OR検索：いずれかのおすすめプレイ人数を含むゲームを検索
+              if recommended_players_array.any? { |count| recommended_counts.include?(count) }
+                recommended_players_game_ids << game.bgg_id
+              end
+            end
+          end
+        end
+        
+        # 各条件の検索結果を組み合わせる（AND検索）
+        if categories.present? || mechanics.present? || recommended_players.present?
+          # 各条件の検索結果を配列に追加
+          condition_results = []
+          condition_results << categories_game_ids if categories.present?
+          condition_results << mechanics_game_ids if mechanics.present?
+          condition_results << recommended_players_game_ids if recommended_players.present?
+          
+          # 最初の条件の結果をベースにする
+          matching_game_ids = condition_results.first || []
+          
+          # 残りの条件の結果と組み合わせる（AND検索）
+          condition_results[1..-1].each do |result|
+            matching_game_ids &= result # AND演算（積集合）
+          end
+          
+          # デバッグログ
+          Rails.logger.info "検索結果: categories=#{categories_game_ids.size}件, mechanics=#{mechanics_game_ids.size}件, recommended_players=#{recommended_players_game_ids.size}件"
+          Rails.logger.info "最終検索結果: #{matching_game_ids.size}件"
+          
+          # 検索結果が空でない場合のみクエリを更新
+          if matching_game_ids.present?
+            base_query = base_query.where(bgg_id: matching_game_ids)
+          else
+            # 該当するゲームがない場合は空の結果を返す
+            base_query = base_query.where("1 = 0")
+          end
+        end
+        
         # レビュー関連のパラメータを処理
         # システムユーザーのレビューがあるゲームも含める
-        if use_reviews_categories || use_reviews_mechanics || use_reviews_recommended_players
+        if use_reviews_categories || use_reviews_mechanics
           # システムユーザーを取得
           system_user = User.find_by(email: 'system@boardgamereview.com')
           

@@ -169,6 +169,12 @@ export interface SearchParams {
   page?: number;
   per_page?: number;
   sort_by?: string;
+  use_reviews_mechanics?: string;
+  use_reviews_categories?: string;
+  use_reviews_recommended_players?: string;
+  categories_match_all?: string;
+  mechanics_match_all?: string;
+  recommended_players_match_all?: string;
 }
 
 export async function searchGames(
@@ -216,6 +222,22 @@ export async function searchGames(
       params.recommended_players.join(",")
     );
   if (params.publisher) queryParams.append("publisher", params.publisher);
+
+  // 検索モード設定
+  if (params.use_reviews_mechanics === "true")
+    queryParams.append("use_reviews_mechanics", "true");
+  if (params.use_reviews_categories === "true")
+    queryParams.append("use_reviews_categories", "true");
+  if (params.use_reviews_recommended_players === "true")
+    queryParams.append("use_reviews_recommended_players", "true");
+
+  // AND検索フラグ
+  if (params.categories_match_all === "true")
+    queryParams.append("categories_match_all", "true");
+  if (params.mechanics_match_all === "true")
+    queryParams.append("mechanics_match_all", "true");
+  if (params.recommended_players_match_all === "true")
+    queryParams.append("recommended_players_match_all", "true");
 
   // ページネーションとソートのパラメータを追加
   if (params.page) queryParams.append("page", params.page.toString());

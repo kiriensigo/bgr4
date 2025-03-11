@@ -295,6 +295,22 @@ class Game < ApplicationRecord
     player_counts.sort_by { |_, count| -count }.map { |count, votes| { count: count, votes: votes } }
   end
   
+  # サイトのおすすめプレイ人数を取得（システムユーザーのレビューを除外）
+  def site_recommended_players
+    player_counts = {}
+    
+    # システムユーザーのレビューを除外
+    reviews.exclude_system_user.each do |review|
+      (review.recommended_players || []).each do |count|
+        next unless count.present?
+        player_counts[count] = (player_counts[count] || 0) + 1
+      end
+    end
+    
+    # 出現回数でソート
+    player_counts.sort_by { |_, count| -count }.map { |count, votes| { count: count, votes: votes } }
+  end
+  
   # 出版社名を日本語化
   def normalize_japanese_publisher
     return unless japanese_publisher.present?

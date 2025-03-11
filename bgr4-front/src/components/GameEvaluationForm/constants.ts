@@ -42,7 +42,7 @@ export const CATEGORIES = [
   "レガシー・キャンペーン",
 ];
 
-export const PLAYER_COUNT_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8+"];
+export const PLAYER_COUNT_OPTIONS = ["1", "2", "3", "4", "5", "6", "7"];
 
 export const PLAY_TIME_MARKS = [
   { value: 1, label: "0" },

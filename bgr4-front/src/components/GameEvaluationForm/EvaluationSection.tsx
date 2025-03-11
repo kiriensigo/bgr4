@@ -1,4 +1,11 @@
-import { Grid, Stack, Typography, ToggleButtonGroup } from "@mui/material";
+import {
+  Grid,
+  Stack,
+  Typography,
+  ToggleButtonGroup,
+  FormControlLabel,
+  Checkbox,
+} from "@mui/material";
 import { CustomSlider } from "./CustomSlider";
 import { CustomToggleButton } from "./CustomToggleButton";
 import {
@@ -28,6 +35,9 @@ interface EvaluationSectionProps {
     recommendedPlayers: string[];
     mechanics: string[];
     categories: string[];
+    categoriesMatchAll?: boolean;
+    mechanicsMatchAll?: boolean;
+    recommendedPlayersMatchAll?: boolean;
   };
   onChange: (name: string, value: any) => void;
   isSearchMode?: boolean;
@@ -201,6 +211,19 @@ export const EvaluationSection = ({
           <Typography variant="caption" color="text.secondary">
             ※ユーザーレビューで50%以上の支持を得た人数で検索します
           </Typography>
+          {isSearchMode && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={values.recommendedPlayersMatchAll}
+                  onChange={(e) =>
+                    onChange("recommendedPlayersMatchAll", e.target.checked)
+                  }
+                />
+              }
+              label="選択をすべて満たす（チェックなしの場合はいずれかを満たす）"
+            />
+          )}
           <ToggleButtonGroup
             value={values.recommendedPlayers}
             onChange={handleArrayChange("recommendedPlayers")}
@@ -210,7 +233,7 @@ export const EvaluationSection = ({
           >
             {PLAYER_COUNT_OPTIONS.map((count) => (
               <CustomToggleButton key={count} value={count}>
-                {count}人
+                {count === "7" ? "7人以上" : `${count}人`}
               </CustomToggleButton>
             ))}
           </ToggleButtonGroup>
@@ -222,6 +245,19 @@ export const EvaluationSection = ({
           <Typography variant="subtitle1" fontWeight="medium">
             メカニクス
           </Typography>
+          {isSearchMode && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={values.mechanicsMatchAll}
+                  onChange={(e) =>
+                    onChange("mechanicsMatchAll", e.target.checked)
+                  }
+                />
+              }
+              label="選択をすべて満たす（チェックなしの場合はいずれかを満たす）"
+            />
+          )}
           <ToggleButtonGroup
             value={values.mechanics}
             onChange={handleArrayChange("mechanics")}
@@ -243,6 +279,19 @@ export const EvaluationSection = ({
           <Typography variant="subtitle1" fontWeight="medium">
             カテゴリー
           </Typography>
+          {isSearchMode && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={values.categoriesMatchAll}
+                  onChange={(e) =>
+                    onChange("categoriesMatchAll", e.target.checked)
+                  }
+                />
+              }
+              label="選択をすべて満たす（チェックなしの場合はいずれかを満たす）"
+            />
+          )}
           <ToggleButtonGroup
             value={values.categories}
             onChange={handleArrayChange("categories")}

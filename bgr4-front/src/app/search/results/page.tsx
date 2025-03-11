@@ -66,7 +66,12 @@ const renderRecommendedPlayers = (counts: any[]) => {
       }
       // countプロパティがある場合はそれを使用
       else if (count.count) {
-        displayText = `${count.count}人`;
+        // 7の場合は「7人以上」と表示
+        if (count.count === "7") {
+          displayText = "7人以上";
+        } else {
+          displayText = `${count.count}人`;
+        }
       }
       // どちらもない場合はJSONを文字列化
       else {
@@ -78,7 +83,12 @@ const renderRecommendedPlayers = (counts: any[]) => {
       }
     } else {
       // プリミティブ値の場合はそのまま使用
-      displayText = `${count}人`;
+      // 7の場合は「7人以上」と表示
+      if (count === "7") {
+        displayText = "7人以上";
+      } else {
+        displayText = `${count}人`;
+      }
     }
 
     // 一意のキーを生成
@@ -129,6 +139,27 @@ export default function SearchResultsPage() {
       params.set("page", newPage.toString());
       params.set("pageSize", newPageSize.toString());
       params.set("sortBy", newSortBy);
+
+      // 検索モード設定のパラメータを保持
+      if (params.has("use_reviews_mechanics")) {
+        params.set(
+          "use_reviews_mechanics",
+          params.get("use_reviews_mechanics") || ""
+        );
+      }
+      if (params.has("use_reviews_categories")) {
+        params.set(
+          "use_reviews_categories",
+          params.get("use_reviews_categories") || ""
+        );
+      }
+      if (params.has("use_reviews_recommended_players")) {
+        params.set(
+          "use_reviews_recommended_players",
+          params.get("use_reviews_recommended_players") || ""
+        );
+      }
+
       router.push(`/search/results?${params.toString()}`, { scroll: false });
     },
     [searchParams, router]
@@ -157,6 +188,15 @@ export default function SearchResultsPage() {
           apiParams.categories = params.categories.split(",");
         if (params.recommended_players)
           apiParams.recommended_players = params.recommended_players.split(",");
+
+        // AND検索フラグを処理
+        if (params.categories_match_all)
+          apiParams.categories_match_all = params.categories_match_all;
+        if (params.mechanics_match_all)
+          apiParams.mechanics_match_all = params.mechanics_match_all;
+        if (params.recommended_players_match_all)
+          apiParams.recommended_players_match_all =
+            params.recommended_players_match_all;
 
         // 数値パラメータを処理
         [
@@ -463,8 +503,12 @@ export default function SearchResultsPage() {
                     >
                       <CardMedia
                         component="img"
-                        image={game.image_url || "/images/no-image.png"}
-                        alt={game.name}
+                        image={
+                          game.japanese_image_url ||
+                          game.image_url ||
+                          "/images/no-image.png"
+                        }
+                        alt={game.japanese_name || game.name}
                         sx={{
                           aspectRatio: "1",
                           objectFit: "contain",
@@ -558,7 +602,12 @@ export default function SearchResultsPage() {
                                         }
                                         // countプロパティがある場合はそれを使用
                                         else if (count.count) {
-                                          displayText = `${count.count}人`;
+                                          // 7の場合は「7人以上」と表示
+                                          if (count.count === "7") {
+                                            displayText = "7人以上";
+                                          } else {
+                                            displayText = `${count.count}人`;
+                                          }
                                           key = `player-count-${index}`;
                                         }
                                         // どちらもない場合はJSONを文字列化
@@ -567,10 +616,11 @@ export default function SearchResultsPage() {
                                         }
                                       } else {
                                         // プリミティブ値の場合はそのまま使用
-                                        displayText = `${count}人`;
                                         // 7の場合は「7人以上」と表示
                                         if (count === "7") {
                                           displayText = "7人以上";
+                                        } else {
+                                          displayText = `${count}人`;
                                         }
                                         key = `player-${count}-${index}`;
                                       }
