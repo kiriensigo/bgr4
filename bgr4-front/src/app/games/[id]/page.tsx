@@ -61,6 +61,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import UpdateIcon from "@mui/icons-material/Update";
+import EditIcon from "@mui/icons-material/Edit";
 
 interface Review {
   id: number;
@@ -936,16 +937,17 @@ export default function GamePage({ params }: GamePageProps) {
                 </Typography>
               )}
 
-              {/* 日本語名登録ボタン */}
+              {/* 日本語名登録ボタンを削除し、ゲーム情報編集ボタンを追加 */}
               {user && (
                 <Button
                   variant="outlined"
                   color="secondary"
-                  startIcon={<TranslateIcon />}
-                  onClick={handleOpenDialog}
+                  startIcon={<EditIcon />}
+                  component={Link}
+                  href={`/games/${game.bgg_id}/edit`}
                   sx={{ mb: 2, mr: 2 }}
                 >
-                  {game.japanese_name ? "日本語名を編集" : "日本語名を登録"}
+                  ゲーム情報を編集
                 </Button>
               )}
 
@@ -1406,46 +1408,6 @@ export default function GamePage({ params }: GamePageProps) {
             </Grid>
           </Grid>
         </Paper>
-
-        {/* 日本語名登録ダイアログ */}
-        <Dialog
-          open={openDialog}
-          onClose={handleCloseDialog}
-          slotProps={{
-            backdrop: {
-              inert: openDialog ? "true" : "false",
-            },
-          }}
-        >
-          <DialogTitle>日本語名の登録</DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" gutterBottom>
-              このゲームの日本語名を登録してください。
-            </Typography>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="japaneseName"
-              label="日本語名"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={japaneseName}
-              onChange={(e) => setJapaneseName(e.target.value)}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>キャンセル</Button>
-            <Button
-              onClick={handleSubmitJapaneseName}
-              color="primary"
-              disabled={submitting || !japaneseName.trim()}
-            >
-              登録
-              {submitting && <CircularProgress size={24} sx={{ ml: 1 }} />}
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* BGGからゲーム情報を更新するダイアログ */}
         <Dialog

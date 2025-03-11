@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { getBGGGameDetails, type BGGGameDetails } from "./bggApi";
+import { getAuthHeaders } from "@/lib/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const API_BASE_URL = `${API_URL}/api/v1`;
@@ -992,3 +993,87 @@ export async function updateSystemReviews(
     throw error;
   }
 }
+
+/**
+ * ゲーム情報を更新する
+ * @param id ゲームID
+ * @param gameData 更新するゲーム情報
+ * @param authHeaders 認証ヘッダー
+ * @returns 更新されたゲーム情報
+ */
+export const updateGame = async (
+  id: string,
+  gameData: any,
+  authHeaders?: Record<string, string>
+) => {
+  try {
+    if (!authHeaders || Object.keys(authHeaders).length === 0) {
+      console.error("認証情報がありません");
+      throw new Error("認証情報がありません。ログインしてください。");
+    }
+
+    console.log("Updating game with ID:", id);
+    console.log("Auth headers:", JSON.stringify(authHeaders));
+    console.log("Game data:", JSON.stringify(gameData));
+
+    // Cookieからも認証情報を取得（バックアップとして）
+    const accessToken =
+      document.cookie.match(/access-token=([^;]+)/)?.[1] || "";
+    const client = document.cookie.match(/client=([^;]+)/)?.[1] || "";
+    const uid = document.cookie.match(/uid=([^;]+)/)?.[1] || "";
+
+    // 認証ヘッダーを結合（Cookieの情報で補完）
+    const combinedHeaders = {
+      "Content-Type": "application/json",
+      "access-token": authHeaders["access-token"] || accessToken,
+      client: authHeaders["client"] || client,
+      uid: authHeaders["uid"] || uid,
+      "token-type": "Bearer",
+    };
+
+    console.log("Combined headers:", JSON.stringify(combinedHeaders));
+    console.log("API URL:", `${API_BASE_URL}/games/${id}`);
+
+    // リクエストボディを作成
+    const requestBody = { game: gameData };
+    console.log("Request body:", JSON.stringify(requestBody));
+
+    const response = await fetch(`${API_BASE_URL}/games/${id}`, {
+      method: "PATCH",
+      headers: combinedHeaders,
+      credentials: "include", // Cookieを含める
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log("Response status:", response.status);
+
+    // レスポンスヘッダーをログに出力
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+    console.log("Response headers:", JSON.stringify(responseHeaders));
+
+    if (!response.ok) {
+      let errorMessage = `ゲーム情報の更新に失敗しました: ${response.status}`;
+
+      try {
+        const errorData = await response.json();
+        console.error("Error response:", errorData);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (e) {
+        const errorText = await response.text();
+        console.error("Error text:", errorText);
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to update game:", error);
+    throw error;
+  }
+};

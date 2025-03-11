@@ -17,11 +17,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormHelperText,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { ja } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBGGGameDetails, type BGGGameDetails } from "@/lib/bggApi";
@@ -60,6 +59,10 @@ export default function RegisterGamePage() {
   const router = useRouter();
   const { user, getAuthHeaders } = useAuth();
 
+  // 現在の年から過去30年分の選択肢を生成
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 31 }, (_, i) => currentYear - i);
+
   // 手動登録用のフォーム状態
   const [manualForm, setManualForm] = useState({
     name: "", // 英語名（任意）
@@ -72,7 +75,8 @@ export default function RegisterGamePage() {
     min_play_time: "", // 最小プレイ時間
     japanese_publisher: "", // 日本語版出版社
     designer: "", // デザイナー（任意）
-    japanese_release_date: null as Date | null, // 日本語版発売日
+    japanese_release_year: "", // 日本語版発売年
+    is_unreleased: false, // 未発売フラグ
   });
 
   // タブ切り替え処理
@@ -110,12 +114,21 @@ export default function RegisterGamePage() {
     }));
   };
 
-  // 日付選択処理
-  const handleDateChange = (date: Date | null) => {
-    setManualForm((prev) => ({
-      ...prev,
-      japanese_release_date: date,
-    }));
+  // セレクト入力の処理
+  const handleSelectChange = (e: any) => {
+    const { name, value } = e.target;
+    setManualForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // チェックボックスの処理
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setManualForm((prev) => ({ ...prev, [name]: checked }));
+
+    // 未発売がチェックされたら発売年をクリア
+    if (name === "is_unreleased" && checked) {
+      setManualForm((prev) => ({ ...prev, japanese_release_year: "" }));
+    }
   };
 
   // BGGのURLからIDを抽出する関数
@@ -206,109 +219,60 @@ export default function RegisterGamePage() {
         throw new Error("プレイ時間は必須です");
       }
 
-      // 数値フィールドを数値型に変換
-      const gameData = {
+      // 数値フィールドの変換
+      const gameData: any = {
         ...manualForm,
-        // 英語名が空の場合は日本語名を使用
-        name: manualForm.name || manualForm.japanese_name,
-        min_players: manualForm.min_players
-          ? parseInt(manualForm.min_players)
-          : undefined,
-        max_players: manualForm.max_players
-          ? parseInt(manualForm.max_players)
-          : undefined,
-        play_time: manualForm.play_time
-          ? parseInt(manualForm.play_time)
-          : undefined,
+        min_players: parseInt(manualForm.min_players),
+        max_players: parseInt(manualForm.max_players),
+        play_time: parseInt(manualForm.play_time),
         min_play_time: manualForm.min_play_time
           ? parseInt(manualForm.min_play_time)
           : undefined,
-        japanese_release_date: manualForm.japanese_release_date
-          ? manualForm.japanese_release_date.toISOString().split("T")[0]
-          : undefined,
       };
 
+      // 日本語版発売日の処理
+      if (manualForm.is_unreleased) {
+        // 未発売の場合はnull
+        gameData.japanese_release_date = null;
+      } else if (manualForm.japanese_release_year) {
+        // 年のみの場合は1月1日として設定
+        gameData.japanese_release_date = new Date(
+          parseInt(manualForm.japanese_release_year),
+          0,
+          1
+        ).toISOString();
+      } else {
+        // 未設定の場合はnull
+        gameData.japanese_release_date = null;
+      }
+
+      // 不要なフィールドを削除
+      if ("japanese_release_year" in gameData) {
+        delete gameData.japanese_release_year;
+      }
+      if ("is_unreleased" in gameData) {
+        delete gameData.is_unreleased;
+      }
+
       // AuthContextのgetAuthHeaders関数を使用
-      const authHeaders = user ? getAuthHeaders() : {};
+      const headers = user ? getAuthHeaders() : undefined;
 
-      try {
-        // 手動登録フラグを追加
-        const response = await registerGame(gameData, authHeaders, false, true);
+      // APIにゲーム情報を送信
+      const result = await registerGame(
+        gameData,
+        headers,
+        false,
+        true // 手動登録フラグ
+      );
 
-        // レスポンスの詳細をログに出力
-        console.log("Registration response:", response);
-        console.log("Response type:", typeof response);
-        console.log("Response keys:", Object.keys(response));
-        console.log("Response JSON:", JSON.stringify(response, null, 2));
-
-        // レスポンス内のゲームオブジェクトを確認
-        if (response.game) {
-          console.log("Game object in response:", response.game);
-          console.log("Game ID in game object:", response.game.id);
-          console.log("BGG ID in game object:", response.game.bgg_id);
-        }
-
-        // レスポンスからゲームIDを取得（bgg_id、id、または他のプロパティ）
-        let gameId =
-          response?.bgg_id ||
-          response?.id ||
-          response?.game?.id ||
-          response?.game?.bgg_id;
-
-        console.log("Extracted game ID:", gameId);
-
-        if (!gameId) {
-          console.error("Invalid response or missing game ID:", response);
-          setError(
-            "ゲームの登録に成功しましたが、IDの取得に失敗しました。ホームページにリダイレクトします。"
-          );
-
-          // 3秒後にホームページにリダイレクト
-          setTimeout(() => {
-            router.push("/");
-          }, 3000);
-
-          return;
-        }
-
-        // 登録成功後、ゲーム詳細ページに遷移
-        console.log("Redirecting to game page with ID:", gameId);
-
-        // IDが既にjp-で始まる場合はエンコード済みなのでそのまま使用
-        const encodedGameId = gameId;
-
-        // リダイレクト前に少し待機して、バックエンドの処理が完了するのを待つ
+      // 登録成功後、ゲーム詳細ページにリダイレクト
+      if (result) {
+        // 少し待機してからリダイレクト（バックエンドの処理完了を待つ）
         setTimeout(() => {
-          console.log(
-            "Now redirecting to:",
-            `/games/${encodedGameId}?refresh=true`
-          );
-          router.push(`/games/${encodedGameId}?refresh=true`);
+          router.push(`/games/${result.bgg_id}`);
         }, 1000);
-      } catch (err) {
-        // エラーメッセージを解析して、重複エラーの場合は既存のゲームページにリダイレクト
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error("Registration error:", errorMessage);
-
-        // 重複エラーの場合（エラーメッセージに | が含まれている）
-        if (errorMessage.includes("|")) {
-          const [message, existingGameId] = errorMessage.split("|");
-          setError(`${message} 既存のゲームページにリダイレクトします。`);
-
-          // 3秒後に既存のゲームページにリダイレクト
-          setTimeout(() => {
-            const encodedGameId = existingGameId.match(/[^\x00-\x7F]/)
-              ? encodeURIComponent(existingGameId)
-              : existingGameId;
-            router.push(`/games/${encodedGameId}?refresh=true`);
-          }, 3000);
-        } else {
-          // 通常のエラー
-          setError(errorMessage);
-        }
       }
     } catch (err) {
-      console.error("Manual registration error:", err);
       setError(
         err instanceof Error ? err.message : "予期せぬエラーが発生しました"
       );
@@ -317,87 +281,56 @@ export default function RegisterGamePage() {
     }
   };
 
+  // BGGゲーム登録処理
   const handleRegister = async (gameDetails: BGGGameDetails) => {
     try {
-      setLoading(true);
-      setError(null);
-
-      console.log("Registering game with details:", gameDetails);
-      console.log("Weight from BGG:", gameDetails.weight);
-      console.log("Best players from BGG:", gameDetails.bestPlayers);
-      console.log(
-        "Recommended players from BGG:",
-        gameDetails.recommendedPlayers
-      );
-      console.log("Japanese name from BGG:", gameDetails.japaneseName);
-      console.log(
-        "Japanese publisher from BGG:",
-        gameDetails.japanesePublisher
-      );
-      console.log(
-        "Japanese release date from BGG:",
-        gameDetails.japaneseReleaseDate
-      );
-
       // AuthContextのgetAuthHeaders関数を使用
-      const authHeaders = user ? getAuthHeaders() : {};
-      console.log("Auth headers:", authHeaders);
+      const headers = user ? getAuthHeaders() : undefined;
 
-      // ゲーム登録前にデータを整形
-      const gameData = {
-        ...gameDetails,
-        id: gameDetails.id.toString(), // 文字列に変換
-        // 日本語名が存在する場合は明示的に設定
-        japaneseName: gameDetails.japaneseName || null,
-        japanesePublisher: gameDetails.japanesePublisher || null,
-        japaneseReleaseDate: gameDetails.japaneseReleaseDate || null,
-      };
-      console.log("Formatted game data:", gameData);
+      // APIにゲーム情報を送信
+      const result = await registerGame(gameDetails, headers);
 
-      const data = await registerGame(gameData, authHeaders);
-      console.log("Registered game data:", data);
-
-      // キャッシュをクリアするためにクエリパラメータを追加
-      router.push(`/games/${gameDetails.id}?refresh=true`);
-    } catch (error) {
-      console.error("Error registering game:", error);
-      setError(
-        error instanceof Error ? error.message : "ゲームの登録に失敗しました"
-      );
-    } finally {
-      setLoading(false);
+      // 登録成功後、ゲーム詳細ページにリダイレクト
+      if (result) {
+        // 少し待機してからリダイレクト（バックエンドの処理完了を待つ）
+        setTimeout(() => {
+          router.push(`/games/${result.bgg_id}`);
+        }, 1000);
+      }
+    } catch (err: any) {
+      // エラーメッセージに既存のゲームIDが含まれている場合は、そのゲームページにリダイレクト
+      if (err.message && err.message.includes("|")) {
+        const [errorMsg, existingGameId] = err.message.split("|");
+        setError(`${errorMsg} 既存のゲームページに移動します...`);
+        setTimeout(() => {
+          router.push(`/games/${existingGameId}`);
+        }, 2000);
+      } else {
+        throw err;
+      }
     }
   };
 
+  // ログインしていない場合はログインページにリダイレクト
   if (!user) {
     return (
-      <Container maxWidth="md">
-        <Box sx={{ py: 4 }}>
-          <Paper elevation={3} sx={{ p: 4, textAlign: "center" }}>
-            <Typography variant="h5" color="error" gutterBottom>
-              ゲームを登録するにはログインが必要です
-            </Typography>
-            <Typography variant="body1" paragraph>
-              ゲームの登録は、ログインしたユーザーのみが行えます。
-              まだアカウントをお持ちでない場合は、新規登録してください。
-            </Typography>
-            <Box
-              sx={{ mt: 3, display: "flex", justifyContent: "center", gap: 2 }}
-            >
-              <Button
-                variant="contained"
-                color="primary"
-                component={Link}
-                href="/login?redirect=/games/register"
-              >
-                ログイン
-              </Button>
-              <Button variant="outlined" onClick={() => router.back()}>
-                戻る
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            ログインが必要です
+          </Typography>
+          <Typography variant="body1" paragraph>
+            ゲームを登録するには、ログインが必要です。
+          </Typography>
+          <Button
+            component={Link}
+            href="/login?redirect=/games/register"
+            variant="contained"
+            color="primary"
+          >
+            ログインページへ
+          </Button>
+        </Paper>
       </Container>
     );
   }
@@ -458,182 +391,206 @@ export default function RegisterGamePage() {
             BoardGameGeekに登録されていないゲームや、日本語情報のみで登録したい場合はこちらから登録できます。
             日本語名は必須項目です。
           </Typography>
-          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ja}>
-            <Box
-              component="form"
-              onSubmit={handleManualSubmit}
-              noValidate
+          <Box
+            component="form"
+            onSubmit={handleManualSubmit}
+            noValidate
+            sx={{ mt: 3 }}
+          >
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="日本語名（必須）"
+                  name="japanese_name"
+                  variant="outlined"
+                  value={manualForm.japanese_name}
+                  onChange={handleManualFormChange}
+                  required
+                  error={tabValue === 1 && error?.includes("日本語名")}
+                  helperText={
+                    tabValue === 1 && error?.includes("日本語名") ? error : ""
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="英語名（任意）"
+                  name="name"
+                  variant="outlined"
+                  value={manualForm.name}
+                  onChange={handleManualFormChange}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="日本語説明"
+                  name="japanese_description"
+                  variant="outlined"
+                  value={manualForm.japanese_description}
+                  onChange={handleManualFormChange}
+                  multiline
+                  rows={4}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="日本語版画像URL（必須）"
+                  name="japanese_image_url"
+                  variant="outlined"
+                  value={manualForm.japanese_image_url}
+                  onChange={handleManualFormChange}
+                  required
+                  error={tabValue === 1 && error?.includes("日本語版画像URL")}
+                  helperText={
+                    tabValue === 1 && error?.includes("日本語版画像URL")
+                      ? error
+                      : "画像のURLを入力してください"
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="最小プレイ人数（必須）"
+                  name="min_players"
+                  variant="outlined"
+                  value={manualForm.min_players}
+                  onChange={handleNumberChange}
+                  type="text"
+                  required
+                  error={tabValue === 1 && error?.includes("最少プレイ人数")}
+                  helperText={
+                    tabValue === 1 && error?.includes("最少プレイ人数")
+                      ? error
+                      : ""
+                  }
+                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="最大プレイ人数（必須）"
+                  name="max_players"
+                  variant="outlined"
+                  value={manualForm.max_players}
+                  onChange={handleNumberChange}
+                  type="text"
+                  required
+                  error={tabValue === 1 && error?.includes("最大プレイ人数")}
+                  helperText={
+                    tabValue === 1 && error?.includes("最大プレイ人数")
+                      ? error
+                      : ""
+                  }
+                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="最小プレイ時間（分）"
+                  name="min_play_time"
+                  variant="outlined"
+                  value={manualForm.min_play_time}
+                  onChange={handleNumberChange}
+                  type="text"
+                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="プレイ時間（分）（必須）"
+                  name="play_time"
+                  variant="outlined"
+                  value={manualForm.play_time}
+                  onChange={handleNumberChange}
+                  type="text"
+                  required
+                  error={tabValue === 1 && error?.includes("プレイ時間")}
+                  helperText={
+                    tabValue === 1 && error?.includes("プレイ時間") ? error : ""
+                  }
+                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="日本語版出版社"
+                  name="japanese_publisher"
+                  variant="outlined"
+                  value={manualForm.japanese_publisher}
+                  onChange={handleManualFormChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="デザイナー（任意）"
+                  name="designer"
+                  variant="outlined"
+                  value={manualForm.designer}
+                  onChange={handleManualFormChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl
+                  fullWidth
+                  variant="outlined"
+                  disabled={manualForm.is_unreleased}
+                >
+                  <InputLabel id="release-year-label">
+                    日本語版発売年
+                  </InputLabel>
+                  <Select
+                    labelId="release-year-label"
+                    name="japanese_release_year"
+                    value={manualForm.japanese_release_year}
+                    onChange={handleSelectChange}
+                    label="日本語版発売年"
+                  >
+                    <MenuItem value="">
+                      <em>未選択</em>
+                    </MenuItem>
+                    {years.map((year) => (
+                      <MenuItem key={year} value={year.toString()}>
+                        {year}年
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>発売年のみを選択してください</FormHelperText>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={manualForm.is_unreleased}
+                      onChange={handleCheckboxChange}
+                      name="is_unreleased"
+                      color="primary"
+                    />
+                  }
+                  label="未発売"
+                />
+              </Grid>
+            </Grid>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={loading}
               sx={{ mt: 3 }}
             >
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="日本語名（必須）"
-                    name="japanese_name"
-                    variant="outlined"
-                    value={manualForm.japanese_name}
-                    onChange={handleManualFormChange}
-                    required
-                    error={tabValue === 1 && error?.includes("日本語名")}
-                    helperText={
-                      tabValue === 1 && error?.includes("日本語名") ? error : ""
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="英語名（任意）"
-                    name="name"
-                    variant="outlined"
-                    value={manualForm.name}
-                    onChange={handleManualFormChange}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="日本語説明"
-                    name="japanese_description"
-                    variant="outlined"
-                    value={manualForm.japanese_description}
-                    onChange={handleManualFormChange}
-                    multiline
-                    rows={4}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="日本語版画像URL（必須）"
-                    name="japanese_image_url"
-                    variant="outlined"
-                    value={manualForm.japanese_image_url}
-                    onChange={handleManualFormChange}
-                    required
-                    error={tabValue === 1 && error?.includes("日本語版画像URL")}
-                    helperText={
-                      tabValue === 1 && error?.includes("日本語版画像URL")
-                        ? error
-                        : "画像のURLを入力してください"
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="最小プレイ人数（必須）"
-                    name="min_players"
-                    variant="outlined"
-                    value={manualForm.min_players}
-                    onChange={handleNumberChange}
-                    type="text"
-                    required
-                    error={tabValue === 1 && error?.includes("最少プレイ人数")}
-                    helperText={
-                      tabValue === 1 && error?.includes("最少プレイ人数")
-                        ? error
-                        : ""
-                    }
-                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="最大プレイ人数（必須）"
-                    name="max_players"
-                    variant="outlined"
-                    value={manualForm.max_players}
-                    onChange={handleNumberChange}
-                    type="text"
-                    required
-                    error={tabValue === 1 && error?.includes("最大プレイ人数")}
-                    helperText={
-                      tabValue === 1 && error?.includes("最大プレイ人数")
-                        ? error
-                        : ""
-                    }
-                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="最小プレイ時間（分）"
-                    name="min_play_time"
-                    variant="outlined"
-                    value={manualForm.min_play_time}
-                    onChange={handleNumberChange}
-                    type="text"
-                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="プレイ時間（分）（必須）"
-                    name="play_time"
-                    variant="outlined"
-                    value={manualForm.play_time}
-                    onChange={handleNumberChange}
-                    type="text"
-                    required
-                    error={tabValue === 1 && error?.includes("プレイ時間")}
-                    helperText={
-                      tabValue === 1 && error?.includes("プレイ時間")
-                        ? error
-                        : ""
-                    }
-                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="日本語版出版社"
-                    name="japanese_publisher"
-                    variant="outlined"
-                    value={manualForm.japanese_publisher}
-                    onChange={handleManualFormChange}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="デザイナー（任意）"
-                    name="designer"
-                    variant="outlined"
-                    value={manualForm.designer}
-                    onChange={handleManualFormChange}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <DatePicker
-                    label="日本語版発売日"
-                    value={manualForm.japanese_release_date}
-                    onChange={handleDateChange}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        variant: "outlined",
-                      },
-                    }}
-                  />
-                </Grid>
-              </Grid>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={loading}
-                sx={{ mt: 3 }}
-              >
-                {loading ? <CircularProgress size={24} /> : "手動で登録する"}
-              </Button>
-            </Box>
-          </LocalizationProvider>
+              {loading ? <CircularProgress size={24} /> : "手動で登録する"}
+            </Button>
+          </Box>
         </TabPanel>
 
         {error && tabValue === 0 && (
