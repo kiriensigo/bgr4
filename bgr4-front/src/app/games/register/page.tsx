@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Container,
   Box,
@@ -58,6 +58,8 @@ export default function RegisterGamePage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { user, getAuthHeaders } = useAuth();
+  const [reviewCount, setReviewCount] = useState(0);
+  const [loadingReviews, setLoadingReviews] = useState(true);
 
   // 現在の年から過去30年分の選択肢を生成
   const currentYear = new Date().getFullYear();
@@ -78,6 +80,53 @@ export default function RegisterGamePage() {
     japanese_release_year: "", // 日本語版発売年
     is_unreleased: false, // 未発売フラグ
   });
+
+  // ユーザーのレビュー数を取得
+  useEffect(() => {
+    if (user) {
+      const fetchReviewCount = async () => {
+        setLoadingReviews(true);
+        try {
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+            }/api/v1/reviews/my`,
+            {
+              headers: {
+                ...getAuthHeaders(),
+              },
+              credentials: "include",
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setReviewCount(
+              Array.isArray(data.reviews) ? data.reviews.length : 0
+            );
+          } else {
+            console.error("レビュー数の取得に失敗しました:", response.status);
+            setReviewCount(0);
+          }
+        } catch (error) {
+          console.error("レビュー数の取得に失敗しました:", error);
+          setReviewCount(0);
+        } finally {
+          setLoadingReviews(false);
+        }
+      };
+
+      fetchReviewCount();
+    }
+  }, [user, getAuthHeaders]);
+
+  // 管理者かどうかを判定
+  const isAdmin =
+    user?.email?.endsWith("@boardgamereview.com") ||
+    user?.email === "admin@example.com";
+
+  // レビュー数が5件以上あるか、または管理者かどうかを判定
+  const canRegisterGame = reviewCount >= 5 || isAdmin;
 
   // タブ切り替え処理
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -331,6 +380,59 @@ export default function RegisterGamePage() {
             ログインページへ
           </Button>
         </Paper>
+      </Container>
+    );
+  }
+
+  // レビュー数が足りない場合はメッセージを表示
+  if (!canRegisterGame && !loadingReviews) {
+    return (
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            レビュー数が不足しています
+          </Typography>
+          <Typography variant="body1" paragraph>
+            ゲームを登録するには、5件以上のレビューが必要です。現在のレビュー数:{" "}
+            {reviewCount}件
+          </Typography>
+          <Typography variant="body1" paragraph>
+            より多くのボードゲームをレビューして、ゲーム登録機能をアンロックしましょう！
+          </Typography>
+          <Button
+            component={Link}
+            href="/games"
+            variant="contained"
+            color="primary"
+            sx={{ mr: 2 }}
+          >
+            ゲーム一覧へ
+          </Button>
+          <Button
+            component={Link}
+            href="/reviews/my"
+            variant="outlined"
+            color="primary"
+          >
+            マイレビューへ
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // レビュー数読み込み中の場合はローディング表示
+  if (loadingReviews) {
+    return (
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="50vh"
+        >
+          <CircularProgress />
+        </Box>
       </Container>
     );
   }

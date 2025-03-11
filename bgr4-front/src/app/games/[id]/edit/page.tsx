@@ -23,6 +23,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import { getGame, updateGame } from "@/lib/api";
+import Link from "next/link";
 
 export default function EditGamePage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -32,6 +33,8 @@ export default function EditGamePage({ params }: { params: { id: string } }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [loadingReviews, setLoadingReviews] = useState(true);
 
   // 現在の年から過去30年分の選択肢を生成
   const currentYear = new Date().getFullYear();
@@ -110,6 +113,53 @@ export default function EditGamePage({ params }: { params: { id: string } }) {
       router.push(`/games/${params.id}`);
     }
   }, [user, authLoading, router, params.id]);
+
+  // ユーザーのレビュー数を取得
+  useEffect(() => {
+    if (user) {
+      const fetchReviewCount = async () => {
+        setLoadingReviews(true);
+        try {
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+            }/api/v1/reviews/my`,
+            {
+              headers: {
+                ...getAuthHeaders(),
+              },
+              credentials: "include",
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setReviewCount(
+              Array.isArray(data.reviews) ? data.reviews.length : 0
+            );
+          } else {
+            console.error("レビュー数の取得に失敗しました:", response.status);
+            setReviewCount(0);
+          }
+        } catch (error) {
+          console.error("レビュー数の取得に失敗しました:", error);
+          setReviewCount(0);
+        } finally {
+          setLoadingReviews(false);
+        }
+      };
+
+      fetchReviewCount();
+    }
+  }, [user, getAuthHeaders]);
+
+  // 管理者かどうかを判定
+  const isAdmin =
+    user?.email?.endsWith("@boardgamereview.com") ||
+    user?.email === "admin@example.com";
+
+  // レビュー数が5件以上あるか、または管理者かどうかを判定
+  const canEditGame = reviewCount >= 5 || isAdmin;
 
   // フォーム入力の処理
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,9 +264,9 @@ export default function EditGamePage({ params }: { params: { id: string } }) {
       await updateGame(gameId, gameData, headers);
       setSuccess(true);
 
-      // 3秒後にゲーム詳細ページに戻る
+      // 3秒後にゲーム詳細ページに戻る（リフレッシュフラグ付き）
       setTimeout(() => {
-        router.push(`/games/${params.id}`);
+        router.push(`/games/${params.id}?refresh=true`);
       }, 3000);
     } catch (err: any) {
       console.error("Failed to update game:", err);
@@ -242,7 +292,72 @@ export default function EditGamePage({ params }: { params: { id: string } }) {
   }
 
   if (!user) {
-    return null; // useEffectでリダイレクト処理をしているため
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            ログインが必要です
+          </Typography>
+          <Typography variant="body1" paragraph>
+            ゲーム情報を編集するには、ログインが必要です。
+          </Typography>
+          <Button
+            component={Link}
+            href={`/login?redirect=/games/${params.id}/edit`}
+            variant="contained"
+            color="primary"
+          >
+            ログインページへ
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // レビュー数が足りない場合はメッセージを表示
+  if (!canEditGame && !loadingReviews) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Typography variant="h5" gutterBottom>
+            レビュー数が不足しています
+          </Typography>
+          <Typography variant="body1" paragraph>
+            ゲーム情報を編集するには、5件以上のレビューが必要です。現在のレビュー数:{" "}
+            {reviewCount}件
+          </Typography>
+          <Typography variant="body1" paragraph>
+            より多くのボードゲームをレビューして、ゲーム編集機能をアンロックしましょう！
+          </Typography>
+          <Button
+            component={Link}
+            href={`/games/${params.id}`}
+            variant="contained"
+            color="primary"
+            sx={{ mr: 2 }}
+          >
+            ゲーム詳細へ戻る
+          </Button>
+          <Button
+            component={Link}
+            href="/games"
+            variant="outlined"
+            color="primary"
+            sx={{ mr: 2 }}
+          >
+            ゲーム一覧へ
+          </Button>
+          <Button
+            component={Link}
+            href="/reviews/my"
+            variant="outlined"
+            color="primary"
+          >
+            マイレビューへ
+          </Button>
+        </Paper>
+      </Container>
+    );
   }
 
   return (

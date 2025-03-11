@@ -1,6 +1,9 @@
 module Api
   module V1
     class GamesController < ApplicationController
+      # レビュー数の制限値（この値以上のレビュー数が必要）
+      REQUIRED_REVIEWS_COUNT = 5
+
       before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image]
       before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :update_system_reviews]
       before_action :authenticate_admin!, only: [:update_system_reviews]
@@ -130,6 +133,12 @@ module Api
       end
 
       def create
+        # 管理者または必要なレビュー数を持つユーザーかチェック
+        unless admin_user? || has_enough_reviews?
+          render json: { error: "ゲーム登録には#{REQUIRED_REVIEWS_COUNT}件以上のレビューが必要です" }, status: :forbidden
+          return
+        end
+
         # デバッグログ - 受け取ったパラメータを記録
         Rails.logger.info "Received params: #{params.inspect}"
         
@@ -249,6 +258,12 @@ module Api
 
       # 手動登録用のメソッド
       def create_manual_game
+        # 管理者または必要なレビュー数を持つユーザーかチェック
+        unless admin_user? || has_enough_reviews?
+          render json: { error: "ゲーム登録には#{REQUIRED_REVIEWS_COUNT}件以上のレビューが必要です" }, status: :forbidden
+          return
+        end
+
         # フロントエンドから送信されたパラメータを取得
         game_params = params[:game]
         
@@ -358,6 +373,12 @@ module Api
       end
 
       def update
+        # 管理者または必要なレビュー数を持つユーザーかチェック
+        unless admin_user? || has_enough_reviews?
+          render json: { error: "ゲーム情報の更新には#{REQUIRED_REVIEWS_COUNT}件以上のレビューが必要です" }, status: :forbidden
+          return
+        end
+
         if @game.update(game_params)
           # 日本語出版社名を正規化
           @game.normalize_japanese_publisher
@@ -370,6 +391,12 @@ module Api
 
       # BGGからゲーム情報を更新するエンドポイント
       def update_from_bgg
+        # 管理者または必要なレビュー数を持つユーザーかチェック
+        unless admin_user? || has_enough_reviews?
+          render json: { error: "ゲーム情報の更新には#{REQUIRED_REVIEWS_COUNT}件以上のレビューが必要です" }, status: :forbidden
+          return
+        end
+
         # 強制更新フラグがある場合は、既存の値も上書きする
         force_update = params[:force_update] == 'true'
         
@@ -1001,6 +1028,22 @@ module Api
         
         # マッピングに該当しない場合は元の名前を返す
         [designer]
+      end
+
+      # 管理者ユーザーかどうかをチェック
+      def admin_user?
+        current_user&.email&.end_with?('@boardgamereview.com') || current_user&.email == 'admin@example.com'
+      end
+
+      # 必要なレビュー数を持っているかチェック
+      def has_enough_reviews?
+        return false unless current_user
+        
+        # ユーザーのレビュー数を取得（システムユーザーのレビューは除外）
+        review_count = current_user.reviews.count
+        
+        # 必要なレビュー数以上かどうかを返す
+        review_count >= REQUIRED_REVIEWS_COUNT
       end
     end
   end

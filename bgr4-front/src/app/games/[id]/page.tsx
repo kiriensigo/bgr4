@@ -62,6 +62,8 @@ import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import UpdateIcon from "@mui/icons-material/Update";
 import EditIcon from "@mui/icons-material/Edit";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 interface Review {
   id: number;
@@ -180,25 +182,18 @@ const getPopularCategories = (reviews: any[]) => {
 
 // 人気のメカニクスを集計する関数
 const getPopularMechanics = (reviews: any[]) => {
-  if (!reviews || reviews.length === 0) return [];
-
-  const mechanicsCount = new Map<string, number>();
+  const mechanics: { [key: string]: number } = {};
   reviews.forEach((review) => {
-    // mechanicsが配列であることを確認し、そうでない場合は空配列を使用
-    const mechanics = Array.isArray(review.mechanics) ? review.mechanics : [];
-
-    mechanics.forEach((mechanic) => {
-      if (mechanic) {
-        // mechanicがnullやundefinedでないことを確認
-        mechanicsCount.set(mechanic, (mechanicsCount.get(mechanic) || 0) + 1);
-      }
-    });
+    if (review.mechanics && Array.isArray(review.mechanics)) {
+      review.mechanics.forEach((mechanic: string) => {
+        mechanics[mechanic] = (mechanics[mechanic] || 0) + 1;
+      });
+    }
   });
-
-  return Array.from(mechanicsCount.entries())
+  return Object.entries(mechanics)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([name, count]) => ({ name, count }));
+    .map((entry) => entry[0]);
 };
 
 // スコアを表示するためのヘルパー関数を修正
@@ -283,11 +278,73 @@ const DesignerInfo = ({ game }: { game: Game }) => {
   );
 };
 
+// エラー表示コンポーネントを追加
+const ErrorDisplay = ({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry?: () => void;
+}) => {
+  const router = useRouter();
+
+  return (
+    <Paper
+      elevation={3}
+      sx={{
+        p: 4,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        maxWidth: 600,
+        mx: "auto",
+        mt: 4,
+      }}
+    >
+      <ErrorOutlineIcon color="error" sx={{ fontSize: 60, mb: 2 }} />
+      <Typography variant="h5" gutterBottom>
+        エラーが発生しました
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        {error}
+      </Typography>
+      <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+        {onRetry && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<RefreshIcon />}
+            onClick={onRetry}
+          >
+            再試行
+          </Button>
+        )}
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => router.push("/games")}
+        >
+          ゲーム一覧に戻る
+        </Button>
+      </Box>
+    </Paper>
+  );
+};
+
 export default function GamePage({ params }: GamePageProps) {
   const { user, getAuthHeaders, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const refresh = searchParams.get("refresh") === "true";
+
+  // IDがundefinedの場合はゲーム一覧ページにリダイレクト
+  useEffect(() => {
+    if (params.id === "undefined" || !params.id) {
+      console.log("Invalid game ID detected, redirecting to games list");
+      router.push("/games");
+    }
+  }, [params.id, router]);
 
   const [game, setGame] = useState<ExtendedGame | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -308,6 +365,7 @@ export default function GamePage({ params }: GamePageProps) {
   const [loadingProgress, setLoadingProgress] = useState(0); // ローディングの進捗状態
   const [openSystemReviewsDialog, setOpenSystemReviewsDialog] = useState(false);
   const [updatingSystemReviews, setUpdatingSystemReviews] = useState(false);
+  const [reviewCount, setReviewCount] = useState(0);
 
   // ローディングの進捗状態を更新するタイマー
   useEffect(() => {
@@ -334,58 +392,108 @@ export default function GamePage({ params }: GamePageProps) {
     };
   }, [updatingGame]);
 
+  // ユーザーのレビュー数を取得
+  useEffect(() => {
+    if (user) {
+      const fetchReviewCount = async () => {
+        try {
+          const response = await fetch(
+            `${
+              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+            }/api/v1/reviews/my`,
+            {
+              headers: {
+                ...getAuthHeaders(),
+              },
+              credentials: "include",
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setReviewCount(
+              Array.isArray(data.reviews) ? data.reviews.length : 0
+            );
+          } else {
+            console.error("レビュー数の取得に失敗しました:", response.status);
+            setReviewCount(0);
+          }
+        } catch (error) {
+          console.error("レビュー数の取得に失敗しました:", error);
+          setReviewCount(0);
+        }
+      };
+
+      fetchReviewCount();
+    }
+  }, [user, getAuthHeaders]);
+
+  // レビュー数が5件以上あるか、または管理者かどうかを判定
+  const canEditGame = reviewCount >= 5 || isAdmin;
+
   const fetchGameData = useCallback(
     async (forceRefresh = false) => {
-      try {
-        setLoading(true);
-        setError(null);
+      // IDがundefinedの場合は処理を中止
+      if (params.id === "undefined" || !params.id) {
+        console.log("Invalid game ID, skipping data fetch");
+        setError("無効なゲームIDです。ゲーム一覧ページに戻ってください。");
+        setLoading(false);
+        return;
+      }
 
-        // キャッシュをチェック
-        const cacheKey = `game-${params.id}`;
-        const cachedData = gameCache[cacheKey];
-        const now = Date.now();
+      setLoading(true);
+      setError(null);
 
-        // 有効なキャッシュがある場合はそれを使用（強制リフレッシュでない場合）
+      // キャッシュをチェック
+      const cacheKey = `game-${params.id}`;
+      const cachedData = gameCache[cacheKey];
+      const now = Date.now();
+
+      // 有効なキャッシュがある場合はそれを使用（強制リフレッシュでない場合）
+      if (
+        !forceRefresh &&
+        !refresh &&
+        cachedData &&
+        now - cachedData.timestamp < CACHE_EXPIRY
+      ) {
+        console.log("Using cached game data");
+        setGame(cachedData.data as ExtendedGame);
+        if (cachedData.data.japanese_name) {
+          setJapaneseName(cachedData.data.japanese_name);
+        }
         if (
-          !forceRefresh &&
-          !refresh &&
-          cachedData &&
-          now - cachedData.timestamp < CACHE_EXPIRY
+          cachedData.data.in_wishlist &&
+          typeof cachedData.data.id === "number"
         ) {
-          console.log("Using cached game data");
-          setGame(cachedData.data as ExtendedGame);
-          if (cachedData.data.japanese_name) {
-            setJapaneseName(cachedData.data.japanese_name);
-          }
-          if (cachedData.data.in_wishlist) {
-            // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
-            setWishlistItemId(cachedData.data.id);
-          }
-          setLoading(false);
-          return;
+          // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
+          setWishlistItemId(cachedData.data.id);
+        }
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // まずAPIからゲーム情報の取得を試みる
+        const headers = user ? getAuthHeaders() : {};
+
+        // パラメータのIDをログに出力
+        console.log("Game ID from params:", params.id);
+        console.log("Params object:", params);
+        console.log("URL path:", window.location.pathname);
+
+        // IDが存在しない場合はエラーを投げる
+        if (!params.id || params.id === "undefined") {
+          throw new Error("ゲームIDが指定されていません");
         }
 
+        // APIリクエストのタイムアウト処理を追加
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒でタイムアウト
+
         try {
-          // まずAPIからゲーム情報の取得を試みる
-          const headers = user ? getAuthHeaders() : {};
-
-          // パラメータのIDをログに出力
-          console.log("Game ID from params:", params.id);
-          console.log("Params object:", params);
-          console.log("URL path:", window.location.pathname);
-
-          // IDが存在しない場合はエラーを投げる
-          if (!params.id) {
-            throw new Error("ゲームIDが指定されていません");
-          }
-
-          // キャッシュを無効化するオプションを追加
-          const options = {
-            headers,
-            cache: "no-cache" as RequestCache,
-          };
-
           const data = (await getGame(params.id, headers)) as ExtendedGame;
+          clearTimeout(timeoutId); // タイムアウトをクリア
+
           console.log("Fetched game data:", {
             ...data,
             reviews: data.reviews
@@ -412,7 +520,7 @@ export default function GamePage({ params }: GamePageProps) {
           if (data.japanese_name) {
             setJapaneseName(data.japanese_name);
           }
-          if (data.in_wishlist) {
+          if (data.in_wishlist && typeof data.id === "number") {
             // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
             setWishlistItemId(data.id);
           }
@@ -422,17 +530,23 @@ export default function GamePage({ params }: GamePageProps) {
             data,
             timestamp: now,
           };
-        } catch (err) {
-          console.error("Error fetching game:", err);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          throw fetchError;
+        }
+      } catch (err) {
+        console.error("Error fetching game:", err);
+
+        // AbortControllerによるタイムアウトエラーの場合
+        if (err instanceof DOMException && err.name === "AbortError") {
+          setError(
+            "リクエストがタイムアウトしました。ネットワーク接続を確認してください。"
+          );
+        } else {
           setError(
             err instanceof Error ? err.message : "予期せぬエラーが発生しました"
           );
         }
-      } catch (err) {
-        console.error("Error in fetchGameData:", err);
-        setError(
-          err instanceof Error ? err.message : "予期せぬエラーが発生しました"
-        );
       } finally {
         setLoading(false);
       }
@@ -441,8 +555,24 @@ export default function GamePage({ params }: GamePageProps) {
   );
 
   useEffect(() => {
+    // IDがundefinedの場合は処理を中止
+    if (params.id === "undefined" || !params.id) {
+      return;
+    }
+
     // ゲームデータを取得
     fetchGameData(refresh);
+
+    // refreshパラメータがtrueの場合、URLからrefreshパラメータを削除し、スナックバーを表示
+    if (refresh) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+
+      // 更新完了のスナックバーを表示
+      setSnackbarMessage("ゲーム情報が更新されました");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    }
   }, [fetchGameData, params.id, refresh]);
 
   const handleOpenDialog = () => {
@@ -717,49 +847,44 @@ export default function GamePage({ params }: GamePageProps) {
     }
   };
 
+  // ページのレンダリング
   if (loading) {
     return (
-      <Container sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-        <CircularProgress />
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="50vh"
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            ゲーム情報を読み込み中...
+          </Typography>
+        </Box>
       </Container>
     );
   }
 
   if (error) {
     return (
-      <Container sx={{ py: 4 }}>
-        <Paper sx={{ p: 3, textAlign: "center", bgcolor: "error.light" }}>
-          <Typography color="error" variant="h6">
-            {error}
-          </Typography>
-          {typeof error === "string" &&
-            error.includes("まだデータベースに登録されていません") && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body1" gutterBottom>
-                  このゲームはまだデータベースに登録されていません。
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  component={Link}
-                  href="/games/register"
-                  sx={{ mt: 1 }}
-                >
-                  ゲーム登録ページへ
-                </Button>
-              </Box>
-            )}
-        </Paper>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <ErrorDisplay
+          error={error}
+          onRetry={() => {
+            setError(null);
+            fetchGameData(true);
+          }}
+        />
       </Container>
     );
   }
 
   if (!game) {
     return (
-      <Container sx={{ py: 4 }}>
-        <Paper sx={{ p: 3, textAlign: "center" }}>
-          <Typography>ゲームが見つかりませんでした</Typography>
-        </Paper>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <ErrorDisplay error="ゲーム情報が見つかりませんでした。" />
       </Container>
     );
   }
@@ -938,7 +1063,7 @@ export default function GamePage({ params }: GamePageProps) {
               )}
 
               {/* 日本語名登録ボタンを削除し、ゲーム情報編集ボタンを追加 */}
-              {user && (
+              {user && canEditGame && (
                 <Button
                   variant="outlined"
                   color="secondary"
@@ -1405,6 +1530,17 @@ export default function GamePage({ params }: GamePageProps) {
                   </Button>
                 </>
               )}
+
+              {/* サイト登録済みチェックボックス */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={Boolean(game.registered_on_site)}
+                    disabled
+                  />
+                }
+                label="サイト登録済み"
+              />
             </Grid>
           </Grid>
         </Paper>

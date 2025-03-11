@@ -70,7 +70,9 @@ export default function Header() {
 
           if (response.ok) {
             const data = await response.json();
-            setReviewCount(Array.isArray(data) ? data.length : 0);
+            setReviewCount(
+              Array.isArray(data.reviews) ? data.reviews.length : 0
+            );
           } else {
             console.error("レビュー数の取得に失敗しました:", response.status);
             const errorData = await response.json().catch(() => ({}));
@@ -87,23 +89,23 @@ export default function Header() {
     }
   }, [user, getAuthHeaders]);
 
-  // レビュー3件以上のユーザーかどうかを判定
-  const canRegisterGame = reviewCount >= 3;
+  // レビュー5件以上のユーザーかどうかを判定
+  const canRegisterGame = reviewCount >= 5;
 
   // 管理者かどうかを判定
   const isAdmin =
     user?.email?.endsWith("@boardgamereview.com") ||
     user?.email === "admin@example.com";
 
-  // 一時的な対応：ユーザーが存在する場合は常にゲーム登録リンクを表示
-  const showGameRegister = user ? true : false;
+  // ゲーム登録リンクを表示するかどうか
+  const showGameRegister = user && (canRegisterGame || isAdmin);
 
   const menuItems = [
     { label: "ホーム", path: "/" },
     { label: "検索", path: "/search" },
     { label: "ゲーム一覧", path: "/games" },
     { label: "レビュー一覧", path: "/reviews" },
-    ...(user && (showGameRegister || canRegisterGame || isAdmin)
+    ...(user && (showGameRegister || isAdmin)
       ? [{ label: "ゲーム登録", path: "/games/register" }]
       : []),
     ...(isAdmin ? [{ label: "編集履歴", path: "/admin/edit-histories" }] : []),

@@ -341,10 +341,10 @@ export async function getGame(
   authHeaders?: Record<string, string>
 ): Promise<Game> {
   try {
-    // IDが未定義の場合はエラーを投げる
-    if (!id) {
+    // IDが未定義または"undefined"文字列の場合はエラーを投げる
+    if (!id || id === "undefined") {
       throw new Error(
-        "ゲームIDが指定されていません。ゲーム登録後のリダイレクトに問題がある可能性があります。"
+        "無効なゲームIDが指定されました。ゲーム一覧ページに戻ってください。"
       );
     }
 
