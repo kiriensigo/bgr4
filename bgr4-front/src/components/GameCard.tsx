@@ -1,6 +1,15 @@
 "use client";
 
-import { Box, Paper, Typography, Button } from "@mui/material";
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
+} from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -10,6 +19,9 @@ import GameRating from "./GameRating";
 import OverallScoreDisplay from "./OverallScoreDisplay";
 import { useState } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
+import GroupIcon from "@mui/icons-material/Group";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import Rating from "@mui/material/Rating";
 
 interface Game {
   id?: string;
@@ -29,6 +41,7 @@ interface Game {
   play_time?: number;
   min_play_time?: number;
   reviews_count?: number;
+  site_recommended_players?: any[];
 }
 
 interface Review {
@@ -50,6 +63,7 @@ interface GameCardProps {
   overallScoreVariant?: "default" | "compact" | "large";
   showOverallScoreOverlay?: boolean;
   onReviewUpdated?: () => void;
+  variant?: "default" | "carousel" | "grid" | "search" | "review";
 }
 
 export default function GameCard({
@@ -60,6 +74,7 @@ export default function GameCard({
   overallScoreVariant = "compact",
   showOverallScoreOverlay = false,
   onReviewUpdated,
+  variant = "default",
 }: GameCardProps) {
   // 画像読み込み状態を管理するステート
   const [imageLoading, setImageLoading] = useState(true);
@@ -73,9 +88,9 @@ export default function GameCard({
     type === "review"
       ? review?.overall_score
       : game.average_score || game.averageRating;
-  const players = `${game.minPlayers || game.min_players || "?"}〜${
-    game.maxPlayers || game.max_players || "?"
-  }人`;
+  const minPlayers = game.minPlayers || game.min_players || "?";
+  const maxPlayers = game.maxPlayers || game.max_players || "?";
+  const players = `${minPlayers}〜${maxPlayers}人`;
 
   // プレイ時間を範囲で表示
   let playTime = "";
@@ -97,17 +112,404 @@ export default function GameCard({
   // ゲームの平均点を取得（nullまたはundefinedの場合は表示しない）
   const hasRating = rating !== null && rating !== undefined && rating > 0;
 
-  // デバッグ情報を出力（開発環境でのみ）
-  if (process.env.NODE_ENV === "development") {
-    console.log(`GameCard for ${displayName}:`, {
-      average_score: game.average_score,
-      averageRating: game.averageRating,
-      rating,
-      hasRating,
-      reviewsCount,
-    });
+  // カルーセル表示の場合
+  if (variant === "carousel" || variant === "grid" || variant === "search") {
+    return (
+      <Card
+        sx={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+          "&:hover": {
+            transform: "translateY(-4px)",
+            boxShadow: 4,
+          },
+        }}
+      >
+        <CardActionArea component={Link} href={linkHref} sx={{ flexGrow: 1 }}>
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              paddingTop: "100%",
+              overflow: "hidden",
+              backgroundColor: "grey.100",
+            }}
+          >
+            {imageUrl && !imageError ? (
+              <Image
+                src={imageUrl}
+                alt={displayName}
+                fill
+                sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
+                priority={false}
+                loading="lazy"
+                style={{
+                  objectFit: "contain",
+                  objectPosition: "center",
+                }}
+                onLoad={() => {
+                  setImageLoading(false);
+                  setImageError(false);
+                }}
+                onError={(e) => {
+                  console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+                  setImageLoading(false);
+                  setImageError(true);
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.style.display = "none";
+                }}
+              />
+            ) : null}
+
+            {/* 画像読み込み中またはエラー時の表示 */}
+            {(imageLoading || imageError) && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "grey.100",
+                }}
+              >
+                {imageLoading && !imageError ? (
+                  <CircularProgress size={30} />
+                ) : (
+                  <>
+                    <ImageNotSupportedIcon
+                      sx={{ fontSize: 40, color: "text.secondary", mb: 1 }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      align="center"
+                    >
+                      画像なし
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            )}
+
+            {/* 評価オーバーレイ */}
+            {showOverallScoreOverlay && hasRating && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  zIndex: 1,
+                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                  borderRadius: 1,
+                  p: 0.5,
+                  boxShadow: 1,
+                }}
+              >
+                <OverallScoreDisplay
+                  score={rating as number}
+                  reviewsCount={reviewsCount}
+                  variant={overallScoreVariant}
+                />
+              </Box>
+            )}
+          </Box>
+
+          <CardContent>
+            <Typography
+              gutterBottom
+              variant="h6"
+              component="h2"
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {displayName}
+            </Typography>
+
+            {hasRating && (
+              <Box sx={{ mb: 1 }}>
+                {useOverallScoreDisplay ? (
+                  <OverallScoreDisplay
+                    score={rating as number}
+                    reviewsCount={reviewsCount}
+                    variant={overallScoreVariant}
+                  />
+                ) : (
+                  <GameRating
+                    score={rating}
+                    reviewsCount={reviewsCount}
+                    size="small"
+                  />
+                )}
+              </Box>
+            )}
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                mb: 1,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <GroupIcon sx={{ mr: 0.5, fontSize: "small" }} />
+                <Typography variant="body2" color="text.secondary">
+                  {players}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <AccessTimeIcon sx={{ mr: 0.5, fontSize: "small" }} />
+                <Typography variant="body2" color="text.secondary">
+                  {playTime}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </CardActionArea>
+      </Card>
+    );
   }
 
+  // レビュー表示の場合
+  if (variant === "review") {
+    return (
+      <Card
+        sx={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+          "&:hover": {
+            transform: "translateY(-4px)",
+            boxShadow: 4,
+          },
+        }}
+      >
+        <CardActionArea component={Link} href={linkHref} sx={{ flexGrow: 0 }}>
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              paddingTop: "100%",
+              overflow: "hidden",
+              backgroundColor: "grey.100",
+            }}
+          >
+            {imageUrl && !imageError ? (
+              <Image
+                src={imageUrl}
+                alt={displayName}
+                fill
+                sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
+                priority={false}
+                loading="lazy"
+                style={{
+                  objectFit: "contain",
+                  objectPosition: "center",
+                }}
+                onLoad={() => {
+                  setImageLoading(false);
+                  setImageError(false);
+                }}
+                onError={(e) => {
+                  console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+                  setImageLoading(false);
+                  setImageError(true);
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.style.display = "none";
+                }}
+              />
+            ) : null}
+
+            {/* 画像読み込み中またはエラー時の表示 */}
+            {(imageLoading || imageError) && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "grey.100",
+                }}
+              >
+                {imageLoading && !imageError ? (
+                  <CircularProgress size={30} />
+                ) : (
+                  <>
+                    <ImageNotSupportedIcon
+                      sx={{ fontSize: 40, color: "text.secondary", mb: 1 }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      align="center"
+                    >
+                      画像なし
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            )}
+
+            {/* 評価オーバーレイ */}
+            {showOverallScoreOverlay && hasRating && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  zIndex: 1,
+                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                  borderRadius: 1,
+                  p: 0.5,
+                  boxShadow: 1,
+                }}
+              >
+                <OverallScoreDisplay
+                  score={rating as number}
+                  reviewsCount={reviewsCount}
+                  variant={overallScoreVariant}
+                />
+              </Box>
+            )}
+          </Box>
+
+          <CardContent>
+            <Typography
+              gutterBottom
+              variant="h6"
+              component="h2"
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {displayName}
+            </Typography>
+
+            {hasRating && (
+              <Box sx={{ mb: 1 }}>
+                {useOverallScoreDisplay ? (
+                  <OverallScoreDisplay
+                    score={rating as number}
+                    reviewsCount={reviewsCount}
+                    variant={overallScoreVariant}
+                  />
+                ) : (
+                  <GameRating
+                    score={rating}
+                    reviewsCount={reviewsCount}
+                    size="small"
+                  />
+                )}
+              </Box>
+            )}
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                mb: 1,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <GroupIcon sx={{ mr: 0.5, fontSize: "small" }} />
+                <Typography variant="body2" color="text.secondary">
+                  {players}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <AccessTimeIcon sx={{ mr: 0.5, fontSize: "small" }} />
+                <Typography variant="body2" color="text.secondary">
+                  {playTime}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </CardActionArea>
+
+        {/* レビュー情報 */}
+        {review && (
+          <CardContent sx={{ pt: 0, flexGrow: 1 }}>
+            <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 1,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Rating
+                    value={
+                      typeof review.overall_score === "number"
+                        ? review.overall_score / 2
+                        : 0
+                    }
+                    precision={0.5}
+                    size="small"
+                    readOnly
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {typeof review.overall_score === "number"
+                      ? review.overall_score.toFixed(1)
+                      : "0.0"}
+                  </Typography>
+                </Box>
+
+                {typeof review.likes_count === "number" && (
+                  <Typography variant="body2" color="text.secondary">
+                    いいね: {review.likes_count}
+                  </Typography>
+                )}
+              </Box>
+
+              {review.short_comment && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  {review.short_comment}
+                </Typography>
+              )}
+            </Box>
+          </CardContent>
+        )}
+      </Card>
+    );
+  }
+
+  // 従来のデザイン（デフォルト）
   return (
     <Paper
       sx={{
@@ -220,7 +622,18 @@ export default function GameCard({
         </Link>
         <Box sx={{ flexGrow: 1 }}>
           <Link href={linkHref}>
-            <Typography variant="h6" component="h2" gutterBottom noWrap>
+            <Typography
+              variant="h6"
+              component="h2"
+              gutterBottom
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
               {displayName}
             </Typography>
           </Link>

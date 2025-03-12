@@ -31,6 +31,7 @@ import SortIcon from "@mui/icons-material/Sort";
 import Link from "next/link";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import SearchPagination from "@/components/SearchPagination";
+import GameCard from "@/components/GameCard";
 
 // 表示件数のオプション
 const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 60, 72];
@@ -462,176 +463,19 @@ export default function SearchResultsPage() {
 
             <Grid container spacing={LAYOUT_CONFIG.gridSpacing}>
               {searchResults.map((game) => (
-                <Grid item xs={12} sm={6} md={4} key={game.id}>
-                  <Card
-                    sx={{
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      transition:
-                        "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: 4,
-                      },
+                <Grid item key={game.id} xs={12} sm={6} md={4} lg={3}>
+                  <GameCard
+                    game={{
+                      ...game,
+                      id:
+                        typeof game.id === "number" ? String(game.id) : game.id,
                     }}
-                  >
-                    <CardActionArea
-                      component={Link}
-                      href={`/games/${game.bgg_id}`}
-                      sx={{ flexGrow: 1 }}
-                    >
-                      <CardMedia
-                        component="img"
-                        image={
-                          game.japanese_image_url ||
-                          game.image_url ||
-                          "/images/no-image.png"
-                        }
-                        alt={game.japanese_name || game.name}
-                        sx={{
-                          aspectRatio: "1",
-                          objectFit: "contain",
-                          bgcolor: "grey.100",
-                        }}
-                      />
-                      <CardContent>
-                        <Typography
-                          gutterBottom
-                          variant="h6"
-                          component="h2"
-                          sx={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            minHeight: "3.6em",
-                          }}
-                        >
-                          {game.japanese_name || game.name}
-                        </Typography>
-                        {game.japanese_name &&
-                          game.japanese_name !== game.name && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 1,
-                                WebkitBoxOrient: "vertical",
-                                mb: 1,
-                              }}
-                            >
-                              {game.name}
-                            </Typography>
-                          )}
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 2,
-                            mb: 1,
-                          }}
-                        >
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <GroupIcon sx={{ mr: 0.5, fontSize: "small" }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {game.min_players}-{game.max_players}人
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <AccessTimeIcon
-                              sx={{ mr: 0.5, fontSize: "small" }}
-                            />
-                            <Typography variant="body2" color="text.secondary">
-                              {game.play_time}分
-                            </Typography>
-                          </Box>
-                        </Box>
-
-                        {/* おすすめプレイ人数を表示 */}
-                        {game.site_recommended_players &&
-                          game.site_recommended_players.length > 0 && (
-                            <Box sx={{ mt: 1 }}>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ mb: 0.5 }}
-                              >
-                                おすすめ:
-                              </Typography>
-                              <Box sx={{ display: "flex", flexWrap: "wrap" }}>
-                                {game.site_recommended_players.map(
-                                  (count: any, index: number) => {
-                                    // countがオブジェクトの場合の処理
-                                    let displayText = "";
-                                    let key = `player-${index}-${
-                                      count.count || count.name || ""
-                                    }`;
-
-                                    try {
-                                      if (
-                                        typeof count === "object" &&
-                                        count !== null
-                                      ) {
-                                        // nameプロパティがある場合はそれを使用
-                                        if (count.name) {
-                                          displayText = String(count.name);
-                                          key = `player-name-${index}`;
-                                        }
-                                        // countプロパティがある場合はそれを使用
-                                        else if (count.count) {
-                                          // 7の場合は「7人以上」と表示
-                                          if (count.count === "7") {
-                                            displayText = "7人以上";
-                                          } else {
-                                            displayText = `${count.count}人`;
-                                          }
-                                          key = `player-count-${index}`;
-                                        }
-                                        // どちらもない場合はJSONを文字列化
-                                        else {
-                                          displayText = JSON.stringify(count);
-                                        }
-                                      } else {
-                                        // プリミティブ値の場合はそのまま使用
-                                        // 7の場合は「7人以上」と表示
-                                        if (count === "7") {
-                                          displayText = "7人以上";
-                                        } else {
-                                          displayText = `${count}人`;
-                                        }
-                                        key = `player-${count}-${index}`;
-                                      }
-                                    } catch (e) {
-                                      console.error(
-                                        "Error processing player count:",
-                                        e
-                                      );
-                                      displayText = "不明";
-                                    }
-
-                                    return (
-                                      <Chip
-                                        key={key}
-                                        label={displayText}
-                                        size="small"
-                                        color="primary"
-                                        variant="outlined"
-                                        sx={{ mr: 0.5, mb: 0.5 }}
-                                      />
-                                    );
-                                  }
-                                )}
-                              </Box>
-                            </Box>
-                          )}
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
+                    type="game"
+                    useOverallScoreDisplay={true}
+                    overallScoreVariant="compact"
+                    showOverallScoreOverlay={false}
+                    variant="carousel"
+                  />
                 </Grid>
               ))}
             </Grid>

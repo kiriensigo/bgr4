@@ -109,6 +109,7 @@ export default function GameCarousel({
                 useOverallScoreDisplay={true}
                 overallScoreVariant="compact"
                 showOverallScoreOverlay={false}
+                variant="carousel"
               />
             </Box>
           ))}

@@ -80,9 +80,8 @@ export default function GameInfoCard({
             overflow: "hidden",
             textOverflow: "ellipsis",
             display: "-webkit-box",
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 1,
             WebkitBoxOrient: "vertical",
-            minHeight: "3.6em",
           }}
         >
           {displayName}
@@ -110,11 +109,9 @@ export default function GameInfoCard({
       <Box
         sx={{
           display: "flex",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: 2,
-          color: "text.secondary",
-          "& .MuiSvgIcon-root": { fontSize: 16 },
-          mb: 1,
+          mt: 1,
         }}
       >
         {game.min_players && game.max_players && (
@@ -145,26 +142,6 @@ export default function GameInfoCard({
           </Box>
         )}
       </Box>
-
-      {categories.length > 0 && (
-        <Box
-          sx={{
-            display: "flex",
-            gap: 0.5,
-            flexWrap: "wrap",
-            mt: 1,
-          }}
-        >
-          {categories.slice(0, maxTagsToShow).map((category) => (
-            <Chip
-              key={category}
-              label={category}
-              size="small"
-              variant="outlined"
-            />
-          ))}
-        </Box>
-      )}
     </CardContent>
   );
 }

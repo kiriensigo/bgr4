@@ -33,6 +33,7 @@ import ReviewScoreDisplay from "@/components/ReviewScoreDisplay";
 import GameInfo from "@/components/GameInfo";
 import GameTags from "@/components/GameTags";
 import { getGame } from "@/lib/api";
+import GameCard from "@/components/GameCard";
 
 type Review = {
   id: number;
@@ -432,110 +433,35 @@ export default function ReviewsPage() {
           <Grid container spacing={3}>
             {reviews.map((review) => (
               <Grid item xs={12} sm={6} md={4} key={review.id}>
-                <Card
-                  sx={{
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    transition:
-                      "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow: 4,
-                    },
+                <GameCard
+                  game={{
+                    id: review.game.id,
+                    bgg_id: review.game.bgg_id,
+                    name: review.game.name,
+                    japanese_name: review.game.japanese_name,
+                    image_url: review.game.image_url,
+                    japanese_image_url: review.game.japanese_image_url,
+                    min_players: review.game.min_players,
+                    max_players: review.game.max_players,
+                    play_time: review.game.play_time,
+                    average_score: review.game.average_score,
+                    reviews_count: review.game.reviews_count,
                   }}
-                >
-                  <CardActionArea
-                    component={Link}
-                    href={`/games/${review.game.bgg_id}`}
-                    sx={{ flexGrow: 1 }}
-                  >
-                    <GameImage
-                      imageUrl={
-                        review.game.japanese_image_url || review.game.image_url
-                      }
-                      gameName={review.game.japanese_name || review.game.name}
-                    />
-                    <CardContent>
-                      <Typography
-                        gutterBottom
-                        variant="h6"
-                        component="h2"
-                        sx={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          minHeight: "3.6em",
-                        }}
-                      >
-                        {review.game.japanese_name || review.game.name}
-                      </Typography>
-
-                      {/* ゲームの平均点と投票数を表示 */}
-                      {review.game.average_score > 0 && (
-                        <Box sx={{ mb: 1 }}>
-                          <OverallScoreDisplay
-                            score={review.game.average_score}
-                            reviewsCount={review.game.reviews_count || 0}
-                            variant="compact"
-                          />
-                        </Box>
-                      )}
-
-                      <GameInfo
-                        minPlayers={review.game.min_players}
-                        maxPlayers={review.game.max_players}
-                        playTime={review.game.play_time}
-                      />
-
-                      <GameTags
-                        categories={(review.categories || []).slice(0, 3)}
-                      />
-                    </CardContent>
-                  </CardActionArea>
-
-                  <CardContent sx={{ pt: 0 }}>
-                    <Divider sx={{ my: 1 }} />
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <ReviewScoreDisplay
-                        score={review.overall_score}
-                        userName={review.user.name}
-                        variant="default"
-                      />
-                      <LikeButton
-                        reviewId={review.id}
-                        initialLikesCount={review.likes_count}
-                        initialLikedByUser={review.liked_by_current_user}
-                      />
-                    </Box>
-
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        minHeight: "3em",
-                        mb: 1,
-                      }}
-                    >
-                      {review.short_comment}
-                    </Typography>
-                  </CardContent>
-                </Card>
+                  review={{
+                    id: review.id,
+                    overall_score: review.overall_score,
+                    short_comment: review.short_comment,
+                    created_at: review.created_at,
+                    likes_count: review.likes_count,
+                    liked_by_current_user: review.liked_by_current_user,
+                    user: review.user,
+                  }}
+                  type="review"
+                  useOverallScoreDisplay={true}
+                  overallScoreVariant="compact"
+                  showOverallScoreOverlay={false}
+                  variant="review"
+                />
               </Grid>
             ))}
           </Grid>
