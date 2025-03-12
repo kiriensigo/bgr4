@@ -53,53 +53,33 @@ const formatNumber = (value: any, decimals = 1): string => {
 
 // 人数別のおすすめ表示
 const renderRecommendedPlayers = (counts: any[]) => {
-  if (!counts || !Array.isArray(counts)) return null;
+  if (!counts || !Array.isArray(counts) || counts.length === 0) return null;
 
   return counts.map((count, index) => {
-    // countがオブジェクトの場合の処理
+    // 表示テキストを決定
     let displayText = "";
+    let countValue = "";
 
+    // countオブジェクトからcountプロパティを取得
     if (typeof count === "object" && count !== null) {
-      // nameプロパティがある場合はそれを使用
-      if (count.name) {
-        displayText = count.name;
-      }
-      // countプロパティがある場合はそれを使用
-      else if (count.count) {
-        // 7の場合は「7人以上」と表示
-        if (count.count === "7") {
-          displayText = "7人以上";
-        } else {
-          displayText = `${count.count}人`;
-        }
-      }
-      // どちらもない場合はJSONを文字列化
-      else {
-        try {
-          displayText = JSON.stringify(count);
-        } catch (e) {
-          displayText = "不明";
-        }
-      }
+      countValue = count.count || count.name || "";
     } else {
-      // プリミティブ値の場合はそのまま使用
-      // 7の場合は「7人以上」と表示
-      if (count === "7") {
-        displayText = "7人以上";
-      } else {
-        displayText = `${count}人`;
-      }
+      countValue = count;
     }
 
-    // 一意のキーを生成
-    const key = `player-${index}`;
+    // 7の場合は「7人以上」と表示
+    if (countValue === "7") {
+      displayText = "7人以上";
+    } else {
+      displayText = `${countValue}人`;
+    }
 
     return (
       <Chip
-        key={key}
+        key={`player-${index}-${countValue}`}
         label={displayText}
         size="small"
-        color="info"
+        color="primary"
         variant="outlined"
         sx={{ mr: 0.5, mb: 0.5 }}
       />
@@ -588,7 +568,9 @@ export default function SearchResultsPage() {
                                   (count: any, index: number) => {
                                     // countがオブジェクトの場合の処理
                                     let displayText = "";
-                                    let key = `player-${index}`;
+                                    let key = `player-${index}-${
+                                      count.count || count.name || ""
+                                    }`;
 
                                     try {
                                       if (

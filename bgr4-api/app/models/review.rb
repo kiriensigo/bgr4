@@ -35,6 +35,10 @@ class Review < ApplicationRecord
   # レビュー作成・更新・削除時にゲーム情報を更新するコールバック
   after_save :update_game_popular_features
   after_destroy :update_game_popular_features
+  
+  # レビュー作成・更新・削除時にゲームの平均値を更新するコールバック
+  after_save :update_game_average_values
+  after_destroy :update_game_average_values
 
   def likes_count
     likes.count
@@ -64,5 +68,11 @@ class Review < ApplicationRecord
 
     # 非同期で更新処理を実行（パフォーマンス向上のため）
     UpdateGamePopularFeaturesJob.perform_later(game_id)
+  end
+  
+  # ゲームの平均値を更新
+  def update_game_average_values
+    # 非同期で更新処理を実行（パフォーマンス向上のため）
+    UpdateGameAverageValuesJob.perform_later(game_id)
   end
 end

@@ -116,7 +116,7 @@ export default function Header() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            BGR4
+            BGR
           </Typography>
           <IconButton
             size="large"
@@ -164,7 +164,7 @@ export default function Header() {
               noWrap
               sx={{ fontWeight: "bold" }}
             >
-              BGReviews
+              BGR
             </Typography>
           </Link>
 
@@ -227,13 +227,6 @@ export default function Header() {
                     onClick={handleClose}
                   >
                     マイレビュー
-                  </MenuItem>
-                  <MenuItem
-                    component={Link}
-                    href="/wishlist"
-                    onClick={handleClose}
-                  >
-                    やりたいリスト
                   </MenuItem>
                   <MenuItem onClick={handleSignOut}>ログアウト</MenuItem>
                 </Menu>

@@ -1161,41 +1161,7 @@ export default function GamePage({ params }: GamePageProps) {
               )}
 
               {/* やりたいリストボタン */}
-              {user && (
-                <Tooltip
-                  title={
-                    game.in_wishlist
-                      ? "やりたいリストから削除"
-                      : "やりたいリストに追加"
-                  }
-                >
-                  <Button
-                    variant="outlined"
-                    color={game.in_wishlist ? "error" : "primary"}
-                    startIcon={
-                      game.in_wishlist ? (
-                        <BookmarkRemoveIcon />
-                      ) : (
-                        <BookmarkAddIcon />
-                      )
-                    }
-                    onClick={
-                      game.in_wishlist
-                        ? handleRemoveFromWishlist
-                        : handleAddToWishlist
-                    }
-                    disabled={addingToWishlist}
-                    sx={{ mb: 2 }}
-                  >
-                    {game.in_wishlist
-                      ? "やりたいリストから削除"
-                      : "やりたいリストに追加"}
-                    {addingToWishlist && (
-                      <CircularProgress size={24} sx={{ ml: 1 }} />
-                    )}
-                  </Button>
-                </Tooltip>
-              )}
+              {/* やりたいリストボタンを非表示にする */}
 
               {/* BGGリンク */}
               <Box sx={{ display: "flex", gap: 2, mb: 2 }}>

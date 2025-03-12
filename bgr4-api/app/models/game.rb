@@ -231,37 +231,56 @@ class Game < ApplicationRecord
     japanese_image_url.presence || image_url
   end
 
-  # レビューの平均ルール複雑度を計算（システムユーザーのレビューも含める）
+  # 平均ルールの複雑さを計算
   def average_rule_complexity
     reviews.average(:rule_complexity)&.round(1) || 0
   end
-  
-  # レビューの平均運要素を計算（ユーザーレビューのみ）
+
+  # 平均運要素を計算
   def average_luck_factor
     reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
   end
-  
-  # レビューの平均インタラクションを計算（ユーザーレビューのみ）
+
+  # 平均インタラクションを計算
   def average_interaction
     reviews.exclude_system_user.average(:interaction)&.round(1) || 0
   end
-  
-  # レビューの平均ダウンタイムを計算（ユーザーレビューのみ）
+
+  # 平均ダウンタイムを計算
   def average_downtime
     reviews.exclude_system_user.average(:downtime)&.round(1) || 0
   end
-  
-  # 総合評価の平均を計算（システムユーザーのレビューも含める）
+
+  # 平均総合評価を計算
   def average_overall_score
     reviews.average(:overall_score)&.round(1) || 0
   end
-  
-  # レビュー数を取得（システムユーザーを除く）
+
+  # 平均値をデータベースに保存
+  def update_average_values
+    # 平均値を計算
+    avg_complexity = average_rule_complexity
+    avg_interaction = average_interaction
+    avg_downtime = average_downtime
+    avg_luck_factor = reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
+    avg_score = average_overall_score
+    
+    # データベースに保存
+    update_columns(
+      average_complexity: avg_complexity,
+      average_interaction: avg_interaction,
+      average_downtime: avg_downtime,
+      average_luck_factor: avg_luck_factor,
+      average_score: avg_score
+    )
+  end
+
+  # レビュー数を取得
   def review_count
     reviews.count
   end
-  
-  # システムユーザーを除いたレビュー数を取得
+
+  # レビュー数を取得（システムユーザーを除く）
   def user_review_count
     reviews.exclude_system_user.count
   end
@@ -279,12 +298,11 @@ class Game < ApplicationRecord
     false
   end
   
-  # おすすめプレイ人数を取得
-  def recommended_players
+  # プレイヤー数のカウントを集計するヘルパーメソッド
+  def count_player_recommendations(reviews_scope)
     player_counts = {}
     
-    # すべてのレビュー（システムユーザーのレビューも含む）
-    reviews.each do |review|
+    reviews_scope.each do |review|
       (review.recommended_players || []).each do |count|
         next unless count.present?
         player_counts[count] = (player_counts[count] || 0) + 1
@@ -295,20 +313,14 @@ class Game < ApplicationRecord
     player_counts.sort_by { |_, count| -count }.map { |count, votes| { count: count, votes: votes } }
   end
   
+  # おすすめプレイ人数を取得（すべてのレビュー）
+  def recommended_players
+    count_player_recommendations(reviews)
+  end
+
   # サイトのおすすめプレイ人数を取得（システムユーザーのレビューを除外）
   def site_recommended_players
-    player_counts = {}
-    
-    # システムユーザーのレビューを除外
-    reviews.exclude_system_user.each do |review|
-      (review.recommended_players || []).each do |count|
-        next unless count.present?
-        player_counts[count] = (player_counts[count] || 0) + 1
-      end
-    end
-    
-    # 出現回数でソート
-    player_counts.sort_by { |_, count| -count }.map { |count, votes| { count: count, votes: votes } }
+    count_player_recommendations(reviews.exclude_system_user)
   end
   
   # 出版社名を日本語化

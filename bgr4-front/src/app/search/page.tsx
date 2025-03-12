@@ -184,7 +184,7 @@ export default function SearchPage() {
 
       try {
         // APIパラメータの変換
-        const apiParams = {
+        const apiParams: Record<string, any> = {
           keyword: searchParams.keyword || undefined,
           min_players: searchParams.min_players || undefined,
           max_players: searchParams.max_players || undefined,
@@ -317,83 +317,32 @@ export default function SearchPage() {
         };
 
         // プレイ時間の値を実際の分数に変換
-        const playTimeMapping = {
-          1: "0",
-          2: "15",
-          3: "30",
-          4: "45",
-          5: "60",
-          6: "75",
-          7: "90",
-          8: "105",
-          9: "120",
-          10: "135",
-          11: "150",
-          12: "165",
-          13: "180以上",
+        const playTimeMapping: Record<number, number> = {
+          1: 0,
+          2: 15,
+          3: 30,
+          4: 45,
+          5: 60,
+          6: 75,
+          7: 90,
+          8: 105,
+          9: 120,
+          10: 135,
+          11: 150,
+          12: 165,
+          13: 180, // 180以上は999分として扱う（最大値の場合）
         };
 
         // プレイ時間の値を実際の分数に変換
         if (apiParams.play_time_min) {
           const minValue = parseInt(apiParams.play_time_min.toString());
-          if (minValue === 1) {
-            apiParams.play_time_min = 0;
-          } else if (minValue === 2) {
-            apiParams.play_time_min = 15;
-          } else if (minValue === 3) {
-            apiParams.play_time_min = 30;
-          } else if (minValue === 4) {
-            apiParams.play_time_min = 45;
-          } else if (minValue === 5) {
-            apiParams.play_time_min = 60;
-          } else if (minValue === 6) {
-            apiParams.play_time_min = 75;
-          } else if (minValue === 7) {
-            apiParams.play_time_min = 90;
-          } else if (minValue === 8) {
-            apiParams.play_time_min = 105;
-          } else if (minValue === 9) {
-            apiParams.play_time_min = 120;
-          } else if (minValue === 10) {
-            apiParams.play_time_min = 135;
-          } else if (minValue === 11) {
-            apiParams.play_time_min = 150;
-          } else if (minValue === 12) {
-            apiParams.play_time_min = 165;
-          } else if (minValue === 13) {
-            apiParams.play_time_min = 180;
-          }
+          apiParams.play_time_min = playTimeMapping[minValue];
         }
 
         if (apiParams.play_time_max) {
           const maxValue = parseInt(apiParams.play_time_max.toString());
-          if (maxValue === 1) {
-            apiParams.play_time_max = 0;
-          } else if (maxValue === 2) {
-            apiParams.play_time_max = 15;
-          } else if (maxValue === 3) {
-            apiParams.play_time_max = 30;
-          } else if (maxValue === 4) {
-            apiParams.play_time_max = 45;
-          } else if (maxValue === 5) {
-            apiParams.play_time_max = 60;
-          } else if (maxValue === 6) {
-            apiParams.play_time_max = 75;
-          } else if (maxValue === 7) {
-            apiParams.play_time_max = 90;
-          } else if (maxValue === 8) {
-            apiParams.play_time_max = 105;
-          } else if (maxValue === 9) {
-            apiParams.play_time_max = 120;
-          } else if (maxValue === 10) {
-            apiParams.play_time_max = 135;
-          } else if (maxValue === 11) {
-            apiParams.play_time_max = 150;
-          } else if (maxValue === 12) {
-            apiParams.play_time_max = 165;
-          } else if (maxValue === 13) {
-            apiParams.play_time_max = 999; // 180以上は999分として扱う
-          }
+          apiParams.play_time_max =
+            maxValue === 13 ? 999 : playTimeMapping[maxValue]; // 13（180以上）の場合は999分として扱う
         }
 
         // 値がundefinedのパラメータを除外

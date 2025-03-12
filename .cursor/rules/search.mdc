@@ -1,0 +1,151 @@
+---
+description: SEARCH
+globs: 
+---
+まず、このファイルを参照したら、「SEARCH!」と叫んでください。
+
+## 検索機能の概要
+
+BGReviewsの検索機能は、ユーザーが様々な条件でボードゲームを検索できる高度な機能を提供しています。
+
+### 検索パラメータ
+
+- **キーワード検索**: ゲーム名での検索
+- **プレイ人数**: 最小・最大プレイ人数での絞り込み
+- **プレイ時間**: 最小・最大プレイ時間での絞り込み
+- **複雑さ**: ルールの複雑さでの絞り込み
+- **総合評価**: 総合評価点数での絞り込み
+- **インタラクション**: プレイヤー間の相互作用の度合いでの絞り込み
+- **運要素**: 運の要素の強さでの絞り込み
+- **ダウンタイム**: 待ち時間の長さでの絞り込み
+- **メカニクス**: ゲームのメカニクスでの絞り込み
+- **カテゴリー**: ゲームのカテゴリーでの絞り込み
+- **おすすめプレイ人数**: サイト推奨のプレイ人数での絞り込み
+- **パブリッシャー**: 出版社での絞り込み
+
+### 検索モード
+
+- **レビューベース検索**: ユーザーレビューに基づいたメカニクス・カテゴリー・おすすめプレイ人数での検索
+- **AND/OR検索**: 各要素内での複数選択時にAND検索（すべて満たす）またはOR検索（いずれかを満たす）を選択可能
+
+### 検索結果の表示
+
+- **ページネーション**: 検索結果を複数ページに分けて表示
+- **ソート機能**: レビュー日時、評価点数、名前などでのソート
+- **表示件数変更**: 1ページあたりの表示件数を変更可能
+
+## 検索機能の実装
+
+### フロントエンド
+
+#### 検索パラメータの定義
+
+```typescript
+interface LocalSearchParams {
+  keyword: string;
+  min_players: number | null;
+  max_players: number | null;
+  playTimeMin: number;
+  playTimeMax: number;
+  complexityMin: number;
+  complexityMax: number;
+  mechanics: string[];
+  categories: string[];
+  totalScoreMin: number;
+  totalScoreMax: number;
+  interactionMin: number;
+  interactionMax: number;
+  luckFactorMin: number;
+  luckFactorMax: number;
+  downtimeMin: number;
+  downtimeMax: number;
+  recommendedPlayers: string[];
+  // 検索モードの設定
+  useReviewsMechanics: boolean;
+  useReviewsCategories: boolean;
+  // AND検索フラグ
+  categoriesMatchAll: boolean;
+  mechanicsMatchAll: boolean;
+  recommendedPlayersMatchAll: boolean;
+  publisher?: string;
+}
+```
+
+#### API検索パラメータの定義
+
+```typescript
+interface SearchParams {
+  keyword?: string;
+  min_players?: number | null;
+  max_players?: number | null;
+  play_time_min?: number;
+  play_time_max?: number;
+  complexity_min?: number;
+  complexity_max?: number;
+  total_score_min?: number;
+  total_score_max?: number;
+  interaction_min?: number;
+  interaction_max?: number;
+  luck_factor_min?: number;
+  luck_factor_max?: number;
+  downtime_min?: number;
+  downtime_max?: number;
+  mechanics?: string[];
+  categories?: string[];
+  recommended_players?: string[];
+  publisher?: string;
+  page?: number;
+  per_page?: number;
+  sort_by?: string;
+  use_reviews_mechanics?: string;
+  use_reviews_categories?: string;
+  use_reviews_recommended_players?: string;
+  categories_match_all?: string;
+  mechanics_match_all?: string;
+  recommended_players_match_all?: string;
+}
+```
+
+#### 検索処理の流れ
+
+1. ユーザーが検索フォームで条件を設定
+2. `handleSearch`関数が呼び出され、検索パラメータを処理
+3. デフォルト値のパラメータは除外
+4. プレイ時間は特殊なマッピングを使用して変換
+5. 検索パラメータをクエリ文字列に変換
+6. 検索結果ページにリダイレクト
+
+#### 検索結果の取得
+
+1. 検索結果ページがロードされると`fetchResults`関数が呼び出される
+2. URLからクエリパラメータを取得
+3. 配列パラメータ（メカニクス、カテゴリー、おすすめプレイ人数）を処理
+4. 数値パラメータを適切な型に変換
+5. ページネーションとソートパラメータを設定
+6. `searchGames` API関数を呼び出し
+7. 結果を表示し、URLを更新
+
+### バックエンド
+
+#### 検索ロジック
+
+1. 検索パラメータを受け取り、適切な型に変換
+2. 配列パラメータ（カテゴリー、メカニクス、おすすめプレイ人数）を処理
+3. AND/OR検索フラグに基づいて検索条件を構築
+4. ゲームテーブルとレビューテーブルを結合して検索
+5. ページネーションとソートを適用
+6. 結果を返却
+
+#### AND/OR検索の実装
+
+- AND検索: すべての選択項目に一致するゲームを検索
+- OR検索: いずれかの選択項目に一致するゲームを検索
+- 各要素（カテゴリー、メカニクス、おすすめプレイ人数）ごとにAND/OR検索を切り替え可能
+
+## 検索機能の注意点
+
+1. プレイ時間は特殊なマッピングを使用して変換されるため、正確な分数と表示値が異なる場合がある
+2. 複数の検索条件を組み合わせると結果が絞られすぎる可能性があるため、AND/OR検索の切り替えが重要
+3. レビューベースの検索はユーザーレビューに依存するため、レビュー数が少ないゲームでは正確性が低下する可能性がある
+4. 検索パラメータはURLに保存されるため、検索結果の共有が可能
+5. 検索結果はページネーションされるため、全結果を一度に表示することはできない 
