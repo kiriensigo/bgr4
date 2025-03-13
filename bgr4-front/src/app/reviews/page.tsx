@@ -435,7 +435,7 @@ export default function ReviewsPage() {
               <Grid item xs={12} sm={6} md={4} key={review.id}>
                 <GameCard
                   game={{
-                    id: review.game.id,
+                    id: String(review.game.id),
                     bgg_id: review.game.bgg_id,
                     name: review.game.name,
                     japanese_name: review.game.japanese_name,
@@ -449,11 +449,13 @@ export default function ReviewsPage() {
                   }}
                   review={{
                     id: review.id,
-                    overall_score: review.overall_score,
+                    overall_score:
+                      typeof review.overall_score === "string"
+                        ? parseFloat(review.overall_score)
+                        : review.overall_score,
                     short_comment: review.short_comment,
                     created_at: review.created_at,
                     likes_count: review.likes_count,
-                    liked_by_current_user: review.liked_by_current_user,
                     user: review.user,
                   }}
                   type="review"

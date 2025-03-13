@@ -1601,7 +1601,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseUpdateDialog}
           slotProps={{
             backdrop: {
-              inert: openUpdateDialog ? "true" : "false",
+              inert: openUpdateDialog,
             },
           }}
         >
@@ -1642,7 +1642,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseSystemReviewsDialog}
           slotProps={{
             backdrop: {
-              inert: openSystemReviewsDialog ? "true" : "false",
+              inert: openSystemReviewsDialog,
             },
           }}
         >

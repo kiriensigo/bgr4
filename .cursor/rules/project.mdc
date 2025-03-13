@@ -52,6 +52,8 @@ git push やgit commitを行わないでください。
 - レビューベースの検索（ユーザーレビューに基づいた検索）
 - 検索結果のページネーションとソート機能
 - 検索パラメータのURL保存（ブックマーク・共有可能）
+- **平均値カラムを使用した高速検索**（レビューテーブルとの結合なしで検索可能）
+- **運要素による検索**（average_luck_factorカラムを使用）
 
 ### レビュー機能
 - 5段階評価システム（ルールの複雑さ、運要素、インタラクション、ダウンタイム）
@@ -88,13 +90,16 @@ git push やgit commitを行わないでください。
 - Devise / devise_token_auth（認証）
 - Active Record（ORM）
 - 非同期ジョブ処理
+  - UpdateGamePopularFeaturesJob: ゲームの人気タグ・メカニクス・おすすめプレイ人数を更新
+  - UpdateGameAverageValuesJob: ゲームの平均評価値を更新
+  - ActiveJob + 標準キューアダプタを使用
 
 ### 外部API連携
 - BoardGameGeek API（ボードゲーム情報取得）
 
 ## データモデル
 - User: ユーザー情報、認証情報
-- Game: ゲーム基本情報、BGG連携
+- Game: ゲーム基本情報、BGG連携、平均評価値（average_score, average_complexity, average_interaction, average_downtime, average_luck_factor）
 - Review: レビュー情報、評価データ
 - Like: いいね情報
 - WishlistItem: やりたいリスト
@@ -130,3 +135,45 @@ git push やgit commitを行わないでください。
 - 手動登録時のIDは必ず `jp-` プレフィックスを使用すること
 - 日本語名は必須項目であり、重複チェックの対象となる
 - 登録後のリダイレクト処理では、IDをそのまま使用する（エンコード済みのため）
+
+## ゲームカードコンポーネント
+
+ゲームカードは、サイト全体で統一されたデザインを提供するための重要なコンポーネントです。
+
+### GameCardコンポーネント
+
+- **ファイル場所**: `bgr4-front/src/components/GameCard.tsx`
+- **用途**: ゲーム情報の表示、レビュー情報の表示
+- **バリアント**:
+  - `default`: 従来のデザイン（Paper要素を使用）
+  - `carousel`: カルーセル表示用（Card要素を使用）
+  - `grid`: グリッド表示用（Card要素を使用）
+  - `search`: 検索結果表示用（Card要素を使用）
+  - `review`: レビュー表示用（Card要素を使用、レビュー情報を含む）
+
+### 主な機能
+
+- **画像表示**: 日本語版の画像を優先表示、読み込み中の表示、エラー時の表示
+- **ゲーム情報表示**: ゲーム名、プレイ人数、プレイ時間
+- **評価表示**: 総合評価、レビュー数
+- **レビュー情報表示**: レビューバリアントでは、ショートコメント、評価、いいね数を表示
+
+### 使用方法
+
+```tsx
+<GameCard
+  game={gameObject}
+  review={reviewObject} // レビュー表示時のみ
+  type="game" // または "review"
+  useOverallScoreDisplay={true} // 総合評価表示を使用するかどうか
+  overallScoreVariant="compact" // 評価表示のバリアント
+  showOverallScoreOverlay={true} // 画像上に評価を表示するかどうか
+  variant="carousel" // 表示バリアント
+/>
+```
+
+### 注意点
+
+- レビュー表示時は `type="review"` と `variant="review"` の両方を設定する
+- 画像の読み込みエラー時は代替表示が自動的に行われる
+- 評価が0または未設定の場合は評価表示が非表示になる

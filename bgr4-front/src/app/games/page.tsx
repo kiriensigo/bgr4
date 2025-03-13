@@ -11,7 +11,14 @@ export default function GamesPage() {
       <div style={containerStyle}>
         <GameList
           title="ボードゲーム一覧"
-          fetchGames={getGames}
+          fetchGames={async (page, pageSize, sortBy) => {
+            const response = await getGames(page, pageSize, sortBy);
+            return {
+              games: response.games,
+              totalPages: response.pagination.total_pages,
+              totalItems: response.pagination.total_count,
+            };
+          }}
           showTitle={true}
           showSort={true}
         />

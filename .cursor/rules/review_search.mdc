@@ -144,4 +144,50 @@ REVIEW!
    - プレイ時間
    - カテゴリー（最大3つ）
 
-3. カードクリック時にゲーム詳細ページに遷移 
+3. カードクリック時にゲーム詳細ページに遷移
+
+## レビュー一覧ページのゲームカード表示
+
+レビュー一覧ページでは、ゲームカードコンポーネントを使用してレビュー情報を含むゲームカードを表示します。
+
+### レビュー一覧でのGameCard使用
+
+- **バリアント**: `review`を使用
+- **表示情報**: 
+  - ゲーム情報: ゲーム名、プレイ人数、プレイ時間、評価
+  - レビュー情報: ショートコメント、評価スコア、いいね数
+- **レイアウト**: グリッドレイアウトで表示（レスポンシブ対応）
+
+### 実装例
+
+```tsx
+<GameCard
+  game={review.game}
+  review={{
+    id: review.id,
+    overall_score: review.overall_score,
+    short_comment: review.short_comment,
+    created_at: review.created_at,
+    likes_count: review.likes_count,
+    liked_by_current_user: review.liked_by_current_user,
+    user: review.user,
+  }}
+  type="review"
+  useOverallScoreDisplay={true}
+  overallScoreVariant="compact"
+  showOverallScoreOverlay={false}
+  variant="review"
+/>
+```
+
+### レビュー一覧の表示機能
+
+- **無限スクロール**: スクロールに応じて追加のレビューを読み込み
+- **画像の遅延読み込み**: パフォーマンス向上のため画像を遅延読み込み
+- **エラー処理**: 画像読み込みエラー時の代替表示
+
+### 注意点
+
+- レビュー表示時は `type="review"` と `variant="review"` の両方を設定する必要がある
+- レビューのショートコメントは3行までに制限され、それ以上は省略される
+- レビュー情報はカード下部に表示され、ゲーム情報と視覚的に分離される 

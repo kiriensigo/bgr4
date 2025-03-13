@@ -19,13 +19,23 @@ export default function DesignerPage() {
       <Box sx={{ mt: 4 }}>
         <GameList
           title=""
-          fetchGames={(page, pageSize, sortBy) =>
-            searchGamesByDesigner(designerName, page, pageSize, sortBy)
-          }
+          fetchGames={async (page, pageSize, sortBy) => {
+            const response = await searchGamesByDesigner(
+              designerName,
+              page,
+              pageSize,
+              sortBy
+            );
+            return {
+              games: response.games,
+              totalPages: response.pagination.total_pages,
+              totalItems: response.pagination.total_count,
+            };
+          }}
           showTitle={false}
           showSort={true}
           emptyMessage={`デザイナー "${designerName}" のゲームが見つかりませんでした`}
-          gridItemProps={{ xs: 12, sm: 6, md: 4 }}
+          gridItemProps={{ xs: 12, sm: 6, md: 4, lg: 3 }}
         />
       </Box>
     </Container>

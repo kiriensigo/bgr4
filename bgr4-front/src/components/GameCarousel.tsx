@@ -104,7 +104,10 @@ export default function GameCarousel({
           {games.map((game) => (
             <Box key={game.id || game.bgg_id} sx={{ px: 1 }}>
               <GameCard
-                game={game}
+                game={{
+                  ...game,
+                  id: typeof game.id === "number" ? String(game.id) : game.id,
+                }}
                 type="game"
                 useOverallScoreDisplay={true}
                 overallScoreVariant="compact"

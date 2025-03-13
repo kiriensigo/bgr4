@@ -38,7 +38,7 @@ const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 60, 72];
 const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0];
 
 // ソートオプション
-export const SORT_OPTIONS = [
+const SORT_OPTIONS = [
   { value: "review_date", label: "レビュー新着順" },
   { value: "reviews_count", label: "レビュー投稿数順" },
   { value: "average_score", label: "総合得点順" },

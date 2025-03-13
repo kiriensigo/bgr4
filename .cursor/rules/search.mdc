@@ -148,4 +148,137 @@ interface SearchParams {
 2. 複数の検索条件を組み合わせると結果が絞られすぎる可能性があるため、AND/OR検索の切り替えが重要
 3. レビューベースの検索はユーザーレビューに依存するため、レビュー数が少ないゲームでは正確性が低下する可能性がある
 4. 検索パラメータはURLに保存されるため、検索結果の共有が可能
-5. 検索結果はページネーションされるため、全結果を一度に表示することはできない 
+5. 検索結果はページネーションされるため、全結果を一度に表示することはできない
+
+## 検索結果のゲームカード表示
+
+検索結果ページでは、ゲームカードコンポーネントを使用して統一されたデザインでゲーム情報を表示します。
+
+### 検索結果ページでのGameCard使用
+
+- **バリアント**: `search`を使用
+- **表示情報**: ゲーム名、プレイ人数、プレイ時間、評価
+- **レイアウト**: グリッドレイアウトで表示（レスポンシブ対応）
+
+### 実装例
+
+```tsx
+<GameCard
+  game={game}
+  type="game"
+  useOverallScoreDisplay={true}
+  overallScoreVariant="compact"
+  showOverallScoreOverlay={true}
+  variant="search"
+/>
+```
+
+### 検索結果の表示カスタマイズ
+
+- **ソート機能**: 名前、評価、レビュー数などでソート可能
+- **表示件数**: 1ページあたりの表示件数を変更可能
+- **ページネーション**: 検索結果を複数ページに分けて表示
+
+### 注意点
+
+- 検索結果が多い場合はページネーションを使用して表示
+- 検索結果が0件の場合は専用のメッセージを表示
+- 検索条件はURLパラメータとして保存され、共有可能 
+
+## 検索機能の更新（平均値カラム）
+
+検索機能は、レビューテーブルからの集計ではなく、ゲームテーブルの平均値カラムを使用するように更新されました。
+
+### 平均値カラムの追加
+
+ゲームテーブルに以下の平均値カラムが追加されました：
+
+- `average_complexity`: 平均ルールの複雑さ（旧 `average_weight`）
+- `average_interaction`: 平均インタラクション
+- `average_downtime`: 平均ダウンタイム
+- `average_luck_factor`: 平均運要素
+- `average_score`: 平均総合評価（既存）
+
+### 検索処理の改善点
+
+1. **パフォーマンス向上**:
+   - レビューテーブルとの結合が不要になり、検索速度が向上
+   - 複雑なサブクエリが削減され、SQLの実行効率が向上
+
+2. **正確性の向上**:
+   - 平均値が事前に計算されているため、検索結果の正確性が向上
+   - システムユーザーのレビューを除外した平均値を使用可能
+
+3. **検索条件の拡張**:
+   - 運要素（`average_luck_factor`）による検索が追加
+   - より細かい評価範囲での検索が可能
+
+### 平均値の更新処理
+
+1. **自動更新**:
+   - レビューの作成・更新・削除時に自動的に平均値が更新
+   - 非同期ジョブ（`UpdateGameAverageValuesJob`）で処理
+
+2. **一括更新**:
+   - Rakeタスク（`games:update_average_values`）で全ゲームの平均値を一括更新可能
+   - マイグレーション後の初期データ設定に使用
+
+### 実装の詳細
+
+#### モデルの変更（`Game` モデル）
+
+```ruby
+def update_average_values
+  # 平均値を計算
+  avg_complexity = average_rule_complexity
+  avg_luck = average_luck_factor
+  avg_interaction = average_interaction
+  avg_downtime = average_downtime
+  avg_score = average_overall_score
+
+  # 平均値をデータベースに保存
+  update_columns(
+    average_complexity: avg_complexity,
+    average_luck_factor: avg_luck,
+    average_interaction: avg_interaction,
+    average_downtime: avg_downtime,
+    average_score: avg_score
+  )
+end
+```
+
+#### 非同期ジョブ（`UpdateGameAverageValuesJob`）
+
+```ruby
+class UpdateGameAverageValuesJob < ApplicationJob
+  queue_as :default
+
+  def perform(game_id)
+    # ゲームを取得
+    game = Game.find_by(bgg_id: game_id)
+    return unless game
+    
+    # ゲームの平均値を更新
+    game.update_average_values
+  end
+end
+```
+
+#### レビューモデルのコールバック
+
+```ruby
+# レビュー作成・更新・削除時にゲームの平均値を更新するコールバック
+after_save :update_game_average_values
+after_destroy :update_game_average_values
+
+def update_game_average_values
+  # 非同期で更新処理を実行（パフォーマンス向上のため）
+  UpdateGameAverageValuesJob.perform_later(game_id)
+end
+```
+
+### 注意点
+
+1. マイグレーション後は必ず `rails games:update_average_values` を実行して既存のゲームの平均値を更新する
+2. 平均値カラムを使用した検索は、レビューテーブルを使用した検索よりも高速だが、最新のレビュー情報が反映されるまで若干のタイムラグが発生する可能性がある
+3. システムユーザーのレビューは平均値計算から除外されるため、BGGからインポートした評価と実際のユーザー評価を区別できる 

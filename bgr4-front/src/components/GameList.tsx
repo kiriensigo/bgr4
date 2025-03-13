@@ -44,6 +44,9 @@ export interface GameListProps {
   showSort?: boolean;
   sortOptions?: SortOption[];
   showPagination?: boolean;
+  showTitle?: boolean;
+  emptyMessage?: string;
+  gridItemProps?: { xs: number; sm: number; md: number; lg: number };
 }
 
 // デフォルトのソートオプション
@@ -68,6 +71,9 @@ export default function GameList({
   showSort = true,
   sortOptions = DEFAULT_SORT_OPTIONS,
   showPagination = true,
+  showTitle = true,
+  emptyMessage = "ゲームが見つかりませんでした",
+  gridItemProps = { xs: 12, sm: 6, md: 4, lg: 3 },
 }: GameListProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -221,7 +227,7 @@ export default function GameList({
         </Alert>
       ) : games.length === 0 ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          表示するゲームがありません
+          {emptyMessage}
         </Alert>
       ) : (
         <>
@@ -292,7 +298,7 @@ export default function GameList({
 
           <Grid container spacing={2}>
             {games.map((game) => (
-              <Grid item key={game.id} xs={12} sm={6} md={4} lg={3}>
+              <Grid item key={game.id} {...gridItemProps}>
                 <GameCard
                   game={{
                     ...game,

@@ -1,8 +1,4 @@
 ---
-description: 
-globs: 
----
----
 description: GAME_REGISTRATION
 globs: 
 ---
@@ -92,6 +88,7 @@ export async function registerGame(
       min_players: gameDetails.min_players,
       max_players: gameDetails.max_players,
       play_time: gameDetails.play_time,
+      designer: gameDetails.designer, // デザイナー（任意）
       // その他の情報
     };
 
@@ -114,30 +111,31 @@ export async function registerGame(
 ### バックエンド実装（bgr4-api/app/controllers/api/v1/games_controller.rb）
 ```ruby
 def create_manual_game
-  # 手動登録モード
+  # フロントエンドから送信されたパラメータを取得
   game_params = params[:game]
-  
-  # 同じ日本語名のゲームが既に存在するかチェック
-  existing_game_by_name = Game.find_by(japanese_name: game_params[:japanese_name])
-  if existing_game_by_name
-    render json: { error: "同じ日本語名のゲームが既に登録されています", existing_game_id: existing_game_by_name.bgg_id }, status: :conflict
-    return
-  end
-  
-  # 日本語名をBase64エンコードしてIDを生成
-  require 'base64'
-  encoded_name = Base64.strict_encode64(game_params[:japanese_name])
-  manual_bgg_id = "jp-#{encoded_name}"
   
   # ゲームを作成
   @game = Game.new(
     bgg_id: manual_bgg_id,
-    name: game_params[:name] || game_params[:japanese_name],
+    name: name_to_use,
     japanese_name: game_params[:japanese_name],
-    // その他の情報
+    japanese_description: game_params[:japanese_description],
+    japanese_image_url: game_params[:japanese_image_url],
+    min_players: game_params[:min_players],
+    max_players: game_params[:max_players],
+    play_time: game_params[:play_time],
+    min_play_time: game_params[:min_play_time],
+    japanese_publisher: game_params[:japanese_publisher],
+    japanese_release_date: game_params[:japanese_release_date],
+    designer: game_params[:designer], // デザイナー情報を保存
+    registered_on_site: true
   )
   
+  # 保存処理
   if @game.save
+    # 初期レビューを作成（手動登録フラグをtrueで渡す）
+    @game.create_initial_reviews(true)
+    
     render json: @game
   else
     render json: { errors: @game.errors }, status: :unprocessable_entity
@@ -211,3 +209,244 @@ export async function getGame(
 4. **エラー処理**:
    - 重複エラー時は既存のゲームページにリダイレクト
    - その他のエラーはエラーメッセージを表示
+
+5. **互換性**:
+   - 将来的には `jp-` プレフィックスのみに統一予定 
+
+## 5. 初期レビューの仕組み
+
+### BGGからの自動登録時の初期レビュー
+
+1. **レビュー数**: システムユーザーによる10件の初期レビューが自動生成されます。
+
+2. **評価値の設定**:
+   - `overall_score`: BGGの評価を当サイトの評価に変換（5.0〜10.0の範囲）
+   - `rule_complexity`: BGGの重さを当サイトのルール複雑さに変換（1.0〜5.0の範囲）
+   - `luck_factor`: 固定値3.0
+   - `interaction`: 固定値3.0
+   - `downtime`: 固定値3.0
+   - `short_comment`: null（未設定）
+
+3. **おすすめプレイ人数の設定**:
+   - BGGのベストプレイ人数とレコメンドプレイ人数を使用
+   - 7以上の値は「7」に変換（「7人以上」として表示）
+   - プレイ人数が設定されていない場合は、最小・最大プレイ人数から設定
+
+4. **カテゴリーとメカニクスの設定**:
+   - BGGのカテゴリーとメカニクスを当サイトの形式に変換
+   - 変換マップに基づいて適切なカテゴリーとメカニクスを設定
+
+### 手動登録時の初期レビュー
+
+1. **レビュー数**: システムユーザーによる5件の初期レビューが自動生成されます。
+
+2. **評価値の設定**:
+   - `overall_score`: 固定値7.0
+   - `rule_complexity`: null（未設定）
+   - `luck_factor`: null（未設定）
+   - `interaction`: null（未設定）
+   - `downtime`: null（未設定）
+   - `short_comment`: null（未設定）
+
+3. **おすすめプレイ人数の設定**:
+   - 最初の2件のレビューには1〜7のすべてのプレイ人数を設定
+   - 残り3件のレビューにはプレイ人数を設定しない（空）
+
+### サイトおすすめプレイ人数の計算
+
+1. **集計方法**:
+   - すべてのレビュー（システムユーザーのレビューも含む）からおすすめプレイ人数を集計
+   - 7以上の値は「7」に変換
+   - 50%以上のレビューで選択されたプレイ人数を「サイトおすすめプレイ人数」として設定
+
+2. **表示方法**:
+   - 「7」は「7人以上」と表示
+   - その他の数値は「○人」と表示
+   - 小さい順に並べて表示
+
+3. **更新タイミング**:
+   - ゲーム登録時
+   - レビュー投稿・更新・削除時
+   - 手動更新時（管理者機能）
+
+## 6. BGGからの変換マッピング
+
+### カテゴリー変換
+
+1. **BGGカテゴリーから当サイトのカテゴリーへの変換**:
+   ```ruby
+   bgg_category_to_site_category_map = {
+     'Animals' => '動物',
+     'Bluffing' => 'ブラフ',
+     'Card Game' => 'カードゲーム',
+     "Children's Game" => '子供向け',
+     'Deduction' => '推理',
+     'Memory' => '記憶',
+     'Negotiation' => '交渉',
+     'Party Game' => 'パーティー',
+     'Puzzle' => 'パズル',
+     'Wargame' => 'ウォーゲーム',
+     'Word Game' => 'ワードゲーム'
+   }
+   ```
+
+2. **BGGメカニクスから当サイトのカテゴリーへの変換**:
+   ```ruby
+   bgg_mechanic_to_site_category_map = {
+     'Acting' => '演技',
+     'Deduction' => '推理',
+     'Legacy Game' => 'レガシー・キャンペーン',
+     'Memory' => '記憶',
+     'Negotiation' => '交渉',
+     'Paper-and-Pencil' => '紙ペン',
+     'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
+     'Solo / Solitaire Game' => 'ソロ向き',
+     'Pattern Building' => 'パズル',
+     'Trick-taking' => 'トリテ'
+   }
+   ```
+
+3. **BGGのベストプレイ人数からサイトのカテゴリーへの変換**:
+   ```ruby
+   bgg_best_player_to_site_category_map = {
+     '1' => 'ソロ向き',
+     '2' => 'ペア向き',
+     '6' => '多人数向き',
+     '7' => '多人数向き',
+     '8' => '多人数向き',
+     '9' => '多人数向き',
+     '10' => '多人数向き'
+   }
+   ```
+
+### メカニクス変換
+
+1. **BGGカテゴリーから当サイトのメカニクスへの変換**:
+   ```ruby
+   bgg_category_to_site_mechanic_map = {
+     'Dice' => 'ダイスロール'
+   }
+   ```
+
+2. **BGGメカニクスから当サイトのメカニクスへの変換**:
+   ```ruby
+   bgg_mechanic_to_site_mechanic_map = {
+     'Area Majority / Influence' => 'エリア支配',
+     'Auction / Bidding' => 'オークション',
+     'Closed Drafting' => 'ドラフト',
+     'Cooperative Game' => '協力',
+     'Deck Construction' => 'デッキ/バッグビルド',
+     'Deck, Bag, and Pool Building' => 'デッキ/バッグビルド',
+     'Dice Rolling' => 'ダイスロール',
+     'Hidden Roles' => '正体隠匿',
+     'Modular Board' => 'モジュラーボード',
+     'Network and Route Building' => 'ルート構築',
+     'Open Drafting' => 'ドラフト',
+     'Push Your Luck' => 'バースト',
+     'Set Collection' => 'セット収集',
+     'Simultaneous Action Selection' => '同時手番',
+     'Tile Placement' => 'タイル配置',
+     'Variable Player Powers' => 'プレイヤー別能力',
+     'Variable Set-up' => 'プレイヤー別能力',
+     'Worker Placement' => 'ワカプレ'
+   }
+   ```
+
+### 変換処理の注意点
+
+1. **マッピングの更新確認**:
+   - マッピングの最終更新日から6ヶ月以上経過している場合は警告ログを出力
+   - 未マッピングの項目は `UnmappedBggItem` モデルに記録して将来の更新に備える
+
+2. **変換の優先順位**:
+   - BGGのメカニクスとカテゴリーの両方から当サイトのカテゴリーとメカニクスを生成
+   - 重複する項目は除外
+   - BGGのベストプレイ人数からも特定のカテゴリー（ソロ向き、ペア向き、多人数向き）を生成
+
+3. **未マッピング項目の処理**:
+   - マッピングにない項目は除外（当サイトは過多な情報を必要としていない設計）
+   - 未マッピング項目はログに記録し、頻出する項目は定期的にマッピングに追加を検討
+
+## 7. 初期レビュー生成の実装詳細
+
+### Game#create_initial_reviews メソッド
+
+```ruby
+def create_initial_reviews(manual_registration = false)
+  # システムユーザーを取得
+  system_user = User.find_by(email: 'system@boardgamereview.com')
+  return unless system_user
+  
+  # 手動登録の場合は、特別なルールでレビューを作成
+  if manual_registration
+    # 固定値の設定
+    overall_score = 7.0
+    
+    # 5件のレビューを作成
+    5.times do |i|
+      # おすすめプレイ人数を設定（最初の2件のみ1〜7を選択、残りは空）
+      recommended_players = []
+      if i < 2
+        # 1〜7のすべてのプレイ人数を選択
+        recommended_players = ["1", "2", "3", "4", "5", "6", "7"]
+      end
+      
+      Review.create(
+        user_id: system_user.id,
+        game_id: bgg_id,
+        overall_score: overall_score,
+        rule_complexity: nil,
+        luck_factor: nil,
+        interaction: nil,
+        downtime: nil,
+        recommended_players: recommended_players,
+        short_comment: nil
+      )
+    end
+    
+    Rails.logger.info "Game #{name} (BGG ID: #{bgg_id}): Created 5 initial reviews for manual registration"
+    return
+  end
+  
+  # BGG登録の場合は、BGGからのデータを使用してレビューを作成
+  # （以下略）
+end
+```
+
+## 8. レビューの仕様
+
+1. **ショートコメント**:
+   - 最大100文字まで入力可能
+   - 必須項目
+   - システムユーザーのレビューではnull（未設定）
+
+2. **評価項目**:
+   - `overall_score`: 1.0〜10.0の範囲（必須）
+   - `rule_complexity`: 1.0〜5.0の範囲（任意）
+   - `luck_factor`: 1.0〜5.0の範囲（任意）
+   - `interaction`: 1.0〜5.0の範囲（任意）
+   - `downtime`: 1.0〜5.0の範囲（任意）
+
+3. **おすすめプレイ人数**:
+   - 任意項目
+   - 複数選択可能
+   - 7以上は「7人以上」として表示 
+
+## ゲーム情報編集機能
+
+ゲーム詳細ページから「ゲーム情報を編集」ボタンをクリックすると、ゲーム情報編集ページに遷移します。
+編集ページでは以下の情報を編集できます：
+
+- 日本語名
+- 日本語説明
+- 日本語画像URL
+- 最小プレイ人数
+- 最大プレイ人数
+- プレイ時間（分）
+- 最小プレイ時間（分）
+- 日本語版パブリッシャー
+- デザイナー
+- 日本語版発売日
+
+編集が完了すると、自動的にゲーム詳細ページに戻ります。
+編集履歴は管理者ページで確認できます。 

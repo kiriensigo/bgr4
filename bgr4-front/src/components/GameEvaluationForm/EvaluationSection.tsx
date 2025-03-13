@@ -228,7 +228,6 @@ export const EvaluationSection = ({
             value={values.recommendedPlayers}
             onChange={handleArrayChange("recommendedPlayers")}
             aria-label="おすすめのプレイ人数"
-            multiple
             sx={{ flexWrap: "wrap", gap: 1 }}
           >
             {PLAYER_COUNT_OPTIONS.map((count) => (
