@@ -1555,7 +1555,7 @@ export default function GamePage({ params }: GamePageProps) {
                 </Box>
               )}
 
-              <ReviewList reviews={game.reviews || []} />
+              <ReviewList reviews={game.reviews || []} initialPageSize={5} />
 
               {/* 管理者のみに表示するボタン */}
               {isAdmin && (

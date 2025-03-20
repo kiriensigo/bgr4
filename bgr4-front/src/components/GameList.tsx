@@ -5,7 +5,6 @@ import {
   Box,
   Grid,
   Typography,
-  Pagination,
   FormControl,
   InputLabel,
   Select,
@@ -19,6 +18,7 @@ import {
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import GameCard from "./GameCard";
 import { Game } from "@/lib/api";
+import SearchPagination from "./SearchPagination";
 
 // ソートオプションの型定義
 export type SortOption = {
@@ -29,6 +29,7 @@ export type SortOption = {
 // GameListコンポーネントのプロパティ
 export interface GameListProps {
   title?: string;
+  showTitle?: boolean;
   fetchGames: (
     page: number,
     pageSize: number,
@@ -57,10 +58,32 @@ const DEFAULT_SORT_OPTIONS: SortOption[] = [
 ];
 
 // デフォルトのページサイズオプション
-const PAGE_SIZE_OPTIONS = [12, 24, 48, 96];
+const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 72];
+// 最大取得数
+const MAX_PAGE_SIZE = 72;
+// 最大ページ数（エラーを防ぐために設定）
+const MAX_SAFE_PAGES = 5;
+// キャッシュの有効期限（15分）
+const CACHE_EXPIRY = 15 * 60 * 1000;
+
+// アプリケーション全体でのゲームデータキャッシュ
+interface GamesCacheItem {
+  data: Game[];
+  totalPages: number;
+  totalItems: number;
+  timestamp: number;
+}
+
+// ゲームキャッシュオブジェクト: キーは "page-pageSize-sort" 形式
+const gamesCache: Record<string, GamesCacheItem> = {};
+
+// 総アイテム数のグローバルキャッシュ
+let globalTotalGames = 0;
+let globalTotalGamesTimestamp = 0;
 
 export default function GameList({
   title,
+  showTitle = true,
   fetchGames,
   initialPage = 1,
   initialPageSize = 24,
@@ -91,6 +114,7 @@ export default function GameList({
   const [currentPage, setCurrentPage] = useState(page);
   const [currentPageSize, setCurrentPageSize] = useState(pageSize);
   const [currentSort, setCurrentSort] = useState(sort);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // URLを更新する関数
   const updateUrl = useCallback(
@@ -106,28 +130,230 @@ export default function GameList({
 
   // ゲームデータを取得する関数
   const loadGames = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    // ページサイズと現在のページを制限して安全に
+    const safePageSize = Math.min(currentPageSize, MAX_PAGE_SIZE);
+    const safePage = Math.min(currentPage, MAX_SAFE_PAGES);
+
+    // キャッシュキーを作成
+    const cacheKey = `${safePage}-${safePageSize}-${currentSort}`;
+    const now = Date.now();
+    let useCache = false;
+
+    // キャッシュをチェック
+    if (
+      gamesCache[cacheKey] &&
+      now - gamesCache[cacheKey].timestamp < CACHE_EXPIRY
+    ) {
+      console.log(`Using cached games data for ${cacheKey}`);
+      const cachedData = gamesCache[cacheKey];
+
+      setGames(cachedData.data);
+      setTotalPages(cachedData.totalPages);
+      setTotalItems(cachedData.totalItems);
+      useCache = true;
+
+      // キャッシュ使用時は即座にロード状態を解除
+      if (loading) {
+        setLoading(false);
+      }
+
+      setInitialLoadDone(true);
+      return;
+    }
+
+    // キャッシュが使用できない場合のみロード状態に設定
+    if (!useCache) {
+      setLoading(true);
+      setError(null);
+    }
+
     try {
-      const data = await fetchGames(currentPage, currentPageSize, currentSort);
+      console.log(
+        `Fetching games for page ${safePage}, pageSize ${safePageSize}, sort ${currentSort}`
+      );
+
+      // APIリクエストにキャッシュを活用
+      const data = await fetchGames(safePage, safePageSize, currentSort);
+
+      console.log("Games data from API:", data);
+      console.log(
+        `Received ${data.games.length} games, totalPages: ${data.totalPages}, totalItems: ${data.totalItems}`
+      );
+
       setGames(data.games);
-      setTotalPages(data.totalPages);
-      setTotalItems(data.totalItems);
+
+      // APIから返されたtotalPagesとtotalItemsを使用
+      let estimatedTotalPages = data.totalPages;
+      let estimatedTotalItems = data.totalItems;
+
+      // 総アイテム数のグローバルキャッシュを更新
+      if (estimatedTotalItems > 0) {
+        globalTotalGames = estimatedTotalItems;
+        globalTotalGamesTimestamp = now;
+      } else if (
+        globalTotalGames > 0 &&
+        now - globalTotalGamesTimestamp < CACHE_EXPIRY
+      ) {
+        // グローバルキャッシュが利用可能なら使用
+        estimatedTotalItems = globalTotalGames;
+        console.log(`Using global cached total games: ${estimatedTotalItems}`);
+      }
+
+      // 値が0または未定義の場合、現在のページと取得したアイテム数から推測
+      if (!estimatedTotalPages || estimatedTotalPages <= 0) {
+        // 現在取得したアイテム数がページサイズより少ない場合、これが最後のページと仮定
+        if (data.games.length < safePageSize) {
+          estimatedTotalItems =
+            (safePage - 1) * safePageSize + data.games.length;
+        } else {
+          // 現在のページが満杯なら、少し余裕を持たせる
+          const estimatedPages = Math.min(safePage + 1, MAX_SAFE_PAGES);
+          estimatedTotalItems = estimatedPages * safePageSize;
+        }
+
+        // 最低でも現在のページ数は確保、最大でもMAX_SAFE_PAGES
+        estimatedTotalPages = Math.min(
+          Math.max(Math.ceil(estimatedTotalItems / safePageSize), safePage),
+          MAX_SAFE_PAGES
+        );
+      } else {
+        // APIから返されるページ数も最大値を超えないように
+        estimatedTotalPages = Math.min(estimatedTotalPages, MAX_SAFE_PAGES);
+        // 総アイテム数も調整
+        estimatedTotalItems = Math.min(
+          estimatedTotalItems,
+          MAX_PAGE_SIZE * MAX_SAFE_PAGES
+        );
+      }
+
+      console.log(
+        `Setting totalItems: ${estimatedTotalItems}, totalPages: ${estimatedTotalPages}`
+      );
+      setTotalPages(estimatedTotalPages);
+      setTotalItems(estimatedTotalItems);
+
+      // キャッシュにデータを保存
+      gamesCache[cacheKey] = {
+        data: data.games,
+        totalPages: estimatedTotalPages,
+        totalItems: estimatedTotalItems,
+        timestamp: now,
+      };
 
       // 現在のページが総ページ数を超えている場合は、最後のページに移動
-      if (currentPage > data.totalPages && data.totalPages > 0) {
-        setCurrentPage(data.totalPages);
-        updateUrl(data.totalPages, currentPageSize, currentSort);
+      if (currentPage > estimatedTotalPages && estimatedTotalPages > 0) {
+        setCurrentPage(estimatedTotalPages);
+        updateUrl(estimatedTotalPages, safePageSize, currentSort);
       }
+
+      setInitialLoadDone(true);
     } catch (err) {
       console.error("Failed to fetch games:", err);
-      setError("ゲームの取得中にエラーが発生しました。");
-      setCurrentPage(1);
-      updateUrl(1, currentPageSize, currentSort);
+      // APIエラーの詳細を確認
+      if (err instanceof Error) {
+        // エラーメッセージを設定
+        setError(err.message || "ゲームの取得中にエラーが発生しました。");
+
+        // 500エラーなどで問題が発生した可能性がある場合は1ページ目に戻る
+        if (currentPage > 1) {
+          console.log("Navigating back to page 1 due to error");
+          setCurrentPage(1);
+          updateUrl(1, currentPageSize, currentSort);
+        }
+      } else {
+        setError("ゲームの取得中にエラーが発生しました。");
+      }
     } finally {
       setLoading(false);
     }
-  }, [currentPage, currentPageSize, currentSort, fetchGames, updateUrl]);
+  }, [
+    currentPage,
+    currentPageSize,
+    currentSort,
+    fetchGames,
+    updateUrl,
+    loading,
+  ]);
+
+  // 総レコード数を別途取得する関数
+  const fetchTotalCount = useCallback(async () => {
+    // グローバルキャッシュをチェック
+    const now = Date.now();
+    if (
+      globalTotalGames > 0 &&
+      now - globalTotalGamesTimestamp < CACHE_EXPIRY
+    ) {
+      console.log(`Using global cached total games count: ${globalTotalGames}`);
+      setTotalItems(globalTotalGames);
+      setTotalPages(
+        Math.min(Math.ceil(globalTotalGames / currentPageSize), MAX_SAFE_PAGES)
+      );
+      return;
+    }
+
+    try {
+      // 最も効率的なアプローチとして、最大ページサイズで1回だけ試行
+      const size = PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1];
+
+      console.log(`Estimating total count with page size ${size}`);
+      const data = await fetchGames(1, size, currentSort);
+
+      // ページネーション情報が正しく返されている場合はそれを使用
+      if (data.totalItems && data.totalItems > 0) {
+        console.log(`Got valid totalItems: ${data.totalItems} from API`);
+        // 最大値で制限
+        const safeCount = Math.min(
+          data.totalItems,
+          MAX_PAGE_SIZE * MAX_SAFE_PAGES
+        );
+
+        // グローバルキャッシュを更新
+        globalTotalGames = safeCount;
+        globalTotalGamesTimestamp = now;
+
+        setTotalItems(safeCount);
+        setTotalPages(
+          Math.min(Math.ceil(safeCount / currentPageSize), MAX_SAFE_PAGES)
+        );
+        return;
+      }
+
+      // アイテム数が最大ページサイズに達していない場合、それが全ての結果であると仮定
+      if (data.games.length < size) {
+        console.log(
+          `Got partial page (${data.games.length} of ${size}), assuming that's the total count`
+        );
+        const estimatedCount = data.games.length;
+
+        // グローバルキャッシュを更新
+        globalTotalGames = estimatedCount;
+        globalTotalGamesTimestamp = now;
+
+        setTotalItems(estimatedCount);
+        setTotalPages(
+          Math.min(Math.ceil(estimatedCount / currentPageSize), MAX_SAFE_PAGES)
+        );
+        return;
+      }
+
+      // それ以外の場合は、3ページ分くらいはあると推測（控えめに）
+      console.log(
+        `Got full page (${data.games.length} of ${size}), estimating total as 3x page size`
+      );
+      const estimatedCount = Math.min(size * 3, MAX_PAGE_SIZE * MAX_SAFE_PAGES);
+
+      // グローバルキャッシュを更新
+      globalTotalGames = estimatedCount;
+      globalTotalGamesTimestamp = now;
+
+      setTotalItems(estimatedCount);
+      setTotalPages(
+        Math.min(Math.ceil(estimatedCount / currentPageSize), MAX_SAFE_PAGES)
+      );
+    } catch (error) {
+      console.error("Error fetching total count:", error);
+    }
+  }, [fetchGames, currentPageSize, currentSort]);
 
   // ページが変更されたときの処理
   const handlePageChange = (
@@ -141,8 +367,11 @@ export default function GameList({
   };
 
   // ページサイズが変更されたときの処理
-  const handlePageSizeChange = (event: SelectChangeEvent<number>) => {
-    const newPageSize = Number(event.target.value);
+  const handlePageSizeChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newPageSize: number | null
+  ) => {
+    if (newPageSize === null) return;
     setCurrentPageSize(newPageSize);
     // ページサイズが変更されたら1ページ目に戻る
     setCurrentPage(1);
@@ -192,13 +421,36 @@ export default function GameList({
     loadGames();
   }, [loadGames]);
 
+  // コンポーネントマウント時に総レコード数を取得
+  useEffect(() => {
+    // 初回ロードが完了し、総レコード数が少ない場合や推測が必要な場合に実行
+    // すでにデータがある場合は再取得不要
+    if (
+      initialLoadDone &&
+      (totalItems <= 0 || totalPages <= 1) &&
+      !loading &&
+      games.length === 0
+    ) {
+      fetchTotalCount();
+    }
+  }, [
+    initialLoadDone,
+    totalItems,
+    totalPages,
+    loading,
+    fetchTotalCount,
+    games.length,
+  ]);
+
   // 現在表示しているアイテムの範囲を計算
-  const startItem = (currentPage - 1) * currentPageSize + 1;
-  const endItem = Math.min(currentPage * currentPageSize, totalItems);
+  const startItem =
+    totalItems > 0 ? (currentPage - 1) * currentPageSize + 1 : 0;
+  const endItem =
+    totalItems > 0 ? Math.min(currentPage * currentPageSize, totalItems) : 0;
 
   return (
     <Box sx={{ width: "100%" }}>
-      {title && (
+      {showTitle && title && (
         <Typography variant="h5" component="h2" gutterBottom>
           {title}
         </Typography>
@@ -225,70 +477,43 @@ export default function GameList({
         </Alert>
       ) : (
         <>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              mb: 2,
-              gap: 2,
-            }}
+          <SearchPagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            size="medium"
+            totalItems={totalItems}
+            currentPageStart={startItem}
+            currentPageEnd={endItem}
+            pageSize={currentPageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageSizeChange={handlePageSizeChange}
+            showPageSizeSelector={true}
+            showIfSinglePage={true}
+            showFirstButton
+            showLastButton
           >
-            <Typography variant="body2" color="text.secondary">
-              {totalItems > 0
-                ? `${totalItems}件中 ${startItem}～${endItem}件を表示`
-                : "0件"}
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                gap: 2,
-                flexWrap: "wrap",
-              }}
-            >
-              {showSort && (
-                <FormControl
-                  size="small"
-                  sx={{ minWidth: isMobile ? "100%" : 200 }}
-                >
-                  <InputLabel id="sort-select-label">並び替え</InputLabel>
-                  <Select
-                    labelId="sort-select-label"
-                    value={currentSort}
-                    label="並び替え"
-                    onChange={handleSortChange}
-                  >
-                    {sortOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-
+            {showSort && (
               <FormControl
                 size="small"
-                sx={{ minWidth: isMobile ? "100%" : 120 }}
+                sx={{ minWidth: isMobile ? "100%" : 200 }}
               >
-                <InputLabel id="page-size-select-label">表示件数</InputLabel>
+                <InputLabel id="sort-select-label">並び替え</InputLabel>
                 <Select
-                  labelId="page-size-select-label"
-                  value={currentPageSize}
-                  label="表示件数"
-                  onChange={handlePageSizeChange}
+                  labelId="sort-select-label"
+                  value={currentSort}
+                  label="並び替え"
+                  onChange={handleSortChange}
                 >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <MenuItem key={size} value={size}>
-                      {size}件
+                  {sortOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
-            </Box>
-          </Box>
+            )}
+          </SearchPagination>
 
           <Grid container spacing={2}>
             {games.map((game) => (
@@ -308,7 +533,7 @@ export default function GameList({
             ))}
           </Grid>
 
-          {showPagination && totalPages > 1 && (
+          {showPagination && (
             <Box
               sx={{
                 display: "flex",
@@ -317,12 +542,18 @@ export default function GameList({
                 mb: 2,
               }}
             >
-              <Pagination
+              <SearchPagination
                 count={totalPages}
                 page={currentPage}
                 onChange={handlePageChange}
-                color="primary"
                 size={isMobile ? "small" : "medium"}
+                totalItems={totalItems}
+                currentPageStart={startItem}
+                currentPageEnd={endItem}
+                pageSize={currentPageSize}
+                onPageSizeChange={handlePageSizeChange}
+                showPageSizeSelector={false}
+                showIfSinglePage={true}
                 showFirstButton
                 showLastButton
               />

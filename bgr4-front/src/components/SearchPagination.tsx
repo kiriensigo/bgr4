@@ -28,6 +28,8 @@ export interface SearchPaginationProps
   ) => void;
   showPageSizeSelector?: boolean;
   children?: ReactNode;
+  showFirstButton?: boolean;
+  showLastButton?: boolean;
 }
 
 // ページサイズの選択肢
@@ -47,13 +49,21 @@ export default function SearchPagination({
   onPageSizeChange,
   showPageSizeSelector = true,
   children,
+  showFirstButton,
+  showLastButton,
   ...props
 }: SearchPaginationProps) {
-  // ページ数が0または1の場合でも表示する
+  // ページ数が0の場合は表示しない
   if (count <= 0) {
     return null;
   }
 
+  // showIfSinglePage=falseの場合、ページ数が1の場合は表示しない
+  if (!showIfSinglePage && count <= 1) {
+    return null;
+  }
+
+  // それ以外の場合は表示する（showIfSinglePage=trueの場合、ページ数が1でも表示）
   return (
     <Box
       sx={{
@@ -66,6 +76,7 @@ export default function SearchPagination({
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        {/* 表示数情報 */}
         {totalItems !== undefined &&
           currentPageStart !== undefined &&
           currentPageEnd !== undefined && (
@@ -74,6 +85,7 @@ export default function SearchPagination({
             </Typography>
           )}
 
+        {/* ページサイズセレクター */}
         {showPageSizeSelector && pageSize !== undefined && onPageSizeChange && (
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
@@ -102,12 +114,15 @@ export default function SearchPagination({
         {children}
       </Box>
 
+      {/* ページネーション */}
       <Pagination
         count={count}
         page={page}
         onChange={onChange}
         color="primary"
         size={size}
+        showFirstButton={showFirstButton}
+        showLastButton={showLastButton}
         {...props}
       />
     </Box>

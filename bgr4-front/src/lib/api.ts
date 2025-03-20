@@ -7,8 +7,11 @@ const API_BASE_URL = `${API_URL}/api/v1`;
 
 // ゲーム情報のキャッシュ
 export const gameCache: Record<string, { data: Game; timestamp: number }> = {};
-// キャッシュの有効期限（5分）
-export const CACHE_EXPIRY = 5 * 60 * 1000;
+// キャッシュの有効期限（15分に延長）
+export const CACHE_EXPIRY = 15 * 60 * 1000;
+
+// 進行中のリクエストを追跡する（重複リクエスト削減用）
+const pendingRequests: Record<string, Promise<any>> = {};
 
 export interface Game {
   id: string | number;
@@ -110,38 +113,78 @@ export interface GamesResponse {
   pagination: PaginationInfo;
 }
 
+interface GamesResponseOptions {
+  cache?: RequestCache;
+  revalidate?: number;
+}
+
 export async function getGames(
   page: number = 1,
   per_page: number = 24,
-  sort_by: string = "review_date"
+  sort_by: string = "review_date",
+  options: GamesResponseOptions = {}
 ): Promise<GamesResponse> {
+  const url = `${API_BASE_URL}/games?page=${page}&per_page=${per_page}&sort_by=${sort_by}`;
+  const cacheKey = `getGames_${page}_${per_page}_${sort_by}`;
+
+  // 同一リクエストが進行中の場合はそれを再利用
+  if (pendingRequests[cacheKey]) {
+    console.log(`Reusing pending request for ${cacheKey}`);
+    return pendingRequests[cacheKey];
+  }
+
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/games?page=${page}&per_page=${per_page}&sort_by=${sort_by}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
+    const requestPromise = new Promise<GamesResponse>(
+      async (resolve, reject) => {
+        try {
+          console.log(
+            `Fetching games: page=${page}, per_page=${per_page}, sort_by=${sort_by}`
+          );
+          const response = await fetch(url, {
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: options.cache || "force-cache",
+            next: options.revalidate
+              ? { revalidate: options.revalidate }
+              : undefined,
+          });
+
+          if (!response.ok) {
+            throw new Error("ゲーム情報の取得に失敗しました");
+          }
+
+          const data = await response.json();
+          console.log(`Successfully fetched ${data.games?.length || 0} games`);
+
+          // 空の結果が返ってきた場合でも、ページネーション情報は正しく設定する
+          if (data.games.length === 0 && page > 1) {
+            console.warn(
+              `ページ ${page} のデータが空です。バックエンドのページネーションに問題がある可能性があります。`
+            );
+          }
+
+          resolve(data);
+        } catch (error) {
+          console.error("API error in getGames:", error);
+          reject(error);
+        }
       }
     );
 
-    if (!response.ok) {
-      throw new Error("ゲーム情報の取得に失敗しました");
-    }
+    // 進行中のリクエストとして登録
+    pendingRequests[cacheKey] = requestPromise;
 
-    const data = await response.json();
-    console.log("API response for getGames:", data);
+    // リクエスト完了後にpendingRequestsから削除（1秒後）
+    const result = await requestPromise;
+    setTimeout(() => {
+      delete pendingRequests[cacheKey];
+    }, 1000);
 
-    // 空の結果が返ってきた場合でも、ページネーション情報は正しく設定する
-    if (data.games.length === 0 && page > 1) {
-      console.warn(
-        `ページ ${page} のデータが空です。バックエンドのページネーションに問題がある可能性があります。`
-      );
-    }
-
-    return data;
+    return result;
   } catch (error) {
-    console.error("API error in getGames:", error);
+    // エラー時もpendingRequestsからは削除
+    delete pendingRequests[cacheKey];
     throw error;
   }
 }
@@ -360,7 +403,8 @@ async function createGame(bggGame: BGGGameDetails): Promise<Game> {
 
 export async function getGame(
   id: string,
-  authHeaders?: Record<string, string>
+  authHeaders?: Record<string, string>,
+  options: { cache?: RequestCache; revalidate?: number } = {}
 ): Promise<Game> {
   try {
     // IDが未定義または"undefined"文字列の場合はエラーを投げる
@@ -368,6 +412,23 @@ export async function getGame(
       throw new Error(
         "無効なゲームIDが指定されました。ゲーム一覧ページに戻ってください。"
       );
+    }
+
+    // キャッシュをチェック
+    const cacheKey = `game_${id}`;
+    const now = Date.now();
+    if (
+      gameCache[cacheKey] &&
+      now - gameCache[cacheKey].timestamp < CACHE_EXPIRY
+    ) {
+      console.log(`Using cached game data for ID: ${id}`);
+      return gameCache[cacheKey].data;
+    }
+
+    // 進行中のリクエストをチェック
+    if (pendingRequests[cacheKey]) {
+      console.log(`Reusing pending request for game ID: ${id}`);
+      return pendingRequests[cacheKey];
     }
 
     // IDが日本語の場合はエンコードする
@@ -381,30 +442,63 @@ export async function getGame(
     console.log("Fetching game with ID:", id);
     console.log("Final ID used for API call:", finalId);
 
-    const response = await fetch(`${API_BASE_URL}/games/${finalId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(authHeaders || {}),
-      },
-      // キャッシュを無効化
-      cache: "no-cache",
+    const requestPromise = new Promise<Game>(async (resolve, reject) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/games/${finalId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(authHeaders || {}),
+          },
+          // キャッシュ戦略を指定
+          cache: options.cache || "force-cache",
+          next: options.revalidate
+            ? { revalidate: options.revalidate }
+            : undefined,
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error(
+              `ゲームID ${id} はまだデータベースに登録されていません`
+            );
+          }
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error ||
+              errorData.message ||
+              `ゲームの取得中にエラーが発生しました（${response.status}）`
+          );
+        }
+
+        const gameData: Game = await response.json();
+        console.log("Game data fetched successfully:", gameData.name);
+
+        // キャッシュに保存
+        gameCache[cacheKey] = {
+          data: gameData,
+          timestamp: now,
+        };
+
+        resolve(gameData);
+      } catch (error) {
+        console.error(`Error fetching game ${id}:`, error);
+        reject(error);
+      }
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Error(
-          `ゲームID ${id} はまだデータベースに登録されていません`
-        );
-      }
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to fetch game");
-    }
+    // 進行中のリクエストとして登録
+    pendingRequests[cacheKey] = requestPromise;
 
-    const data = await response.json();
-    return data;
+    // リクエスト完了後にpendingRequestsから削除（1秒後）
+    const result = await requestPromise;
+    setTimeout(() => {
+      delete pendingRequests[cacheKey];
+    }, 1000);
+
+    return result;
   } catch (error) {
-    console.error("Error fetching game:", error);
+    console.error("Game fetch error:", error);
     throw error;
   }
 }

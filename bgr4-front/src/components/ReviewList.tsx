@@ -1,9 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Box, Typography, Paper, Rating, Grid } from "@mui/material";
 import { formatDate } from "@/lib/utils";
 import LikeButton from "./LikeButton";
 import Link from "next/link";
+import SearchPagination from "./SearchPagination";
 
 interface Review {
   id: number;
@@ -21,6 +23,7 @@ interface Review {
 
 interface ReviewListProps {
   reviews: Review[];
+  initialPageSize?: number;
 }
 
 const formatScore = (score: number | string | null | undefined): string => {
@@ -32,33 +35,27 @@ const formatScore = (score: number | string | null | undefined): string => {
     : numScore.toFixed(1);
 };
 
-export default function ReviewList({ reviews }: ReviewListProps) {
+// ページサイズのオプション（最大100件まで）
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100];
+
+export default function ReviewList({
+  reviews,
+  initialPageSize = 10,
+}: ReviewListProps) {
   // レビューが配列でない場合は空の配列として扱う
   const validReviews = Array.isArray(reviews) ? reviews : [];
 
-  // デバッグ情報を出力
-  console.log("ReviewList received reviews:", {
-    reviews,
-    validReviews,
-    isArray: Array.isArray(reviews),
-    length: validReviews.length,
-    type: typeof reviews,
+  // ページネーション用のステート
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+
+  // 有効なレビューのみをフィルタリング
+  const filteredReviews = validReviews.filter((review) => {
+    return review && review.user && review.user.id && review.user.name;
   });
 
-  // 最初のレビューの詳細をログに出力（デバッグ用）
-  if (validReviews.length > 0) {
-    console.log("First review details:", {
-      id: validReviews[0].id,
-      user: validReviews[0].user,
-      hasUser: !!validReviews[0].user,
-      userKeys: validReviews[0].user ? Object.keys(validReviews[0].user) : [],
-      score: validReviews[0].overall_score,
-      comment: validReviews[0].short_comment,
-    });
-  }
-
   // レビューが存在しない場合
-  if (!validReviews || validReviews.length === 0) {
+  if (!filteredReviews || filteredReviews.length === 0) {
     return (
       <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
         <Typography variant="body1" color="text.secondary">
@@ -68,132 +65,148 @@ export default function ReviewList({ reviews }: ReviewListProps) {
     );
   }
 
-  // 有効なレビューのみをフィルタリング
-  const filteredReviews = validReviews.filter((review) => {
-    if (!review) {
-      console.warn("Review is null or undefined");
-      return false;
+  // 表示するレビューをページネーション
+  const totalReviews = filteredReviews.length;
+  const totalPages = Math.ceil(totalReviews / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalReviews);
+  const currentPageReviews = filteredReviews.slice(startIndex, endIndex);
+
+  // ページが変わったときの処理
+  const handlePageChange = (
+    _event: React.ChangeEvent<unknown>,
+    newPage: number
+  ) => {
+    setCurrentPage(newPage);
+    // ページトップにスクロール
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ページサイズが変わったときの処理
+  const handlePageSizeChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    newPageSize: number | null
+  ) => {
+    if (newPageSize === null) return;
+    setPageSize(newPageSize);
+    setCurrentPage(1); // ページサイズが変わったら1ページ目に戻る
+  };
+
+  // ページ数が変わったときにcurrentPageを調整
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
     }
-
-    if (!review.user) {
-      console.warn(`Review ${review.id} has no user property:`, review);
-      return false;
-    }
-
-    if (!review.user.id) {
-      console.warn(`Review ${review.id} has user but no user.id:`, review.user);
-      return false;
-    }
-
-    if (!review.user.name) {
-      console.warn(
-        `Review ${review.id} has user but no user.name:`,
-        review.user
-      );
-      return false;
-    }
-
-    return true;
-  });
-
-  console.log(
-    `Filtered ${validReviews.length} reviews to ${filteredReviews.length} valid reviews`
-  );
-
-  // フィルタリング後にレビューがない場合
-  if (filteredReviews.length === 0) {
-    return (
-      <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
-        <Typography variant="body1" color="text.secondary">
-          表示できるレビューがありません。データが不完全な可能性があります。
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          元のレビュー数: {validReviews.length}、有効なレビュー数: 0
-        </Typography>
-      </Paper>
-    );
-  }
-
-  // 最大10件のレビューに制限
-  const limitedReviews = filteredReviews.slice(0, 10);
+  }, [currentPage, totalPages, pageSize]);
 
   return (
-    <Grid container spacing={1}>
-      {limitedReviews.map((review) => {
-        const numScore =
-          typeof review.overall_score === "string"
-            ? parseFloat(review.overall_score)
-            : review.overall_score;
+    <Box>
+      {/* 常にページネーションを表示（ページが1つでも必要なときに） */}
+      {totalReviews > 0 && (
+        <SearchPagination
+          count={totalPages}
+          page={currentPage}
+          onChange={handlePageChange}
+          size="small"
+          totalItems={totalReviews}
+          currentPageStart={startIndex + 1}
+          currentPageEnd={endIndex}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageSizeChange={handlePageSizeChange}
+          showPageSizeSelector={true}
+          showIfSinglePage={true} // 1ページでも常に表示
+          showFirstButton
+          showLastButton
+        />
+      )}
 
-        return (
-          <Grid item xs={12} key={review.id}>
-            <Paper
-              sx={{
-                p: 1.5,
-                "&:hover": {
-                  bgcolor: "grey.50",
-                },
-              }}
-            >
-              <Box
+      <Grid container spacing={1} sx={{ mt: 1 }}>
+        {currentPageReviews.map((review) => {
+          const numScore =
+            typeof review.overall_score === "string"
+              ? parseFloat(review.overall_score)
+              : review.overall_score;
+
+          return (
+            <Grid item xs={12} key={review.id}>
+              <Paper
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mb: 0.5,
+                  p: 1.5,
+                  "&:hover": {
+                    bgcolor: "grey.50",
+                  },
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Link
-                    href={`/users/${review.user?.id}`}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      color="primary"
-                      sx={{
-                        cursor: "pointer",
-                        "&:hover": {
-                          textDecoration: "underline",
-                        },
-                      }}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 0.5,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Link
+                      href={`/users/${review.user?.id}`}
+                      style={{ textDecoration: "none" }}
                     >
-                      {review.user?.name}
+                      <Typography
+                        variant="subtitle2"
+                        color="primary"
+                        sx={{
+                          cursor: "pointer",
+                          "&:hover": {
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
+                        {review.user?.name}
+                      </Typography>
+                    </Link>
+                    <Typography variant="body2">
+                      {formatScore(review.overall_score)}
                     </Typography>
-                  </Link>
-                  <Typography variant="body2">
-                    {formatScore(review.overall_score)}
-                  </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Rating
+                      value={numScore / 2}
+                      precision={0.5}
+                      readOnly
+                      size="small"
+                    />
+                  </Box>
                 </Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Rating
-                    value={numScore / 2}
-                    precision={0.5}
-                    readOnly
-                    size="small"
+                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                  {review.short_comment}
+                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                  <LikeButton
+                    reviewId={review.id}
+                    initialLikesCount={review.likes_count}
+                    initialLikedByUser={review.liked_by_current_user}
                   />
                 </Box>
-              </Box>
-              <Typography variant="body2" sx={{ mb: 0.5 }}>
-                {review.short_comment}
-              </Typography>
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <LikeButton
-                  reviewId={review.id}
-                  initialLikesCount={review.likes_count}
-                  initialLikedByUser={review.liked_by_current_user}
-                />
-              </Box>
-            </Paper>
-          </Grid>
-        );
-      })}
-      {filteredReviews.length > 10 && (
-        <Grid item xs={12}>
-          <Typography variant="body2" color="text.secondary" align="center">
-            他に{filteredReviews.length - 10}件のレビューがあります
-          </Typography>
-        </Grid>
+              </Paper>
+            </Grid>
+          );
+        })}
+      </Grid>
+
+      {/* 常に下部のページネーションも表示 */}
+      {totalReviews > 0 && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+          <SearchPagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            size="small"
+            showPageSizeSelector={false}
+            showIfSinglePage={true} // 1ページでも常に表示
+            showFirstButton
+            showLastButton
+          />
+        </Box>
       )}
-    </Grid>
+    </Box>
   );
 }
