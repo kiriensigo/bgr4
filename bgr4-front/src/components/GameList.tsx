@@ -139,8 +139,9 @@ export default function GameList({
     const now = Date.now();
     let useCache = false;
 
-    // キャッシュをチェック
+    // キャッシュをチェック（totalItemsが0の場合はキャッシュを使わない）
     if (
+      totalItems > 0 &&
       gamesCache[cacheKey] &&
       now - gamesCache[cacheKey].timestamp < CACHE_EXPIRY
     ) {
@@ -182,68 +183,67 @@ export default function GameList({
 
       setGames(data.games);
 
-      // APIから返されたtotalPagesとtotalItemsを使用
-      let estimatedTotalPages = data.totalPages;
-      let estimatedTotalItems = data.totalItems;
+      // APIから返された正確な総数を常に優先して使用
+      let actualTotalItems = data.totalItems;
+      let actualTotalPages = data.totalPages;
 
-      // 総アイテム数のグローバルキャッシュを更新
-      if (estimatedTotalItems > 0) {
-        globalTotalGames = estimatedTotalItems;
-        globalTotalGamesTimestamp = now;
-      } else if (
-        globalTotalGames > 0 &&
-        now - globalTotalGamesTimestamp < CACHE_EXPIRY
-      ) {
-        // グローバルキャッシュが利用可能なら使用
-        estimatedTotalItems = globalTotalGames;
-        console.log(`Using global cached total games: ${estimatedTotalItems}`);
-      }
-
-      // 値が0または未定義の場合、現在のページと取得したアイテム数から推測
-      if (!estimatedTotalPages || estimatedTotalPages <= 0) {
-        // 現在取得したアイテム数がページサイズより少ない場合、これが最後のページと仮定
+      // APIから値が取得できなかった場合のみ、代替値を計算
+      if (!actualTotalItems || actualTotalItems <= 0) {
+        console.log(
+          "API did not return valid totalItems, calculating alternative..."
+        );
+        // APIから総数が返されない場合は推測
         if (data.games.length < safePageSize) {
-          estimatedTotalItems =
-            (safePage - 1) * safePageSize + data.games.length;
+          // 最後のページと思われる場合
+          actualTotalItems = (safePage - 1) * safePageSize + data.games.length;
+          actualTotalPages = safePage;
+          console.log(
+            `Estimated total from partial page: ${actualTotalItems} items`
+          );
+        } else if (totalItems > 0) {
+          // 既存の値を使用
+          actualTotalItems = totalItems;
+          actualTotalPages = Math.min(
+            Math.ceil(actualTotalItems / safePageSize),
+            MAX_SAFE_PAGES
+          );
+          console.log(`Using existing value: ${actualTotalItems} items`);
         } else {
-          // 現在のページが満杯なら、少し余裕を持たせる
-          const estimatedPages = Math.min(safePage + 1, MAX_SAFE_PAGES);
-          estimatedTotalItems = estimatedPages * safePageSize;
+          // 最低でも現在のページ×ページサイズの3倍と見積もる
+          actualTotalItems = Math.min(safePageSize * MAX_SAFE_PAGES, 200);
+          actualTotalPages = Math.min(
+            Math.ceil(actualTotalItems / safePageSize),
+            MAX_SAFE_PAGES
+          );
+          console.log(`Using safe default estimate: ${actualTotalItems} items`);
         }
-
-        // 最低でも現在のページ数は確保、最大でもMAX_SAFE_PAGES
-        estimatedTotalPages = Math.min(
-          Math.max(Math.ceil(estimatedTotalItems / safePageSize), safePage),
-          MAX_SAFE_PAGES
-        );
       } else {
-        // APIから返されるページ数も最大値を超えないように
-        estimatedTotalPages = Math.min(estimatedTotalPages, MAX_SAFE_PAGES);
-        // 総アイテム数も調整
-        estimatedTotalItems = Math.min(
-          estimatedTotalItems,
-          MAX_PAGE_SIZE * MAX_SAFE_PAGES
+        console.log(
+          `Using API reported value: ${actualTotalItems} total items`
         );
+        // グローバルキャッシュを更新
+        globalTotalGames = actualTotalItems;
+        globalTotalGamesTimestamp = now;
       }
 
       console.log(
-        `Setting totalItems: ${estimatedTotalItems}, totalPages: ${estimatedTotalPages}`
+        `Setting totalItems: ${actualTotalItems}, totalPages: ${actualTotalPages}`
       );
-      setTotalPages(estimatedTotalPages);
-      setTotalItems(estimatedTotalItems);
+      setTotalPages(actualTotalPages);
+      setTotalItems(actualTotalItems);
 
       // キャッシュにデータを保存
       gamesCache[cacheKey] = {
         data: data.games,
-        totalPages: estimatedTotalPages,
-        totalItems: estimatedTotalItems,
+        totalPages: actualTotalPages,
+        totalItems: actualTotalItems,
         timestamp: now,
       };
 
       // 現在のページが総ページ数を超えている場合は、最後のページに移動
-      if (currentPage > estimatedTotalPages && estimatedTotalPages > 0) {
-        setCurrentPage(estimatedTotalPages);
-        updateUrl(estimatedTotalPages, safePageSize, currentSort);
+      if (currentPage > actualTotalPages && actualTotalPages > 0) {
+        setCurrentPage(actualTotalPages);
+        updateUrl(actualTotalPages, safePageSize, currentSort);
       }
 
       setInitialLoadDone(true);
@@ -273,85 +273,45 @@ export default function GameList({
     fetchGames,
     updateUrl,
     loading,
+    totalItems,
   ]);
 
-  // 総レコード数を別途取得する関数
+  // 総レコード数を別途取得する関数 - APIから直接正確な総数を取得
   const fetchTotalCount = useCallback(async () => {
-    // グローバルキャッシュをチェック
-    const now = Date.now();
-    if (
-      globalTotalGames > 0 &&
-      now - globalTotalGamesTimestamp < CACHE_EXPIRY
-    ) {
-      console.log(`Using global cached total games count: ${globalTotalGames}`);
-      setTotalItems(globalTotalGames);
-      setTotalPages(
-        Math.min(Math.ceil(globalTotalGames / currentPageSize), MAX_SAFE_PAGES)
-      );
-      return;
-    }
-
     try {
-      // 最も効率的なアプローチとして、最大ページサイズで1回だけ試行
+      // APIから総数を取得（最大サイズのページで効率的に）
       const size = PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1];
+      console.log(`Fetching total count with page size ${size}`);
 
-      console.log(`Estimating total count with page size ${size}`);
       const data = await fetchGames(1, size, currentSort);
 
-      // ページネーション情報が正しく返されている場合はそれを使用
+      // APIから返された総数を使用
       if (data.totalItems && data.totalItems > 0) {
-        console.log(`Got valid totalItems: ${data.totalItems} from API`);
-        // 最大値で制限
-        const safeCount = Math.min(
-          data.totalItems,
-          MAX_PAGE_SIZE * MAX_SAFE_PAGES
-        );
+        console.log(`API reported ${data.totalItems} total items`);
 
         // グローバルキャッシュを更新
-        globalTotalGames = safeCount;
-        globalTotalGamesTimestamp = now;
+        globalTotalGames = data.totalItems;
+        globalTotalGamesTimestamp = Date.now();
 
-        setTotalItems(safeCount);
-        setTotalPages(
-          Math.min(Math.ceil(safeCount / currentPageSize), MAX_SAFE_PAGES)
+        // 現在のページサイズに基づいてページ数を計算
+        const calculatedPages = Math.min(
+          Math.ceil(data.totalItems / currentPageSize),
+          MAX_SAFE_PAGES
         );
-        return;
-      }
 
-      // アイテム数が最大ページサイズに達していない場合、それが全ての結果であると仮定
-      if (data.games.length < size) {
         console.log(
-          `Got partial page (${data.games.length} of ${size}), assuming that's the total count`
+          `Setting totalItems: ${data.totalItems}, totalPages: ${calculatedPages}`
         );
-        const estimatedCount = data.games.length;
-
-        // グローバルキャッシュを更新
-        globalTotalGames = estimatedCount;
-        globalTotalGamesTimestamp = now;
-
-        setTotalItems(estimatedCount);
-        setTotalPages(
-          Math.min(Math.ceil(estimatedCount / currentPageSize), MAX_SAFE_PAGES)
-        );
-        return;
+        setTotalItems(data.totalItems);
+        setTotalPages(calculatedPages);
+        return data.totalItems;
       }
 
-      // それ以外の場合は、3ページ分くらいはあると推測（控えめに）
-      console.log(
-        `Got full page (${data.games.length} of ${size}), estimating total as 3x page size`
-      );
-      const estimatedCount = Math.min(size * 3, MAX_PAGE_SIZE * MAX_SAFE_PAGES);
-
-      // グローバルキャッシュを更新
-      globalTotalGames = estimatedCount;
-      globalTotalGamesTimestamp = now;
-
-      setTotalItems(estimatedCount);
-      setTotalPages(
-        Math.min(Math.ceil(estimatedCount / currentPageSize), MAX_SAFE_PAGES)
-      );
+      console.log("API did not return a valid total count");
+      return 0;
     } catch (error) {
       console.error("Error fetching total count:", error);
+      return 0;
     }
   }, [fetchGames, currentPageSize, currentSort]);
 
@@ -366,17 +326,38 @@ export default function GameList({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ページサイズが変更されたときの処理
-  const handlePageSizeChange = (
-    event: React.MouseEvent<HTMLElement>,
-    newPageSize: number | null
-  ) => {
-    if (newPageSize === null) return;
-    setCurrentPageSize(newPageSize);
-    // ページサイズが変更されたら1ページ目に戻る
-    setCurrentPage(1);
-    updateUrl(1, newPageSize, currentSort);
-  };
+  // ページサイズ変更時のハンドラ
+  const handlePageSizeChange = useCallback(
+    (event: React.MouseEvent<HTMLElement>, newPageSize: number | null) => {
+      if (newPageSize === null) return;
+
+      console.log(`Page size changed to ${newPageSize}`);
+
+      // ページサイズ変更時に総アイテム数とページ数の計算をリセットする
+      setTotalItems(0);
+      setTotalPages(0);
+
+      // キャッシュをすべてクリア
+      Object.keys(gamesCache).forEach((key) => {
+        delete gamesCache[key];
+      });
+
+      // グローバルキャッシュもリセット
+      globalTotalGames = 0;
+      globalTotalGamesTimestamp = 0;
+
+      // ページサイズ変更時は常に1ページ目に戻す
+      setCurrentPage(1);
+      setCurrentPageSize(newPageSize);
+      updateUrl(1, newPageSize, currentSort);
+
+      // ページサイズ変更時に少し遅延して総件数を再取得
+      setTimeout(() => {
+        fetchTotalCount();
+      }, 100);
+    },
+    [updateUrl, currentSort, fetchTotalCount]
+  );
 
   // ソートが変更されたときの処理
   const handleSortChange = (event: SelectChangeEvent<string>) => {
@@ -421,30 +402,36 @@ export default function GameList({
     loadGames();
   }, [loadGames]);
 
-  // コンポーネントマウント時に総レコード数を取得
+  // コンポーネントのマウント時、URLパラメータの変更時、または依存関係の変更時にデータを再ロードする
   useEffect(() => {
-    // 初回ロードが完了し、総レコード数が少ない場合や推測が必要な場合に実行
-    // すでにデータがある場合は再取得不要
-    if (
-      initialLoadDone &&
-      (totalItems <= 0 || totalPages <= 1) &&
-      !loading &&
-      games.length === 0
-    ) {
-      fetchTotalCount();
-    }
-  }, [
-    initialLoadDone,
-    totalItems,
-    totalPages,
-    loading,
-    fetchTotalCount,
-    games.length,
-  ]);
+    loadGames();
+  }, [loadGames]);
 
-  // 現在表示しているアイテムの範囲を計算
+  // 初回マウント時に総レコード数を取得する
+  useEffect(() => {
+    // タイムスタンプベースのキャッシュチェック（10分間有効）
+    const now = Date.now();
+    const cacheExpired = now - globalTotalGamesTimestamp > 10 * 60 * 1000;
+
+    // グローバルキャッシュがない、または期限切れの場合のみ総数を取得
+    if (globalTotalGames <= 0 || cacheExpired) {
+      console.log("Fetching total count on mount...");
+      fetchTotalCount();
+    } else {
+      console.log(`Using cached global total games: ${globalTotalGames}`);
+      // キャッシュされた総数を使用してページ数を計算
+      const calculatedPages = Math.min(
+        Math.ceil(globalTotalGames / currentPageSize),
+        MAX_SAFE_PAGES
+      );
+      setTotalItems(globalTotalGames);
+      setTotalPages(calculatedPages);
+    }
+  }, [fetchTotalCount, currentPageSize]);
+
+  // 現在表示しているアイテムの範囲を計算（最小値が1になるように調整）
   const startItem =
-    totalItems > 0 ? (currentPage - 1) * currentPageSize + 1 : 0;
+    totalItems > 0 ? Math.max((currentPage - 1) * currentPageSize + 1, 1) : 0;
   const endItem =
     totalItems > 0 ? Math.min(currentPage * currentPageSize, totalItems) : 0;
 

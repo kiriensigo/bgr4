@@ -111,6 +111,15 @@ export interface PaginationInfo {
 export interface GamesResponse {
   games: Game[];
   pagination: PaginationInfo;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface ReviewsResponse {
+  reviews: Review[];
+  pagination?: PaginationInfo;
+  totalItems: number;
+  totalPages: number;
 }
 
 interface GamesResponseOptions {
@@ -157,6 +166,18 @@ export async function getGames(
           const data = await response.json();
           console.log(`Successfully fetched ${data.games?.length || 0} games`);
 
+          // APIレスポンスに総ゲーム数があることをログ出力
+          console.log(
+            `API reported total_count: ${
+              data.pagination?.total_count || "undefined"
+            }`
+          );
+          console.log(
+            `API reported total_pages: ${
+              data.pagination?.total_pages || "undefined"
+            }`
+          );
+
           // 空の結果が返ってきた場合でも、ページネーション情報は正しく設定する
           if (data.games.length === 0 && page > 1) {
             console.warn(
@@ -164,7 +185,21 @@ export async function getGames(
             );
           }
 
-          resolve(data);
+          // API からの応答を整形し、totalItemsとtotalPagesを明示的に設定
+          const transformedResponse: GamesResponse = {
+            games: data.games || [],
+            pagination: data.pagination || {
+              total_count: 0,
+              total_pages: 0,
+              current_page: page,
+              per_page: per_page,
+            },
+            // GameList コンポーネントが使用する形式にマッピング
+            totalItems: data.pagination?.total_count || 0,
+            totalPages: data.pagination?.total_pages || 0,
+          };
+
+          resolve(transformedResponse);
         } catch (error) {
           console.error("API error in getGames:", error);
           reject(error);
@@ -588,25 +623,96 @@ export async function getReviews(gameId: string) {
   }
 }
 
-export async function getAllReviews() {
+export async function getAllReviews(
+  page: number = 1,
+  per_page: number = 24,
+  options: { cache?: RequestCache; revalidate?: number } = {}
+): Promise<ReviewsResponse> {
+  const apiUrl = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/v1/reviews/all?page=${page}&per_page=${per_page}`;
+
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/reviews/all?exclude_system=true`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    console.log(`Fetching all reviews from ${apiUrl}`);
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: options.cache || "default",
+      next: options.revalidate ? { revalidate: options.revalidate } : undefined,
+    });
 
     if (!response.ok) {
-      throw new Error("レビューの取得に失敗しました");
+      throw new Error(`API error: ${response.status}`);
     }
 
-    return await response.json();
+    // デバッグ: レスポンスヘッダーを確認
+    console.log("Reviews API response headers:");
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      console.log(`${key}: ${value}`);
+      headers[key.toLowerCase()] = value;
+    });
+
+    const reviews = await response.json();
+
+    // 総数と総ページ数の取得
+    let totalItems = 0;
+    let totalPages = 0;
+
+    // ヘッダーからペジネーション情報を取得
+    if (headers["x-total-count"]) {
+      totalItems = parseInt(headers["x-total-count"]);
+      totalPages = Math.ceil(totalItems / per_page);
+      console.log(
+        `Reviews API returned total count: ${totalItems}, pages: ${totalPages}`
+      );
+    } else if (headers["x-pagination"]) {
+      // X-Paginationヘッダーがある場合
+      try {
+        const paginationInfo = JSON.parse(headers["x-pagination"]);
+        if (paginationInfo.total_count) {
+          totalItems = paginationInfo.total_count;
+          totalPages =
+            paginationInfo.total_pages || Math.ceil(totalItems / per_page);
+          console.log(
+            `Reviews pagination info: ${totalItems} items, ${totalPages} pages`
+          );
+        }
+      } catch (e) {
+        console.error("Error parsing X-Pagination header:", e);
+      }
+    }
+
+    // データがあるけど総数情報がない場合の推測 (上限なし)
+    if (totalItems <= 0 && reviews.length > 0) {
+      if (reviews.length < per_page) {
+        // 返されたレビュー数がページサイズより少ない場合、最後のページと判断
+        totalItems = (page - 1) * per_page + reviews.length;
+        totalPages = page;
+        console.log(`Estimated total from last page: ${totalItems} items`);
+      } else {
+        // まだ続きがあると推測
+        // 最小でも現在のデータ + もう1ページ分はあるはず
+        const minEstimate = page * per_page + per_page;
+        totalItems = minEstimate;
+        totalPages = Math.ceil(totalItems / per_page);
+        console.log(`Minimal estimate: ${totalItems} items`);
+      }
+    }
+
+    // レスポンスオブジェクトに関連情報を含めて返す
+    return {
+      reviews,
+      totalItems: totalItems || reviews.length,
+      totalPages:
+        totalPages ||
+        (reviews.length < per_page ? 1 : Math.ceil(totalItems / per_page)),
+    };
   } catch (error) {
-    console.error("Reviews fetch error:", error);
-    throw new Error("レビューの取得に失敗しました");
+    console.error("Failed to fetch all reviews:", error);
+    throw error;
   }
 }
 

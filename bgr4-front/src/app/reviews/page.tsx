@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { getGame } from "@/lib/api";
+import { getGame, getAllReviews } from "@/lib/api";
 import LikeButton from "@/components/LikeButton";
 import SearchPagination from "@/components/SearchPagination";
 
@@ -83,10 +83,10 @@ let globalTotalItemsTimestamp = 0;
 
 // ページサイズのオプション（ゲーム一覧と同じ）
 const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 72];
-// 最大取得数
-const MAX_PAGE_SIZE = 72;
-// 最大ページ数（エラーを防ぐために設定）
-const MAX_SAFE_PAGES = 5;
+// 最大取得数 (制限なし)
+const MAX_PAGE_SIZE = 1000;
+// 最大ページ数 (制限なし)
+const MAX_SAFE_PAGES = 1000;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -226,12 +226,6 @@ export default function ReviewsPage() {
   const fetchReviews = useCallback(
     async (pageNum: number, pageSizeNum: number) => {
       try {
-        // ページサイズが最大値を超えないように制限
-        const safeSizeNum = Math.min(pageSizeNum, MAX_PAGE_SIZE);
-
-        // ページ番号が大きすぎる場合は1ページ目に戻す（エラー防止）
-        const safePageNum = pageNum > MAX_SAFE_PAGES ? 1 : pageNum;
-
         // APIリクエストの前にロード状態にする（ただしキャッシュ使用時は除く）
         const now = Date.now();
         let useCache = false;
@@ -240,8 +234,8 @@ export default function ReviewsPage() {
         if (
           reviewsCache.data.length > 0 &&
           now - reviewsCache.timestamp < CACHE_EXPIRY &&
-          reviewsCache.page === safePageNum &&
-          reviewsCache.pageSize === safeSizeNum
+          reviewsCache.page === pageNum &&
+          reviewsCache.pageSize === pageSizeNum
         ) {
           console.log("Using cached reviews data");
           setReviews(reviewsCache.data);
@@ -263,103 +257,34 @@ export default function ReviewsPage() {
         }
 
         console.log(
-          `Fetching reviews for page ${safePageNum}, pageSize ${safeSizeNum}`
+          `Fetching reviews for page ${pageNum}, pageSize ${pageSizeNum}`
         );
 
-        // APIからデータを取得
-        const response = await fetch(
-          `${
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-          }/api/v1/reviews/all?page=${safePageNum}&per_page=${safeSizeNum}`,
-          {
-            headers: {
-              ...getAuthHeaders(),
-              "Content-Type": "application/json",
-            },
-            // メモリキャッシュを使用（ネットワークリクエストを削減）
-            cache: "force-cache",
-          }
-        );
-
-        if (!response.ok) {
-          // エラーレスポンスの詳細をログに記録
-          console.error(`API Error: ${response.status} ${response.statusText}`);
-
-          // 500エラーの場合は、以前のデータを保持しつつエラーメッセージを表示
-          if (response.status === 500) {
-            setError(
-              `サーバーエラーが発生しました。ページサイズまたはページ番号を小さくしてみてください。`
-            );
-            // 現在のページが大きすぎる場合は1ページ目に戻す
-            if (pageNum > 1) {
-              setCurrentPage(1);
-              updateUrl(1, pageSize);
-            }
-            setLoading(false);
-            return;
-          }
-
-          throw new Error("レビューの取得に失敗しました");
-        }
-
-        // デバッグ: レスポンスヘッダーを確認
-        console.log("Response headers:");
-        const headers = {};
-        response.headers.forEach((value, key) => {
-          console.log(`${key}: ${value}`);
-          headers[key] = value;
+        // 修正されたgetAllReviews関数を使用
+        const data = await getAllReviews(pageNum, pageSizeNum, {
+          cache: "force-cache",
         });
 
-        const data = await response.json();
-        console.log(`Received ${data.length} reviews`);
-
-        // X-Total-Countヘッダーから合計アイテム数を取得
-        let totalCount = 0;
-
-        // ヘッダーの完全な検証
-        if (headers["x-total-count"]) {
-          totalCount = parseInt(headers["x-total-count"]);
-          console.log(`X-Total-Count header value: ${totalCount}`);
-
-          // グローバルキャッシュも更新
-          globalTotalItems = totalCount;
-          globalTotalItemsTimestamp = now;
-        } else if (
-          globalTotalItems > 0 &&
-          now - globalTotalItemsTimestamp < CACHE_EXPIRY
-        ) {
-          // グローバルキャッシュを使用
-          totalCount = globalTotalItems;
-          console.log(`Using global cached total count: ${totalCount}`);
-        } else {
-          // APIがX-Total-Countを提供しない場合、推測値を使用
-          // 現在のページサイズが最大でなければ最後のページと推測
-          if (data.length < safeSizeNum) {
-            totalCount = (safePageNum - 1) * safeSizeNum + data.length;
-          } else {
-            // より控えめな推測を行う（最大で現在のページの2倍まで）
-            const estimatedPages = Math.min(safePageNum + 1, MAX_SAFE_PAGES);
-            totalCount = estimatedPages * safeSizeNum;
-          }
-          console.log(`Estimated total count: ${totalCount}`);
-        }
-
-        // 安全なページ数計算（最大ページ数を制限）
-        const calculatedTotalPages = Math.min(
-          Math.ceil(totalCount / safeSizeNum),
-          MAX_SAFE_PAGES
-        );
-
+        console.log(`Received ${data.reviews.length} reviews`);
         console.log(
-          `Setting totalItems: ${totalCount}, totalPages: ${calculatedTotalPages}`
+          `Total items: ${data.totalItems}, total pages: ${data.totalPages}`
         );
 
-        setTotalItems(totalCount);
-        setTotalPages(calculatedTotalPages);
+        // 総数情報を直接設定
+        const actualTotalItems = data.totalItems;
+        const actualTotalPages = data.totalPages;
+
+        // APIから返された総数情報を設定
+        setTotalItems(actualTotalItems);
+        setTotalPages(actualTotalPages);
+
+        // グローバルキャッシュを更新
+        globalTotalItems = actualTotalItems;
+        globalTotalItemsTimestamp = now;
 
         // レビューアイテムの処理効率化: 並列で一度に画像情報のチェックを行う
         const processedData = await Promise.all(
-          data.map(async (review: Review) => {
+          data.reviews.map(async (review: Review) => {
             // 必要な場合のみゲーム詳細を取得（条件を厳格に）
             if (
               review.game &&
@@ -421,10 +346,10 @@ export default function ReviewsPage() {
         // データをキャッシュ
         reviewsCache.data = processedData;
         reviewsCache.timestamp = now;
-        reviewsCache.page = safePageNum;
-        reviewsCache.pageSize = safeSizeNum;
-        reviewsCache.totalPages = calculatedTotalPages;
-        reviewsCache.totalItems = totalCount;
+        reviewsCache.page = pageNum;
+        reviewsCache.pageSize = pageSizeNum;
+        reviewsCache.totalPages = actualTotalPages;
+        reviewsCache.totalItems = actualTotalItems;
       } catch (error) {
         console.error("Error fetching reviews:", error);
         setError(
@@ -434,7 +359,7 @@ export default function ReviewsPage() {
         setLoading(false);
       }
     },
-    [getAuthHeaders, updateUrl, pageSize]
+    [getAuthHeaders]
   );
 
   // ページネーションのハンドラー
@@ -454,6 +379,32 @@ export default function ReviewsPage() {
     newPageSize: number | null
   ) => {
     if (newPageSize === null) return;
+
+    console.log(`Page size changed to ${newPageSize}`);
+
+    // キャッシュをクリア
+    reviewsCache.data = [];
+    reviewsCache.timestamp = 0;
+    reviewsCache.page = 0;
+    reviewsCache.pageSize = 0;
+    reviewsCache.totalPages = 0;
+    reviewsCache.totalItems = 0;
+
+    // グローバルキャッシュの総アイテム数は維持し、ページサイズに基づいて総ページ数を再計算
+    if (globalTotalItems > 0) {
+      const newTotalPages = Math.ceil(globalTotalItems / newPageSize);
+      console.log(
+        `Recalculating pages with cached count: ${globalTotalItems} items, new size: ${newPageSize}, pages: ${newTotalPages}`
+      );
+
+      setTotalItems(globalTotalItems);
+      setTotalPages(newTotalPages);
+    } else {
+      // グローバルキャッシュがない場合は一旦リセット（取得時に再設定）
+      setTotalItems(0);
+      setTotalPages(0);
+    }
+
     setPageSize(newPageSize);
     setCurrentPage(1); // ページサイズが変わったら1ページ目に戻る
     updateUrl(1, newPageSize);
@@ -466,10 +417,21 @@ export default function ReviewsPage() {
 
     // 現在のステートと異なる場合のみ更新
     if (urlPage !== currentPage || urlPageSize !== pageSize) {
+      // ページサイズが変わった場合は総ページ数を再計算
+      if (urlPageSize !== pageSize && globalTotalItems > 0) {
+        const recalculatedTotalPages = Math.ceil(
+          globalTotalItems / urlPageSize
+        );
+        console.log(
+          `URL changed - recalculating total pages: ${recalculatedTotalPages} with size ${urlPageSize}`
+        );
+        setTotalPages(recalculatedTotalPages);
+      }
+
       setCurrentPage(urlPage);
       setPageSize(urlPageSize);
     }
-  }, [searchParams, currentPage, pageSize]);
+  }, [searchParams, currentPage, pageSize, globalTotalItems]);
 
   // データの取得 - memo化されたfetchReviewsと依存関係を明確に
   useEffect(() => {
@@ -482,140 +444,63 @@ export default function ReviewsPage() {
   const endItem =
     totalItems > 0 ? Math.min(currentPage * pageSize, totalItems) : 0;
 
-  // コンポーネントマウント時に総レコード数を取得
+  // コンポーネントマウント時に総レコード数を取得 - getAllReviewsを使用する方法に修正
   useEffect(() => {
-    // 総レコード数を別途取得する関数
-    const fetchTotalCount = async () => {
-      // グローバルキャッシュをチェック
-      const now = Date.now();
-      if (
-        globalTotalItems > 0 &&
-        now - globalTotalItemsTimestamp < CACHE_EXPIRY
-      ) {
-        console.log(`Using global cached total count: ${globalTotalItems}`);
-        setTotalItems(globalTotalItems);
-        setTotalPages(
-          Math.min(Math.ceil(globalTotalItems / pageSize), MAX_SAFE_PAGES)
-        );
-        return;
-      }
+    // 総レコード数が未設定でキャッシュも無効な場合のみ実行
+    const now = Date.now();
+    const cacheExpired = now - globalTotalItemsTimestamp > CACHE_EXPIRY;
 
-      try {
-        // APIから総レコード数を取得（可能であれば）
-        const response = await fetch(
-          `${
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-          }/api/v1/reviews/count`,
-          {
-            headers: {
-              ...getAuthHeaders(),
-              "Content-Type": "application/json",
-            },
-            // メモリキャッシュを使用
-            cache: "force-cache",
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.count) {
-            console.log(`Total reviews count from API: ${data.count}`);
-            // 安全な最大値を設定
-            const safeCount = Math.min(
-              data.count,
-              MAX_PAGE_SIZE * MAX_SAFE_PAGES
-            );
-
-            // グローバルキャッシュを更新
-            globalTotalItems = safeCount;
-            globalTotalItemsTimestamp = now;
-
-            setTotalItems(safeCount);
-            setTotalPages(
-              Math.min(Math.ceil(safeCount / pageSize), MAX_SAFE_PAGES)
-            );
-            return;
-          }
-        }
-
-        // 並列リクエストの数を減らす（最大1つだけ試行）
-        // 最も多く取得できる可能性があるサイズを選択
-        const size = PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1];
-
+    if (
+      totalItems <= 0 &&
+      (globalTotalItems <= 0 || cacheExpired) &&
+      !loading
+    ) {
+      // 最大のページサイズでAPIから総数を取得（効率化のため）
+      const fetchCount = async () => {
         try {
-          const resp = await fetch(
-            `${
-              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-            }/api/v1/reviews/all?page=1&per_page=${size}`,
-            {
-              headers: {
-                ...getAuthHeaders(),
-                "Content-Type": "application/json",
-              },
-              cache: "force-cache",
-            }
-          );
+          console.log("Fetching total count on mount...");
+          const size = PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1];
+          const data = await getAllReviews(1, size);
 
-          if (resp.ok) {
-            const pageData = await resp.json();
-            const countFromHeader = resp.headers.get("X-Total-Count");
+          if (data.totalItems > 0) {
+            console.log(`Total reviews from API: ${data.totalItems}`);
 
-            if (countFromHeader) {
-              const count = parseInt(countFromHeader);
-              // グローバルキャッシュを更新
-              globalTotalItems = count;
-              globalTotalItemsTimestamp = now;
+            // 上限なしでAPIから返された総数を使用
+            const totalCount = data.totalItems;
 
-              const safeCount = Math.min(count, MAX_PAGE_SIZE * MAX_SAFE_PAGES);
-              setTotalItems(safeCount);
-              setTotalPages(
-                Math.min(Math.ceil(safeCount / pageSize), MAX_SAFE_PAGES)
-              );
-              return;
-            }
-
-            // ページが部分的に埋まっている場合はそれが全てと仮定
-            if (pageData.length < size) {
-              const estimatedCount = pageData.length;
-              // グローバルキャッシュを更新
-              globalTotalItems = estimatedCount;
-              globalTotalItemsTimestamp = now;
-
-              setTotalItems(estimatedCount);
-              setTotalPages(
-                Math.min(Math.ceil(estimatedCount / pageSize), MAX_SAFE_PAGES)
-              );
-              return;
-            }
-
-            // 満杯なら控えめに推定（3ページ分）
-            const estimatedCount = Math.min(
-              size * 3,
-              MAX_PAGE_SIZE * MAX_SAFE_PAGES
-            );
             // グローバルキャッシュを更新
-            globalTotalItems = estimatedCount;
+            globalTotalItems = totalCount;
             globalTotalItemsTimestamp = now;
 
-            setTotalItems(estimatedCount);
-            setTotalPages(
-              Math.min(Math.ceil(estimatedCount / pageSize), MAX_SAFE_PAGES)
+            // 現在のページサイズに基づいてページ数を計算
+            const calculatedPages = Math.ceil(totalCount / pageSize);
+            console.log(
+              `Setting totalItems: ${totalCount}, totalPages: ${calculatedPages}`
             );
+
+            setTotalItems(totalCount);
+            setTotalPages(calculatedPages);
           }
         } catch (error) {
-          console.error("Error estimating count:", error);
+          console.error("Error fetching total count:", error);
         }
-      } catch (error) {
-        console.error("Error fetching total count:", error);
-      }
-    };
+      };
 
-    // 総レコード数が未取得で、現在ロード中でない場合に取得
-    // さらに既にデータがある場合は再取得不要
-    if (totalItems <= 0 && !loading && reviews.length === 0) {
-      fetchTotalCount();
+      fetchCount();
+    } else if (globalTotalItems > 0 && !cacheExpired && totalItems <= 0) {
+      // キャッシュされた総数を使用
+      console.log(`Using cached global total: ${globalTotalItems}`);
+
+      // 現在のページサイズに基づいてページ数を計算（上限なし）
+      const calculatedPages = Math.ceil(globalTotalItems / pageSize);
+      console.log(
+        `Using cached count: ${globalTotalItems}, pages: ${calculatedPages}`
+      );
+
+      setTotalItems(globalTotalItems);
+      setTotalPages(calculatedPages);
     }
-  }, [getAuthHeaders, pageSize, totalItems, loading, reviews.length]);
+  }, [loading, totalItems, pageSize]);
 
   if (loading) {
     return (
@@ -734,7 +619,7 @@ export default function ReviewsPage() {
             page={currentPage}
             onChange={handlePageChange}
             size="medium"
-            totalItems={totalItems}
+            totalItems={undefined}
             currentPageStart={startItem}
             currentPageEnd={endItem}
             pageSize={pageSize}
@@ -840,7 +725,7 @@ export default function ReviewsPage() {
               page={currentPage}
               onChange={handlePageChange}
               size="medium"
-              totalItems={totalItems}
+              totalItems={undefined}
               currentPageStart={startItem}
               currentPageEnd={endItem}
               pageSize={pageSize}
