@@ -22,6 +22,7 @@ import {
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import { CustomSlider } from "@/components/GameEvaluationForm/CustomSlider";
 import Cookies from "js-cookie";
+import ShareToTwitterButton from "@/components/ShareToTwitterButton";
 
 interface Game {
   id: string;
@@ -114,6 +115,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
+  const [gameData, setGameData] = useState<Game | null>(null);
+  const [showShareOptions, setShowShareOptions] = useState(false);
   const router = useRouter();
 
   const [review, setReview] = useState<Review>({
@@ -274,9 +277,11 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       setSuccessMessage(
         existingReview ? "レビューを修正しました" : "レビューを投稿しました"
       );
+      setShowShareOptions(true);
+
       setTimeout(() => {
         router.push("/reviews/my");
-      }, 2000);
+      }, 5000);
     } catch (error) {
       if (error instanceof Error) {
         if (
@@ -664,12 +669,66 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         />
       )}
 
-      <Snackbar
-        open={!!successMessage}
-        autoHideDuration={2000}
-        message={successMessage}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      />
+      {successMessage && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <Paper
+            sx={{
+              p: 4,
+              maxWidth: 500,
+              width: "90%",
+              textAlign: "center",
+              borderRadius: 2,
+            }}
+          >
+            <Typography variant="h5" color="primary" gutterBottom>
+              {successMessage}
+            </Typography>
+
+            {showShareOptions && game && (
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography variant="body1" gutterBottom>
+                  レビューをシェアしませんか？
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <ShareToTwitterButton
+                    gameName={game.name}
+                    gameId={params.id}
+                    score={review.overall_score}
+                    comment={review.short_comment}
+                    color="info"
+                    size="large"
+                    fullWidth
+                  />
+                </Box>
+              </Box>
+            )}
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              まもなくマイレビューページに移動します...
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={() => router.push("/reviews/my")}
+              sx={{ mt: 2 }}
+            >
+              今すぐ移動
+            </Button>
+          </Paper>
+        </Box>
+      )}
     </Container>
   );
 }

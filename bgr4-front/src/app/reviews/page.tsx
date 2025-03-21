@@ -11,6 +11,7 @@ import {
   Button,
   CircularProgress,
   CardActionArea,
+  IconButton,
 } from "@mui/material";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +22,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getGame, getAllReviews } from "@/lib/api";
 import LikeButton from "@/components/LikeButton";
 import SearchPagination from "@/components/SearchPagination";
+import ShareToTwitterButton from "@/components/ShareToTwitterButton";
+import ShareIcon from "@mui/icons-material/Share";
 
 type Review = {
   id: number;
@@ -706,11 +709,55 @@ export default function ReviewsPage() {
                           "ja-JP"
                         )}
                       </Typography>
-                      <LikeButton
-                        reviewId={review.id}
-                        initialLikesCount={review.likes_count}
-                        initialLikedByUser={review.liked_by_current_user}
-                      />
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            // シェアボタンクリック時に共有用のURLを生成
+                            const gameUrl = `${window.location.origin}/games/${review.game.id}`;
+                            const formattedScore =
+                              typeof review.overall_score === "number"
+                                ? review.overall_score.toFixed(1)
+                                : review.overall_score;
+
+                            // ツイート本文
+                            let tweetText = `「${
+                              review.game.japanese_name || review.game.name
+                            }」を評価しました！\n評価: ${formattedScore}/10\n`;
+
+                            // コメントがあれば追加（短くする）
+                            if (review.short_comment) {
+                              const shortenedComment =
+                                review.short_comment.length > 50
+                                  ? review.short_comment.substring(0, 47) +
+                                    "..."
+                                  : review.short_comment;
+                              tweetText += `${shortenedComment}\n`;
+                            }
+
+                            // ハッシュタグとURL追加
+                            tweetText += `#ボードゲーム #bgr4\n${gameUrl}`;
+
+                            // URLエンコード
+                            const encodedText = encodeURIComponent(tweetText);
+
+                            // ツイート投稿ページを開く
+                            window.open(
+                              `https://x.com/intent/tweet?text=${encodedText}`,
+                              "_blank"
+                            );
+                          }}
+                        >
+                          <ShareIcon fontSize="small" />
+                        </IconButton>
+                        <LikeButton
+                          reviewId={review.id}
+                          initialLikesCount={review.likes_count}
+                          initialLikedByUser={review.liked_by_current_user}
+                        />
+                      </Box>
                     </Box>
                   </CardContent>
                 </Card>
