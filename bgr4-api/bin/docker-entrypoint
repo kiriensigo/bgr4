@@ -6,9 +6,23 @@ if [ -z "${LD_PRELOAD+x}" ]; then
     export LD_PRELOAD
 fi
 
-# If running the rails server then create or migrate existing database
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+# PostgreSQLサーバーが起動するのを待機
+if [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_PORT" ]; then
+  echo "Waiting for PostgreSQL to start..."
+  /usr/bin/wait-for-postgres.sh "$DATABASE_HOST" "$DATABASE_PORT"
 fi
 
+# If running the rails server then create or migrate existing database
+if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  echo "Running database migrations..."
+  ./bin/rails db:prepare
+  
+  # 必要に応じて初期データを投入
+  if [ "$SEED_DATABASE" = "true" ]; then
+    echo "Seeding database..."
+    ./bin/rails db:seed
+  fi
+fi
+
+echo "Starting Rails application..."
 exec "${@}"

@@ -1,0 +1,66 @@
+# PostgreSQL 17データベース
+services:
+  # PostgreSQL 17データベース
+  db:
+    build:
+      context: ./postgres
+    container_name: bgr4-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      TZ: Asia/Tokyo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Railsバックエンド
+  api:
+    build:
+      context: ./bgr4-api
+    container_name: bgr4-api
+    depends_on:
+      - db
+    environment:
+      RAILS_ENV: development
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      BGR4_API_DATABASE_PASSWORD: postgres
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      RAILS_LOG_TO_STDOUT: "true"
+      SEED_DATABASE: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - api_storage:/rails/storage
+      - ./bgr4-api:/rails
+    restart: unless-stopped
+
+  # Next.jsフロントエンド
+  front:
+    build:
+      context: ./bgr4-front
+    container_name: bgr4-front
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./bgr4-front:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  api_storage:

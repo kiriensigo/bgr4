@@ -20,8 +20,8 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: postgres
   password: postgres
-  host: localhost
-  port: 5432 # PostgreSQL 17のデフォルトポート
+  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
+  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
 
 development:
   <<: *default
@@ -84,5 +84,15 @@ test:
 production:
   <<: *default
   database: bgr4_api_production
-  username: bgr4_api
-  password: <%= ENV["BGR4_API_DATABASE_PASSWORD"] %>
+  username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+
+cable:
+  <<: *default
+  database: bgr4_api_production
+  username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
