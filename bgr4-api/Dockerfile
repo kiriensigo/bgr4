@@ -19,11 +19,11 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Set production environment
-ENV RAILS_ENV="production" \
-    BUNDLE_DEPLOYMENT="1" \
+# Set development environment
+ENV RAILS_ENV="development" \
+    BUNDLE_DEPLOYMENT="0" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development"
+    RAILS_LOG_TO_STDOUT="1"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -50,9 +50,6 @@ RUN chmod +x bin/* && \
     sed -i "s/\r$//g" bin/* && \
     sed -i 's/ruby\.exe$/ruby/' bin/*
 
-
-
-
 # Final stage for app image
 FROM base
 
@@ -60,15 +57,19 @@ FROM base
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
+# データベース接続待機スクリプトを追加
+COPY ./bin/wait-for-postgres.sh /usr/bin/
+RUN chmod +x /usr/bin/wait-for-postgres.sh
+
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
     chown -R rails:rails db log storage tmp
 USER 1000:1000
 
-# Entrypoint prepares the database.
+# ENTRYPOINT設定
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+# Start server
+EXPOSE 8080
+CMD ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "8080"]
