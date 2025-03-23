@@ -3,7 +3,7 @@ Rails.application.config.middleware.use OmniAuth::Builder do
     ENV['GOOGLE_CLIENT_ID'],
     ENV['GOOGLE_CLIENT_SECRET'],
     {
-      callback_url: "#{ENV['API_URL']}/auth/google_oauth2/callback",
+      callback_url: ENV['GOOGLE_CALLBACK_URL'],
       provider_ignores_state: true,
       skip_jwt: true,
       access_type: 'offline',
@@ -16,14 +16,14 @@ Rails.application.config.middleware.use OmniAuth::Builder do
     ENV['TWITTER_CLIENT_ID'],
     ENV['TWITTER_CLIENT_SECRET'],
     {
-      callback_url: "#{ENV['API_URL']}/auth/twitter2/callback",
+      callback_url: ENV['TWITTER_CALLBACK_URL'],
       client_options: {
         site: 'https://api.twitter.com',
         authorize_url: 'https://twitter.com/i/oauth2/authorize',
         token_url: 'https://api.twitter.com/2/oauth2/token'
       },
       authorize_params: {
-        redirect_uri: "#{ENV['API_URL']}/auth/twitter2/callback",
+        redirect_uri: ENV['TWITTER_CALLBACK_URL'],
         scope: 'tweet.read users.read offline.access'
       },
       provider_ignores_state: true,

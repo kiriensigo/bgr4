@@ -86,7 +86,7 @@ production:
   database: bgr4_api_production
   username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
-  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
   port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
 
 cable:
@@ -94,5 +94,5 @@ cable:
   database: bgr4_api_production
   username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
   password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
-  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
   port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>

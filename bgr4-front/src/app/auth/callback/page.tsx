@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import { Container, CircularProgress, Typography, Box } from "@mui/material";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function AuthCallback() {
   const router = useRouter();

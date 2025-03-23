@@ -2,7 +2,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getBGGGameDetails, type BGGGameDetails } from "./bggApi";
 import { getAuthHeaders } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// コンテナ内からのアクセスを考慮し、コンテナ名か環境変数からAPIのURLを取得
+const API_URL =
+  typeof window !== "undefined"
+    ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+    : "http://api:8080"; // コンテナ名でアクセス
 const API_BASE_URL = `${API_URL}/api/v1`;
 
 // ゲーム情報のキャッシュ
@@ -629,7 +633,7 @@ export async function getAllReviews(
   options: { cache?: RequestCache; revalidate?: number } = {}
 ): Promise<ReviewsResponse> {
   const apiUrl = `${
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
   }/api/v1/reviews/all?page=${page}&per_page=${per_page}`;
 
   try {

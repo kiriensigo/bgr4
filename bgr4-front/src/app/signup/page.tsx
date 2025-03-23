@@ -17,7 +17,7 @@ import TwitterIcon from "@mui/icons-material/Twitter";
 import { useAuth } from "@/contexts/AuthContext";
 import Cookies from "js-cookie";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function SignupPage() {
   const { signUp } = useAuth();

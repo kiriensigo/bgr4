@@ -999,6 +999,7 @@ class BggService
     details = get_game_details(game_ids)
     
     # 必要な情報のみを返す
+    return [] if details.nil?
     details.first(limit)
   end
 
