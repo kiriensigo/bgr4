@@ -2,12 +2,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getBGGGameDetails, type BGGGameDetails } from "./bggApi";
 import { getAuthHeaders } from "@/lib/auth";
 
-// コンテナ内からのアクセスを考慮し、コンテナ名か環境変数からAPIのURLを取得
-const API_URL =
-  typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-    : "http://api:8080"; // コンテナ名でアクセス
-const API_BASE_URL = `${API_URL}/api/v1`;
+// NextJSのrewrites機能を利用して、クライアントからもサーバーからも同じパスでアクセスできるようにする
+// 相対パスを使用することで、環境に関係なく同じパスでアクセス可能になる
+const API_URL = "/api";
+const API_BASE_URL = `${API_URL}/v1`;
 
 // ゲーム情報のキャッシュ
 export const gameCache: Record<string, { data: Game; timestamp: number }> = {};
@@ -632,9 +630,7 @@ export async function getAllReviews(
   per_page: number = 24,
   options: { cache?: RequestCache; revalidate?: number } = {}
 ): Promise<ReviewsResponse> {
-  const apiUrl = `${
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-  }/api/v1/reviews/all?page=${page}&per_page=${per_page}`;
+  const apiUrl = `${API_BASE_URL}/reviews/all?page=${page}&per_page=${per_page}`;
 
   try {
     console.log(`Fetching all reviews from ${apiUrl}`);

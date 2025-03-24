@@ -6,6 +6,12 @@ if [ -z "${LD_PRELOAD+x}" ]; then
     export LD_PRELOAD
 fi
 
+# 古いPIDファイルが残っていれば削除
+if [ -f /rails/tmp/pids/server.pid ]; then
+  echo "Removing old server.pid file..."
+  rm -f /rails/tmp/pids/server.pid
+fi
+
 # PostgreSQLサーバーが起動するのを待機
 if [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_PORT" ]; then
   echo "Waiting for PostgreSQL to start..."

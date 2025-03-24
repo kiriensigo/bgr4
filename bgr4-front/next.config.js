@@ -62,5 +62,15 @@ const nextConfig = {
     domains: ["*"],
     unoptimized: true,
   },
+  // APIリクエストをプロキシする設定
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        // Dockerコンテナの直接IPアドレスを使用
+        destination: "http://172.19.0.3:8080/api/:path*",
+      },
+    ];
+  },
 };
 module.exports = nextConfig;
