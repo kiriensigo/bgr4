@@ -70,6 +70,11 @@ const nextConfig = {
         // Dockerコンテナの直接IPアドレスを使用
         destination: "http://172.19.0.3:8080/api/:path*",
       },
+      {
+        source: "/auth/:path*",
+        // 認証エンドポイント用のプロキシ設定
+        destination: "http://172.19.0.3:8080/auth/:path*",
+      },
     ];
   },
 };

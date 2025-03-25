@@ -717,7 +717,8 @@ export async function getAllReviews(
 }
 
 export const socialLogin = async (provider: "google" | "twitter") => {
-  const response = await fetch(`${API_URL}/auth/${provider}`, {
+  // 認証エンドポイントへの直接アクセス
+  const response = await fetch(`/auth/${provider}`, {
     method: "GET",
     credentials: "include",
   });

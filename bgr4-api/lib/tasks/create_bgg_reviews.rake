@@ -162,23 +162,29 @@ namespace :reviews do
     categories = []
     
     # BGGのメカニクスを変換（指定されたもののみ）
+    puts "変換前のBGGメカニクス: #{bgg_game_info[:mechanics].inspect}"
     if bgg_game_info[:mechanics].is_a?(Array)
       bgg_game_info[:mechanics].each do |mechanic|
         site_category = bgg_mechanic_to_site_category[mechanic]
+        puts "BGGメカニクス「#{mechanic}」→ サイトカテゴリー「#{site_category}」"
         categories << site_category if site_category.present? && !categories.include?(site_category)
       end
     end
+    puts "変換後のカテゴリー: #{categories.inspect}"
     
     # メカニクスを設定（BGGのカテゴリーから）
     mechanics = []
     
     # BGGのカテゴリーを変換（指定されたもののみ）
+    puts "変換前のBGGカテゴリー: #{bgg_game_info[:categories].inspect}"
     if bgg_game_info[:categories].is_a?(Array)
       bgg_game_info[:categories].each do |category|
         site_mechanic = bgg_category_to_site_mechanic[category]
+        puts "BGGカテゴリー「#{category}」→ サイトメカニクス「#{site_mechanic}」"
         mechanics << site_mechanic if site_mechanic.present? && !mechanics.include?(site_mechanic)
       end
     end
+    puts "変換後のメカニクス: #{mechanics.inspect}"
     
     # 短いコメントを生成
     short_comments = [
@@ -200,6 +206,8 @@ namespace :reviews do
       # 各レビューで異なるコメントを使用
       short_comment = short_comments[i % short_comments.length]
       
+      # 10件のレビューを作成します
+      puts "最終確認：mechanics=#{mechanics.inspect}, categories=#{categories.inspect}, custom_tags=#{tags.inspect}"
       review = Review.create(
         user_id: system_user.id,
         game_id: game.bgg_id,
@@ -210,9 +218,11 @@ namespace :reviews do
         downtime: downtime,
         recommended_players: recommended_players,
         mechanics: mechanics,
-        tags: tags,
+        categories: categories,
+        custom_tags: tags,
         short_comment: short_comment
       )
+      puts "レビュー作成結果：成功=#{review.persisted?}, エラー=#{review.errors.full_messages.inspect}" if review.errors.any?
       
       if review.persisted?
         created_count += 1
@@ -223,7 +233,7 @@ namespace :reviews do
     puts "  おすすめプレイ人数: #{recommended_players.join(', ')}"
     puts "  カテゴリー: #{categories.join(', ')}"
     puts "  メカニクス: #{mechanics.join(', ')}"
-    puts "  タグ: #{tags.join(', ')}"
+    puts "  カスタムタグ: #{tags.join(', ')}"
     
     puts "初期レビューの作成が完了しました。"
   end
@@ -411,23 +421,29 @@ namespace :reviews do
       categories = []
       
       # BGGのメカニクスを変換（指定されたもののみ）
+      puts "変換前のBGGメカニクス: #{bgg_game_info[:mechanics].inspect}"
       if bgg_game_info[:mechanics].is_a?(Array)
         bgg_game_info[:mechanics].each do |mechanic|
           site_category = bgg_mechanic_to_site_category[mechanic]
+          puts "BGGメカニクス「#{mechanic}」→ サイトカテゴリー「#{site_category}」"
           categories << site_category if site_category.present? && !categories.include?(site_category)
         end
       end
+      puts "変換後のカテゴリー: #{categories.inspect}"
       
       # メカニクスを設定（BGGのカテゴリーから）
       mechanics = []
       
       # BGGのカテゴリーを変換（指定されたもののみ）
+      puts "変換前のBGGカテゴリー: #{bgg_game_info[:categories].inspect}"
       if bgg_game_info[:categories].is_a?(Array)
         bgg_game_info[:categories].each do |category|
           site_mechanic = bgg_category_to_site_mechanic[category]
+          puts "BGGカテゴリー「#{category}」→ サイトメカニクス「#{site_mechanic}」"
           mechanics << site_mechanic if site_mechanic.present? && !mechanics.include?(site_mechanic)
         end
       end
+      puts "変換後のメカニクス: #{mechanics.inspect}"
       
       # 10件のレビューを作成
       created_count = 0
@@ -435,6 +451,8 @@ namespace :reviews do
         # 各レビューで異なるコメントを使用
         short_comment = short_comments[i % short_comments.length]
         
+        # 10件のレビューを作成します
+        puts "最終確認：mechanics=#{mechanics.inspect}, categories=#{categories.inspect}, custom_tags=#{tags.inspect}"
         review = Review.create(
           user_id: system_user.id,
           game_id: game.bgg_id,
@@ -445,9 +463,11 @@ namespace :reviews do
           downtime: downtime,
           recommended_players: recommended_players,
           mechanics: mechanics,
-          tags: tags,
+          categories: categories,
+          custom_tags: tags,
           short_comment: short_comment
         )
+        puts "レビュー作成結果：成功=#{review.persisted?}, エラー=#{review.errors.full_messages.inspect}" if review.errors.any?
         
         if review.persisted?
           created_count += 1

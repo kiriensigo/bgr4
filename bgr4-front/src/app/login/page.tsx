@@ -91,7 +91,8 @@ export default function LoginPage() {
 
     // 現在のタイムスタンプをクエリパラメータとして追加して、キャッシュを防ぐ
     const timestamp = new Date().getTime();
-    window.location.href = `${API_URL}/auth/${provider}?t=${timestamp}`;
+    // URLパスを相対パスに変更し、プロキシを経由するように
+    window.location.href = `/auth/${provider}?t=${timestamp}`;
   };
 
   return (

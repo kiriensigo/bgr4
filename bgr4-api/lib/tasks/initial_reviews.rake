@@ -201,7 +201,7 @@ namespace :initial_reviews do
         downtime: downtime,
         recommended_players: recommended_players,
         mechanics: mechanics,
-        tags: categories,
+        categories: categories,
         short_comment: short_comment
       )
       
@@ -442,7 +442,7 @@ namespace :initial_reviews do
         downtime: downtime,
         recommended_players: recommended_players,
         mechanics: mechanics,
-        tags: categories,
+        categories: categories,
         short_comment: short_comment
       )
       
