@@ -2,10 +2,46 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getBGGGameDetails, type BGGGameDetails } from "./bggApi";
 import { getAuthHeaders } from "@/lib/auth";
 
-// NextJSのrewrites機能を利用して、クライアントからもサーバーからも同じパスでアクセスできるようにする
-// 相対パスを使用することで、環境に関係なく同じパスでアクセス可能になる
-const API_URL = "/api";
+// リライト機能を使用するかどうか
+const USE_DIRECT_API = process.env.NEXT_PUBLIC_API_DIRECT === "true";
+console.log("API直接アクセスモード:", USE_DIRECT_API);
+
+// API基本URLを環境に応じて設定
+// サーバーサイドではDocker間通信、クライアントサイド（ブラウザ）ではlocalhostを使用
+const isServer = typeof window === "undefined";
+const SERVER_API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://bgr4-api:8080"; // Docker環境
+const BROWSER_API_URL =
+  process.env.NEXT_PUBLIC_BROWSER_API_URL || "http://localhost:8080"; // ブラウザ環境
+
+// 環境に応じたベースURLを選択
+const BASE_URL = isServer ? SERVER_API_URL : BROWSER_API_URL;
+
+// 環境に応じたAPIベースURLを設定
+const API_URL = USE_DIRECT_API
+  ? `${BASE_URL}/api` // 直接APIを叩く場合
+  : "/api"; // リライト機能を使う場合
+
 const API_BASE_URL = `${API_URL}/v1`;
+
+// APIベースURLを取得する関数
+export function getApiBaseUrl(): string {
+  return API_BASE_URL;
+}
+
+// デバッグ情報をコンソールに出力
+console.log("API設定:", {
+  USE_DIRECT_API,
+  isServer,
+  SERVER_API_URL,
+  BROWSER_API_URL,
+  BASE_URL,
+  API_URL,
+  API_BASE_URL,
+  NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  NEXT_PUBLIC_BROWSER_API_URL: process.env.NEXT_PUBLIC_BROWSER_API_URL,
+  NEXT_PUBLIC_API_DIRECT: process.env.NEXT_PUBLIC_API_DIRECT,
+});
 
 // ゲーム情報のキャッシュ
 export const gameCache: Record<string, { data: Game; timestamp: number }> = {};
@@ -14,6 +50,51 @@ export const CACHE_EXPIRY = 15 * 60 * 1000;
 
 // 進行中のリクエストを追跡する（重複リクエスト削減用）
 const pendingRequests: Record<string, Promise<any>> = {};
+
+// デバッグ用のAPIリクエスト関数をラップする
+async function fetchWithDebug(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  // 相対パスの場合は絶対パスに変換（直接APIアクセスモードの場合）
+  let fullUrl = url;
+  if (USE_DIRECT_API && url.startsWith("/")) {
+    // ブラウザかサーバーかで異なるベースURLを使用
+    const baseUrl = isServer ? SERVER_API_URL : BROWSER_API_URL;
+    fullUrl = `${baseUrl}${url}`;
+    console.log(
+      `相対パスを絶対パスに変換: ${url} -> ${fullUrl} (${
+        isServer ? "サーバー" : "ブラウザ"
+      }環境)`
+    );
+  }
+
+  console.log(`APIリクエスト: ${fullUrl}`, {
+    method: options.method || "GET",
+    headers: options.headers || {},
+    body: options.body ? "(data)" : undefined,
+  });
+
+  try {
+    const response = await fetch(fullUrl, options);
+    console.log(`APIレスポンス: ${fullUrl}`, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+    });
+
+    if (!response.ok) {
+      console.error(
+        `APIエラーレスポンス: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return response;
+  } catch (error) {
+    console.error(`APIリクエスト例外: ${fullUrl}`, error);
+    throw error;
+  }
+}
 
 export interface Game {
   id: string | number;
@@ -151,7 +232,8 @@ export async function getGames(
           console.log(
             `Fetching games: page=${page}, per_page=${per_page}, sort_by=${sort_by}`
           );
-          const response = await fetch(url, {
+          // fetchWithDebug関数を使用
+          const response = await fetchWithDebug(url, {
             headers: {
               "Content-Type": "application/json",
             },
@@ -162,7 +244,12 @@ export async function getGames(
           });
 
           if (!response.ok) {
-            throw new Error("ゲーム情報の取得に失敗しました");
+            console.error(
+              `APIリクエスト失敗: ${response.status} ${response.statusText}`
+            );
+            throw new Error(
+              `ゲーム情報の取得に失敗しました: ${response.status} ${response.statusText}`
+            );
           }
 
           const data = await response.json();
@@ -438,107 +525,105 @@ async function createGame(bggGame: BGGGameDetails): Promise<Game> {
   }
 }
 
-export async function getGame(
-  id: string,
-  authHeaders?: Record<string, string>,
-  options: { cache?: RequestCache; revalidate?: number } = {}
-): Promise<Game> {
+export const getGame = async (
+  gameId: string | number,
+  headers: Record<string, string> = {}
+): Promise<Game> => {
+  // IDがundefinedか、文字列で'undefined'の場合はエラーを投げる
+  if (
+    !gameId ||
+    gameId === undefined ||
+    gameId === "undefined" ||
+    gameId === "" ||
+    (typeof gameId === "string" && gameId.trim() === "")
+  ) {
+    console.error("Invalid game ID:", gameId);
+    throw new Error("無効なゲームIDです");
+  }
+
+  // キャッシュをチェック
+  const cacheKey = `game-${gameId}`;
+  const cachedData = gameCache[cacheKey];
+  const now = Date.now();
+
+  // 有効なキャッシュがある場合はそれを使用
+  if (cachedData && now - cachedData.timestamp < CACHE_EXPIRY) {
+    return cachedData.data;
+  }
+
+  // IDにnon-ASCII文字が含まれている場合はエンコードする
+  const encodedGameId =
+    typeof gameId === "string" && /[^\x00-\x7F]/.test(gameId)
+      ? encodeURIComponent(gameId)
+      : gameId;
+
+  // システムレビューを含めるパラメータをURLに追加
+  const includeSystemReviews = headers.include_system_reviews || "true";
+  const url = `${getApiBaseUrl()}/games/${encodedGameId}?include_system_reviews=${includeSystemReviews}`;
+
   try {
-    // IDが未定義または"undefined"文字列の場合はエラーを投げる
-    if (!id || id === "undefined") {
-      throw new Error(
-        "無効なゲームIDが指定されました。ゲーム一覧ページに戻ってください。"
-      );
-    }
+    console.log(`Making API request to get game with ID: ${encodedGameId}`);
+    console.log(`API URL: ${url}`);
 
-    // キャッシュをチェック
-    const cacheKey = `game_${id}`;
-    const now = Date.now();
-    if (
-      gameCache[cacheKey] &&
-      now - gameCache[cacheKey].timestamp < CACHE_EXPIRY
-    ) {
-      console.log(`Using cached game data for ID: ${id}`);
-      return gameCache[cacheKey].data;
-    }
+    // includeSystemReviewsパラメータをヘッダーから削除（URLパラメータとして使用するため）
+    const { include_system_reviews, ...requestHeaders } = headers;
+    console.log("Request headers:", requestHeaders);
 
-    // 進行中のリクエストをチェック
-    if (pendingRequests[cacheKey]) {
-      console.log(`Reusing pending request for game ID: ${id}`);
-      return pendingRequests[cacheKey];
-    }
-
-    // IDが日本語の場合はエンコードする
-    // jp-で始まる場合は既にエンコード済みなのでそのまま使用
-    const finalId = id.startsWith("jp-")
-      ? id
-      : id.match(/[^\x00-\x7F]/)
-      ? encodeURIComponent(id)
-      : id;
-
-    console.log("Fetching game with ID:", id);
-    console.log("Final ID used for API call:", finalId);
-
-    const requestPromise = new Promise<Game>(async (resolve, reject) => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/games/${finalId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authHeaders || {}),
-          },
-          // キャッシュ戦略を指定
-          cache: options.cache || "force-cache",
-          next: options.revalidate
-            ? { revalidate: options.revalidate }
-            : undefined,
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error(
-              `ゲームID ${id} はまだデータベースに登録されていません`
-            );
-          }
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error ||
-              errorData.message ||
-              `ゲームの取得中にエラーが発生しました（${response.status}）`
-          );
-        }
-
-        const gameData: Game = await response.json();
-        console.log("Game data fetched successfully:", gameData.name);
-
-        // キャッシュに保存
-        gameCache[cacheKey] = {
-          data: gameData,
-          timestamp: now,
-        };
-
-        resolve(gameData);
-      } catch (error) {
-        console.error(`Error fetching game ${id}:`, error);
-        reject(error);
-      }
+    const response = await fetchWithDebug(url, {
+      method: "GET",
+      headers: {
+        ...requestHeaders,
+      },
+      credentials: "include",
     });
 
-    // 進行中のリクエストとして登録
-    pendingRequests[cacheKey] = requestPromise;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error fetching game: ${response.status}`, errorText);
 
-    // リクエスト完了後にpendingRequestsから削除（1秒後）
-    const result = await requestPromise;
-    setTimeout(() => {
-      delete pendingRequests[cacheKey];
-    }, 1000);
+      if (response.status === 404) {
+        throw new Error("指定されたゲームが見つかりませんでした");
+      }
 
-    return result;
+      let errorMessage = "ゲーム情報の取得に失敗しました";
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (e) {
+        // JSONのパースに失敗した場合は元のエラーメッセージを使用
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log("Game data successfully fetched");
+
+    // デバッグ: レビュー情報と評価値を確認
+    console.log(
+      "Game reviews:",
+      data.reviews ? `${data.reviews.length} reviews` : "no reviews"
+    );
+    console.log("Game ratings:", {
+      overall_score: data.average_overall_score,
+      rule_complexity: data.average_rule_complexity,
+      luck_factor: data.average_luck_factor,
+      interaction: data.average_interaction,
+      downtime: data.average_downtime,
+    });
+
+    // キャッシュに保存
+    gameCache[cacheKey] = {
+      data,
+      timestamp: now,
+    };
+
+    return data;
   } catch (error) {
-    console.error("Game fetch error:", error);
+    console.error("Error in getGame function:", error);
     throw error;
   }
-}
+};
 
 export const postReview = async (
   gameId: string,
@@ -563,35 +648,56 @@ export const postReview = async (
     });
     console.log("Review data:", reviewData);
 
+    // IDにnon-ASCII文字が含まれている場合はエンコードする
+    const encodedGameId = /[^\x00-\x7F]/.test(gameId) 
+      ? encodeURIComponent(gameId) 
+      : gameId;
+
     // ヘッダーを単純化して送信
-    const response = await fetch(`${API_BASE_URL}/games/${gameId}/reviews`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "access-token": authHeaders["access-token"],
-        client: authHeaders.client,
-        uid: authHeaders.uid,
-        expiry: authHeaders.expiry || "",
-        "token-type": "Bearer",
-      },
-      body: JSON.stringify(reviewData),
-      credentials: "include",
-    });
+    const response = await fetchWithDebug(
+      `${getApiBaseUrl()}/games/${encodedGameId}/reviews`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "access-token": authHeaders["access-token"],
+          client: authHeaders.client,
+          uid: authHeaders.uid,
+          expiry: authHeaders.expiry || "",
+          "token-type": "Bearer",
+        },
+        body: JSON.stringify(reviewData),
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ error: "レスポンスの解析に失敗しました" }));
+      const errorText = await response.text();
+      console.error(
+        `Review post error: ${response.status} ${response.statusText}`,
+        errorText
+      );
+
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { error: errorText || "レスポンスの解析に失敗しました" };
+      }
+
       console.error("Unauthorized response:", errorData);
+
       if (response.status === 401) {
         throw new Error(
           errorData.error || "認証に失敗しました。再度ログインしてください。"
         );
       }
+
       throw new Error(
         errorData.errors?.[0] ||
           errorData.error ||
+          errorData.message ||
           "レビューの投稿に失敗しました"
       );
     }
@@ -605,8 +711,13 @@ export const postReview = async (
 
 export async function getReviews(gameId: string) {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/games/${gameId}/reviews?exclude_system=true`,
+    // IDにnon-ASCII文字が含まれている場合はエンコードする
+    const encodedGameId = /[^\x00-\x7F]/.test(gameId) 
+      ? encodeURIComponent(gameId) 
+      : gameId;
+      
+    const response = await fetchWithDebug(
+      `${getApiBaseUrl()}/games/${encodedGameId}/reviews?exclude_system=true`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -615,13 +726,23 @@ export async function getReviews(gameId: string) {
     );
 
     if (!response.ok) {
-      throw new Error("レビューの取得に失敗しました");
+      console.error(`Error fetching reviews: ${response.status}`);
+      // エラーの詳細情報を確認
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.error || "レビューの取得に失敗しました");
+      } catch (e) {
+        throw new Error("レビューの取得に失敗しました");
+      }
     }
 
     return await response.json();
   } catch (error) {
     console.error("Reviews fetch error:", error);
-    throw new Error("レビューの取得に失敗しました");
+    throw new Error(
+      error instanceof Error ? error.message : "レビューの取得に失敗しました"
+    );
   }
 }
 

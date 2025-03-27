@@ -449,42 +449,34 @@ export default function GamePage({ params }: GamePageProps) {
       setLoading(true);
       setError(null);
 
-      // キャッシュをチェック
-      const cacheKey = `game-${params.id}`;
-      const cachedData = gameCache[cacheKey];
-      const now = Date.now();
-
-      // 有効なキャッシュがある場合はそれを使用（強制リフレッシュでない場合）
-      if (
-        !forceRefresh &&
-        !refresh &&
-        cachedData &&
-        now - cachedData.timestamp < CACHE_EXPIRY
-      ) {
-        console.log("Using cached game data");
-        setGame(cachedData.data as ExtendedGame);
-        if (cachedData.data.japanese_name) {
-          setJapaneseName(cachedData.data.japanese_name);
-        }
-        if (
-          cachedData.data.in_wishlist &&
-          typeof cachedData.data.id === "number"
-        ) {
-          // やりたいリストに追加されている場合、wishlistItemIdを取得する必要がある
-          setWishlistItemId(cachedData.data.id);
-        }
-        setLoading(false);
-        return;
-      }
-
       try {
-        // まずAPIからゲーム情報の取得を試みる
-        const headers = user ? getAuthHeaders() : {};
+        const headers = user ? await getAuthHeaders() : {};
 
-        // パラメータのIDをログに出力
-        console.log("Game ID from params:", params.id);
-        console.log("Params object:", params);
-        console.log("URL path:", window.location.pathname);
+        // キャッシュキーを作成
+        const cacheKey = `game-${params.id}`;
+        const now = Date.now();
+        const cachedData = gameCache[cacheKey];
+
+        // キャッシュが有効で、強制更新でない場合はキャッシュを使用
+        if (
+          !forceRefresh &&
+          cachedData &&
+          now - cachedData.timestamp < CACHE_EXPIRY
+        ) {
+          console.log("Using cached game data");
+          setGame(cachedData.data);
+          if (cachedData.data.japanese_name) {
+            setJapaneseName(cachedData.data.japanese_name);
+          }
+          if (
+            cachedData.data.in_wishlist &&
+            typeof cachedData.data.id === "number"
+          ) {
+            setWishlistItemId(cachedData.data.id);
+          }
+          setLoading(false);
+          return;
+        }
 
         // IDが存在しない場合はエラーを投げる
         if (!params.id || params.id === "undefined") {
@@ -496,7 +488,14 @@ export default function GamePage({ params }: GamePageProps) {
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒でタイムアウト
 
         try {
-          const data = (await getGame(params.id, headers)) as ExtendedGame;
+          console.log(`Calling getGame with id: ${params.id}`);
+          console.log("Adding include_system_reviews=true parameter");
+          // システムユーザーのレビューを含めるパラメータを明示的に指定
+          const data = (await getGame(params.id, {
+            ...headers,
+            include_system_reviews: "true",
+          })) as ExtendedGame;
+          console.log("getGame returned data successfully");
           clearTimeout(timeoutId); // タイムアウトをクリア
 
           console.log("Fetched game data:", {
@@ -556,7 +555,7 @@ export default function GamePage({ params }: GamePageProps) {
         setLoading(false);
       }
     },
-    [params.id, user, getAuthHeaders, refresh]
+    [params.id, user, getAuthHeaders]
   );
 
   useEffect(() => {
@@ -1374,10 +1373,21 @@ export default function GamePage({ params }: GamePageProps) {
                     </Typography>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                       {game.site_recommended_players.map(
-                        (count: string, index: number) => {
+                        (playerData: any, index: number) => {
+                          // オブジェクトからcountプロパティを取得
+                          let count = playerData;
+                          if (
+                            typeof playerData === "object" &&
+                            playerData !== null
+                          ) {
+                            count =
+                              playerData.count || playerData.name || "不明";
+                          }
+
                           // 7の場合は「7人以上」と表示
                           const displayText =
                             count === "7" ? "7人以上" : `${count}人`;
+
                           return (
                             <Chip
                               key={`player-${count}-${index}`}

@@ -64,16 +64,15 @@ const nextConfig = {
   },
   // APIリクエストをプロキシする設定
   async rewrites() {
+    console.log("リライト設定が呼び出されました");
     return [
       {
         source: "/api/:path*",
-        // Dockerコンテナの直接IPアドレスを使用
-        destination: "http://172.19.0.3:8080/api/:path*",
+        destination: "http://bgr4-api:8080/api/:path*", // Docker サービス名で指定
       },
       {
         source: "/auth/:path*",
-        // 認証エンドポイント用のプロキシ設定
-        destination: "http://172.19.0.3:8080/auth/:path*",
+        destination: "http://bgr4-api:8080/auth/:path*", // Docker サービス名で指定
       },
     ];
   },

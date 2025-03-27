@@ -165,7 +165,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         setGame({
           id: params.id,
           name: gameData.name,
-          image: gameData.image_url || "",
+          image: gameData.image_url || gameData.japanese_image_url || "",
           bggLink: `https://boardgamegeek.com/boardgame/${params.id}`,
           amazonLink: `https://www.amazon.co.jp/s?k=${encodeURIComponent(
             gameData.name
@@ -176,38 +176,43 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         });
 
         // 既存のレビューを取得
-        const reviewsResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/${params.id}/reviews`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              ...headers,
-            },
-            credentials: "include",
-          }
-        );
-
-        if (reviewsResponse.ok) {
-          const reviewsData = await reviewsResponse.json();
-          const userReview = reviewsData.find(
-            (review: any) => review.user.id === user?.id
+        try {
+          const reviewsResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/games/${params.id}/reviews`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                ...headers,
+              },
+              credentials: "include",
+            }
           );
-          if (userReview) {
-            setExistingReview(userReview);
-            // 既存のレビューデータでフォームを初期化
-            setReview({
-              overall_score: userReview.overall_score,
-              rule_complexity: userReview.rule_complexity || 3,
-              luck_factor: userReview.luck_factor || 3,
-              interaction: userReview.interaction || 3,
-              downtime: userReview.downtime || 3,
-              recommended_players: userReview.recommended_players || [],
-              mechanics: userReview.mechanics || [],
-              categories: userReview.categories || [],
-              custom_tags: (userReview.custom_tags || []).join(" "),
-              short_comment: userReview.short_comment || "",
-            });
+
+          if (reviewsResponse.ok) {
+            const reviewsData = await reviewsResponse.json();
+            const userReview = reviewsData.find(
+              (review: any) => review.user.id === user?.id
+            );
+            if (userReview) {
+              setExistingReview(userReview);
+              // 既存のレビューデータでフォームを初期化
+              setReview({
+                overall_score: userReview.overall_score,
+                rule_complexity: userReview.rule_complexity || 3,
+                luck_factor: userReview.luck_factor || 3,
+                interaction: userReview.interaction || 3,
+                downtime: userReview.downtime || 3,
+                recommended_players: userReview.recommended_players || [],
+                mechanics: userReview.mechanics || [],
+                categories: userReview.categories || [],
+                custom_tags: (userReview.custom_tags || []).join(" "),
+                short_comment: userReview.short_comment || "",
+              });
+            }
           }
+        } catch (reviewErr) {
+          console.error("Error fetching reviews:", reviewErr);
+          // レビュー取得でエラーが発生しても、ゲーム情報の表示は続行
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -344,12 +349,33 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <Grid container spacing={LAYOUT_CONFIG.gridSpacing}>
             <Grid item xs={12} md={4}>
               <Box sx={{ position: "relative", pt: "100%" }}>
-                <Image
-                  src={game.image}
-                  alt={game.name}
-                  fill
-                  style={{ objectFit: "contain" }}
-                />
+                {game.image ? (
+                  <Image
+                    src={game.image}
+                    alt={game.name}
+                    fill
+                    style={{ objectFit: "contain" }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      bgcolor: "grey.100",
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Typography color="text.secondary" align="center">
+                      画像がありません
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Grid>
             <Grid item xs={12} md={8}>

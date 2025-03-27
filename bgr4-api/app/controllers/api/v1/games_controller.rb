@@ -4,9 +4,9 @@ module Api
       # レビュー数の制限値（この値以上のレビュー数が必要）
       REQUIRED_REVIEWS_COUNT = 5
 
-      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image]
-      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :update_system_reviews]
-      before_action :authenticate_admin!, only: [:update_system_reviews]
+      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image, :update_system_reviews]
+      before_action :set_game, only: [:show, :update, :destroy, :update_japanese_name, :edit_histories, :update_from_bgg, :update_system_reviews]
+      before_action :check_admin_role, only: [:edit_histories]
 
       def index
         # ページネーションパラメータを取得
@@ -95,8 +95,14 @@ module Api
           return
         end
         
-        # レビューにユーザー情報を含める（システムユーザーのレビューを除外）
-        reviews_with_users = @game.reviews.exclude_system_user.includes(:user).map do |review|
+        # systemユーザーのレビューを含めるかどうかを判断
+        include_system = params[:include_system_reviews] == 'true'
+        Rails.logger.info "Include system reviews: #{include_system}"
+        
+        # レビューにユーザー情報を含める（パラメータに応じてシステムユーザーのレビューを含めるか除外）
+        reviews_query = include_system ? @game.reviews : @game.reviews.exclude_system_user
+        
+        reviews_with_users = reviews_query.includes(:user).map do |review|
           review_json = review.as_json
           review_json['user'] = {
             id: review.user.id,
@@ -105,6 +111,8 @@ module Api
           }
           review_json
         end
+        
+        Rails.logger.info "Found #{reviews_with_users.size} reviews, including system reviews: #{include_system}"
         
         game_json = @game.as_json
         
@@ -122,12 +130,27 @@ module Api
         game_json['site_recommended_players'] = @game.site_recommended_players
         game_json['review_count'] = @game.user_review_count
         
-        # 評価値を追加
-        game_json['average_rule_complexity'] = @game.average_rule_complexity
-        game_json['average_luck_factor'] = @game.average_luck_factor
-        game_json['average_interaction'] = @game.average_interaction
-        game_json['average_downtime'] = @game.average_downtime
-        game_json['average_overall_score'] = @game.average_overall_score
+        # 評価値を追加（システムユーザーを含めるかどうかで挙動を変更）
+        if include_system
+          # システムユーザーを含む場合は、全てのレビューの平均値を使用
+          Rails.logger.info "Using average values with system reviews"
+          game_json['average_rule_complexity'] = @game.average_rule_complexity
+          game_json['average_luck_factor'] = @game.average_luck_factor_with_system
+          game_json['average_interaction'] = @game.average_interaction_with_system
+          game_json['average_downtime'] = @game.average_downtime_with_system
+          game_json['average_overall_score'] = @game.average_overall_score
+        else
+          # システムユーザーを除外する場合は、通常の計算方法を使用
+          Rails.logger.info "Using average values without system reviews"
+          game_json['average_rule_complexity'] = @game.average_rule_complexity
+          game_json['average_luck_factor'] = @game.average_luck_factor
+          game_json['average_interaction'] = @game.average_interaction
+          game_json['average_downtime'] = @game.average_downtime
+          game_json['average_overall_score'] = @game.average_overall_score
+        end
+        
+        # デバッグ情報を追加
+        Rails.logger.info "Average values for Game #{@game.bgg_id}: rule_complexity=#{game_json['average_rule_complexity']}, luck_factor=#{game_json['average_luck_factor']}, interaction=#{game_json['average_interaction']}, downtime=#{game_json['average_downtime']}"
         
         render json: game_json
       end
@@ -976,7 +999,7 @@ module Api
       # システムレビューを更新するアクション
       def update_system_reviews
         if @game.update_system_reviews
-          render json: { message: "システムレビューを更新しました" }, status: :ok
+          render json: { message: "システムレビューを更新しました" }
         else
           render json: { error: "システムレビューの更新に失敗しました" }, status: :unprocessable_entity
         end

@@ -5,10 +5,21 @@ class Review < ApplicationRecord
   has_many :likes, dependent: :destroy
   has_many :liked_users, through: :likes, source: :user
 
+  # システムユーザーを取得するヘルパーメソッド
+  def self.system_user
+    User.find_by(email: 'system@boardgamereview.com')
+  end
+
+  # システムユーザーのレビューのみを取得するスコープ
+  scope :system_reviews_only, -> {
+    sys_user = system_user
+    sys_user.present? ? where(user: sys_user) : none
+  }
+
   # システムユーザーを除外するスコープ
   scope :exclude_system_user, -> {
-    system_user = User.find_by(email: 'system@boardgamereview.com')
-    system_user.present? ? where.not(user: system_user) : all
+    sys_user = system_user
+    sys_user.present? ? where.not(user: sys_user) : all
   }
 
   validates :user_id, presence: true

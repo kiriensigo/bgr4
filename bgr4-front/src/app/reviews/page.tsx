@@ -738,7 +738,7 @@ export default function ReviewsPage() {
                             }
 
                             // ハッシュタグとURL追加
-                            tweetText += `#ボードゲーム #bgr4\n${gameUrl}`;
+                            tweetText += `#ボードゲーム #ボードゲームレビュー\n${gameUrl}`;
 
                             // URLエンコード
                             const encodedText = encodeURIComponent(tweetText);

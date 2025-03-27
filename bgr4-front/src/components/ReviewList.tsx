@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, Typography, Paper, Rating, Grid } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Paper,
+  Rating,
+  Grid,
+  Pagination,
+} from "@mui/material";
 import { formatDate } from "@/lib/utils";
 import LikeButton from "./LikeButton";
 import Link from "next/link";
-import SearchPagination from "./SearchPagination";
+// 使わなくなったので削除
+// import SearchPagination from "./SearchPagination";
 
 interface Review {
   id: number;
@@ -35,19 +43,18 @@ const formatScore = (score: number | string | null | undefined): string => {
     : numScore.toFixed(1);
 };
 
-// ページサイズのオプション（最大100件まで）
-const PAGE_SIZE_OPTIONS = [5, 10, 20, 50, 100];
+// ページサイズを固定
+const PAGE_SIZE = 10;
 
 export default function ReviewList({
   reviews,
-  initialPageSize = 10,
+  initialPageSize = 10, // このパラメータは使用しませんが、互換性のために残します
 }: ReviewListProps) {
   // レビューが配列でない場合は空の配列として扱う
   const validReviews = Array.isArray(reviews) ? reviews : [];
 
   // ページネーション用のステート
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(initialPageSize);
 
   // 有効なレビューのみをフィルタリング
   const filteredReviews = validReviews.filter((review) => {
@@ -67,9 +74,9 @@ export default function ReviewList({
 
   // 表示するレビューをページネーション
   const totalReviews = filteredReviews.length;
-  const totalPages = Math.ceil(totalReviews / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalReviews);
+  const totalPages = Math.ceil(totalReviews / PAGE_SIZE);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = Math.min(startIndex + PAGE_SIZE, totalReviews);
   const currentPageReviews = filteredReviews.slice(startIndex, endIndex);
 
   // ページが変わったときの処理
@@ -82,27 +89,17 @@ export default function ReviewList({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ページサイズが変わったときの処理
-  const handlePageSizeChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    newPageSize: number | null
-  ) => {
-    if (newPageSize === null) return;
-    setPageSize(newPageSize);
-    setCurrentPage(1); // ページサイズが変わったら1ページ目に戻る
-  };
-
   // ページ数が変わったときにcurrentPageを調整
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages, pageSize]);
+  }, [currentPage, totalPages]);
 
   return (
     <Box>
-      {/* 常にページネーションを表示（ページが1つでも必要なときに） */}
-      {totalReviews > 0 && (
+      {/* ページネーションは不要なので削除 */}
+      {/* {totalReviews > 0 && (
         <SearchPagination
           count={totalPages}
           page={currentPage}
@@ -119,7 +116,7 @@ export default function ReviewList({
           showFirstButton
           showLastButton
         />
-      )}
+      )} */}
 
       <Grid container spacing={1} sx={{ mt: 1 }}>
         {currentPageReviews.map((review) => {
@@ -192,19 +189,29 @@ export default function ReviewList({
         })}
       </Grid>
 
-      {/* 常に下部のページネーションも表示 */}
-      {totalReviews > 0 && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-          <SearchPagination
-            count={totalPages}
-            page={currentPage}
-            onChange={handlePageChange}
-            size="small"
-            showPageSizeSelector={false}
-            showIfSinglePage={true} // 1ページでも常に表示
-            showFirstButton
-            showLastButton
-          />
+      {/* ページネーション */}
+      {totalPages > 1 && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3, mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <Pagination
+              count={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+              color="primary"
+              showFirstButton
+              showLastButton
+              size="medium"
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+              {totalReviews}件中 {startIndex + 1}-{endIndex}件を表示
+            </Typography>
+          </Box>
         </Box>
       )}
     </Box>

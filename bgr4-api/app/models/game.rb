@@ -236,19 +236,34 @@ class Game < ApplicationRecord
     reviews.average(:rule_complexity)&.round(1) || 0
   end
 
-  # 平均運要素を計算
+  # 平均運要素を計算（システムユーザーを除外）
   def average_luck_factor
     reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
   end
 
-  # 平均インタラクションを計算
+  # 平均インタラクションを計算（システムユーザーを除外）
   def average_interaction
     reviews.exclude_system_user.average(:interaction)&.round(1) || 0
   end
 
-  # 平均ダウンタイムを計算
+  # 平均ダウンタイムを計算（システムユーザーを除外）
   def average_downtime
     reviews.exclude_system_user.average(:downtime)&.round(1) || 0
+  end
+
+  # システムユーザーのレビューを含めた平均運要素を計算
+  def average_luck_factor_with_system
+    reviews.average(:luck_factor)&.round(1) || 0
+  end
+
+  # システムユーザーのレビューを含めた平均インタラクションを計算
+  def average_interaction_with_system
+    reviews.average(:interaction)&.round(1) || 0
+  end
+
+  # システムユーザーのレビューを含めた平均ダウンタイムを計算
+  def average_downtime_with_system
+    reviews.average(:downtime)&.round(1) || 0
   end
 
   # 平均総合評価を計算
@@ -780,14 +795,140 @@ class Game < ApplicationRecord
   def update_system_reviews
     # システムユーザーを取得
     system_user = User.find_by(email: 'system@boardgamereview.com')
-    return false unless system_user
     
-    # システムユーザーのレビューを削除
-    reviews.where(user_id: system_user.id).destroy_all
+    # システムユーザーが存在しない場合は、失敗
+    unless system_user
+      Rails.logger.error "システムユーザーが存在しません"
+      return false
+    end
     
-    # 初期レビューを作成
-    create_initial_reviews
+    # 既存のシステムレビューを削除
+    existing_reviews = reviews.where(user: system_user).count
+    Rails.logger.info "既存のシステムレビュー数: #{existing_reviews}件"
     
+    # 既存のレビューを削除（すべて削除し、新しく作り直し）
+    reviews.where(user: system_user).destroy_all
+    
+    # BGGからシステムレビュー用の情報を取得
+    Rails.logger.info "BGGからゲーム情報を取得中: #{bgg_id}"
+    bgg_game_info = BggService.get_game_details(bgg_id)
+    
+    # BGG情報が取得できない場合は処理を中止
+    if bgg_game_info.nil?
+      Rails.logger.error "BGGからゲーム情報の取得に失敗しました: #{bgg_id}"
+      return false
+    end
+    
+    # レビュー用の値を計算
+    # BGGの評価を当サイトの評価に変換（BGGも10点満点）
+    bgg_rating = bgg_game_info[:average_score].to_f
+    return false if bgg_rating <= 0
+    
+    # 5点以上10点以下に制限
+    overall_score = [5.0, [bgg_rating, 10.0].min].max
+    
+    # BGGの重さを当サイトのルール複雑さに変換（5点満点に正規化）
+    weight = bgg_game_info[:weight].to_f
+    rule_complexity = [1.0, [weight, 5.0].min].max
+    
+    # その他の評価項目はBGGから取得した情報から推定
+    # 例: 運要素が少ないゲームは戦略性が高く、インタラクションも多い傾向
+    luck_factor = 5 - ((weight - 1) / 4 * 3)
+    luck_factor = [1.0, [luck_factor, 5.0].min].max
+    
+    # インタラクションは重量級ゲームほど高い傾向
+    interaction = 2 + ((weight - 1) / 4 * 3)
+    interaction = [1.0, [interaction, 5.0].min].max
+    
+    # ダウンタイムも重量級ゲームほど長い傾向
+    downtime = 2 + ((weight - 1) / 4 * 3)
+    downtime = [1.0, [downtime, 5.0].min].max
+    
+    # おすすめプレイ人数を設定
+    recommended_players = []
+    
+    # BGGのベストプレイ人数を変換
+    if bgg_game_info[:best_num_players].is_a?(Array)
+      bgg_game_info[:best_num_players].each do |num|
+        if num.present?
+          # 7以上の値は「7」に変換
+          player_num = num.to_i
+          normalized_num = player_num >= 7 ? "7" : num
+          recommended_players << normalized_num
+        end
+      end
+    end
+    
+    # BGGのレコメンドプレイ人数も追加
+    if bgg_game_info[:recommended_num_players].is_a?(Array)
+      bgg_game_info[:recommended_num_players].each do |num|
+        if num.present? && !recommended_players.include?(num)
+          # 7以上の値は「7」に変換
+          player_num = num.to_i
+          normalized_num = player_num >= 7 ? "7" : num
+          recommended_players << normalized_num if !recommended_players.include?(normalized_num)
+        end
+      end
+    end
+    
+    # 最低でも1つはプレイ人数を設定
+    if recommended_players.empty?
+      if min_players == max_players
+        recommended_players << min_players.to_s
+      elsif min_players.present? && max_players.present?
+        # 最小と最大の間でランダムに選択
+        recommended_players << rand(min_players..max_players).to_s
+      end
+    end
+    
+    # メカニクスとカテゴリの変換
+    categories = []
+    mechanics = []
+    
+    # BGGからカテゴリとメカニクスを変換
+    BGGMapperService.convert_mechanics_and_categories(
+      bgg_game_info[:mechanics], 
+      bgg_game_info[:categories],
+      recommended_players
+    ) do |result_categories, result_mechanics|
+      categories = result_categories
+      mechanics = result_mechanics
+    end
+    
+    # 少なくとも10個のレビューを作成
+    10.times do |i|
+      # わずかなランダム性を持たせる
+      random_offset = (rand - 0.5) * 0.4 # -0.2から+0.2の間のランダム値
+      
+      # レビュー作成
+      review = reviews.new(
+        user: system_user,
+        overall_score: [1.0, [overall_score + random_offset, 10.0].min].max,
+        rule_complexity: [1.0, [rule_complexity + random_offset * 0.5, 5.0].min].max,
+        luck_factor: [1.0, [luck_factor + random_offset * 0.5, 5.0].min].max,
+        interaction: [1.0, [interaction + random_offset * 0.5, 5.0].min].max,
+        downtime: [1.0, [downtime + random_offset * 0.5, 5.0].min].max,
+        recommended_players: recommended_players,
+        mechanics: mechanics,
+        categories: categories,
+        short_comment: "システムによる自動評価です",
+        play_time: play_time
+      )
+      
+      # エラーがあれば記録
+      unless review.save
+        Rails.logger.error "レビュー保存エラー: #{review.errors.full_messages.join(', ')}"
+      end
+    end
+    
+    # 新しいレビュー数を記録
+    new_reviews_count = reviews.where(user: system_user).count
+    Rails.logger.info "新しいシステムレビュー数: #{new_reviews_count}件"
+    
+    # 平均値を更新
+    update_average_values
+    
+    # 処理成功
     true
   end
 
