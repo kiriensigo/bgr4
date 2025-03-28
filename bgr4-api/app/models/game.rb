@@ -641,67 +641,17 @@ class Game < ApplicationRecord
     
     # カテゴリーを設定（BGGのメカニクスとカテゴリーから）
     categories = []
-    missing_mechanics = []
+    mechanics = []
     
-    # BGGメカニクスから当サイトのカテゴリーへの変換マップ
-    bgg_mechanic_to_site_category_map = {
-      'Acting' => '演技',
-      'Deduction' => '推理',
-      'Legacy Game' => 'レガシー・キャンペーン',
-      'Memory' => '記憶',
-      'Negotiation' => '交渉',
-      'Paper-and-Pencil' => '紙ペン',
-      'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
-      'Solo / Solitaire Game' => 'ソロ向き',
-      'Pattern Building' => 'パズル',
-      'Trick-taking' => 'トリテ'
-    }
-    
-    # BGGのメカニクスを当サイトのカテゴリーに変換（指定されたもののみ）
-    if bgg_game_info[:mechanics].is_a?(Array)
-      Rails.logger.info "BGG Mechanics: #{bgg_game_info[:mechanics].inspect}"
-      converted_categories = []
-      
-      bgg_game_info[:mechanics].each do |mechanic|
-        site_category = bgg_mechanic_to_site_category_map[mechanic]
-        if site_category.present?
-          categories << site_category if !categories.include?(site_category)
-          converted_categories << "#{mechanic} → #{site_category}"
-        else
-          missing_mechanics << mechanic
-          # 未マッピングの項目を記録
-          UnmappedBggItem.record_occurrence('mechanic', mechanic)
-        end
-      end
-      
-      Rails.logger.info "Converted to site categories: #{converted_categories.inspect}"
-      Rails.logger.info "Mechanics not mapped to categories: #{missing_mechanics.inspect}" if missing_mechanics.present?
+    # BGGからカテゴリとメカニクスを変換
+    BggService.convert_mechanics_and_categories(
+      bgg_game_info[:mechanics], 
+      bgg_game_info[:categories],
+      recommended_players
+    ) do |result_categories, result_mechanics|
+      categories = result_categories
+      mechanics = result_mechanics
     end
-    
-    # BGGのカテゴリーを当サイトのカテゴリーに変換（指定されたもののみ）
-    if bgg_game_info[:categories].is_a?(Array)
-      Rails.logger.info "BGG Categories: #{bgg_game_info[:categories].inspect}"
-      converted_categories_from_bgg_categories = []
-      missing_categories = []
-      
-      bgg_game_info[:categories].each do |category|
-        site_category = bgg_category_to_site_category_map[category]
-        if site_category.present?
-          categories << site_category if !categories.include?(site_category)
-          converted_categories_from_bgg_categories << "#{category} → #{site_category}"
-        else
-          missing_categories << category
-          # 未マッピングの項目を記録
-          UnmappedBggItem.record_occurrence('category', category)
-        end
-      end
-      
-      Rails.logger.info "Converted from BGG categories to site categories: #{converted_categories_from_bgg_categories.inspect}"
-      Rails.logger.info "Categories not mapped to site categories: #{missing_categories.inspect}" if missing_categories.present?
-    end
-    
-    # カテゴリーリストにカテゴリーを追加
-    categories_list.concat(categories)
     
     # メカニクスを設定（BGGのカテゴリーとメカニクスから）
     mechanics = []
@@ -710,7 +660,7 @@ class Game < ApplicationRecord
     if bgg_game_info[:categories].is_a?(Array)
       Rails.logger.info "BGG Categories: #{bgg_game_info[:categories].inspect}"
       converted_mechanics = []
-      missing_categories = []
+      missing_mechanics = []
       
       bgg_game_info[:categories].each do |category|
         site_mechanic = bgg_mechanic_to_site_mechanic_map[category]
@@ -718,34 +668,13 @@ class Game < ApplicationRecord
           mechanics << site_mechanic if !mechanics.include?(site_mechanic)
           converted_mechanics << "#{category} → #{site_mechanic}"
         else
-          missing_categories << category unless bgg_mechanic_to_site_category_map[category].present?
+          missing_mechanics << category unless bgg_mechanic_to_site_category_map[category].present?
           # 未マッピングの項目を記録（カテゴリーとしても変換されていない場合のみ）
           UnmappedBggItem.record_occurrence('category', category) unless bgg_mechanic_to_site_category_map[category].present?
         end
       end
       
       Rails.logger.info "Converted from BGG categories to site mechanics: #{converted_mechanics.inspect}"
-    end
-    
-    # BGGのメカニクスを当サイトのメカニクスに変換
-    if bgg_game_info[:mechanics].is_a?(Array)
-      converted_mechanics_from_bgg_mechanics = []
-      missing_mechanics = []
-      
-      bgg_game_info[:mechanics].each do |mechanic|
-        site_mechanic = bgg_mechanic_to_site_mechanic_map[mechanic]
-        if site_mechanic.present?
-          mechanics << site_mechanic if !mechanics.include?(site_mechanic)
-          converted_mechanics_from_bgg_mechanics << "#{mechanic} → #{site_mechanic}"
-        else
-          missing_mechanics << mechanic unless bgg_mechanic_to_site_category_map[mechanic].present?
-          # 未マッピングの項目を記録（カテゴリーとしても変換されていない場合のみ）
-          UnmappedBggItem.record_occurrence('mechanic', mechanic) unless bgg_mechanic_to_site_category_map[mechanic].present?
-        end
-      end
-      
-      Rails.logger.info "Converted from BGG mechanics to site mechanics: #{converted_mechanics_from_bgg_mechanics.inspect}" if converted_mechanics_from_bgg_mechanics.present?
-      Rails.logger.info "Mechanics not mapped to site mechanics: #{missing_mechanics.inspect}" if missing_mechanics.present?
     end
     
     # 10件のレビューを作成
@@ -886,7 +815,7 @@ class Game < ApplicationRecord
     mechanics = []
     
     # BGGからカテゴリとメカニクスを変換
-    BGGMapperService.convert_mechanics_and_categories(
+    BggService.convert_mechanics_and_categories(
       bgg_game_info[:mechanics], 
       bgg_game_info[:categories],
       recommended_players
@@ -911,8 +840,7 @@ class Game < ApplicationRecord
         recommended_players: recommended_players,
         mechanics: mechanics,
         categories: categories,
-        short_comment: "システムによる自動評価です",
-        play_time: play_time
+        short_comment: "システムによる自動評価です"
       )
       
       # エラーがあれば記録

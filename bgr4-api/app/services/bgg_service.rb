@@ -1082,4 +1082,148 @@ class BggService
     
     expansions
   end
+
+  # BGGからのメカニクスとカテゴリを変換するメソッド
+  def self.convert_mechanics_and_categories(bgg_mechanics, bgg_categories, recommended_players = nil)
+    categories = []
+    mechanics = []
+
+    # BGGのメカニクスを当サイトのカテゴリーに変換するためのマップ
+    bgg_mechanic_to_category_map = {
+      'Acting' => '演技',
+      'Deduction' => '推理',
+      'Legacy Game' => 'レガシー・キャンペーン',
+      'Memory' => '記憶',
+      'Negotiation' => '交渉',
+      'Paper-and-Pencil' => '紙ペン',
+      'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
+      'Solo / Solitaire Game' => 'ソロ向き',
+      'Pattern Building' => 'パズル',
+      'Trick-taking' => 'トリテ'
+    }
+
+    # BGGのカテゴリーを当サイトのカテゴリーに変換するためのマップ
+    bgg_category_to_category_map = {
+      'Adventure' => 'アドベンチャー',
+      'Exploration' => '探検',
+      'Fantasy' => 'ファンタジー',
+      'Fighting' => '戦闘',
+      'Horror' => 'ホラー',
+      'Medieval' => '中世',
+      'Murder/Mystery' => '推理',
+      'Mythology' => '神話',
+      'Science Fiction' => 'SF',
+      'Economic' => '経済',
+      'Educational' => '教育',
+      'Environmental' => '環境',
+      'Medical' => '医療',
+      'Animals' => '動物',
+      'Children\'s Game' => '子供向け',
+      'Party Game' => 'パーティー',
+      'Print & Play' => '紙ペン',
+      'Wargame' => 'ウォーゲーム',
+      'Word Game' => '言葉',
+      'Novel-based' => '小説原作',
+      'Video Game Theme' => 'ビデオゲーム原作',
+      'Abstract Strategy' => '抽象戦略'
+    }
+
+    # BGGのカテゴリーを当サイトのメカニクスに変換するためのマップ
+    bgg_category_to_mechanic_map = {
+      'Bluffing' => 'ブラフ',
+      'Card Game' => 'カード',
+      'Dice' => 'ダイス',
+      'Tile Placement' => 'タイル配置'
+    }
+
+    # BGGのメカニクスを当サイトのメカニクスに変換するためのマップ
+    bgg_mechanic_to_mechanic_map = {
+      'Area Control / Area Influence' => 'エリアコントロール',
+      'Area Movement' => 'エリア移動',
+      'Auction/Bidding' => 'オークション',
+      'Card Drafting' => 'ドラフティング',
+      'Cooperative Game' => '協力',
+      'Deck Building' => 'デッキ構築',
+      'Dice Rolling' => 'ダイス',
+      'Hand Management' => 'ハンドマネジメント',
+      'Hex-and-Counter' => 'ヘクス＆カウンター',
+      'Modular Board' => 'モジュラーボード',
+      'Player Elimination' => 'プレイヤー脱落',
+      'Point to Point Movement' => 'ポイントツーポイント移動',
+      'Resource Management' => 'リソース管理',
+      'Role Playing' => 'ロールプレイ',
+      'Roll / Spin and Move' => 'サイコロ移動',
+      'Route/Network Building' => 'ルート/ネットワーク構築',
+      'Set Collection' => 'セット収集',
+      'Simultaneous Action Selection' => '同時アクション選択',
+      'Tile Placement' => 'タイル配置',
+      'Trading' => '交易',
+      'Variable Player Powers' => '個別プレイヤーパワー',
+      'Worker Placement' => 'ワーカープレイスメント'
+    }
+
+    # BGGのメカニクスをカテゴリーに変換
+    if bgg_mechanics.is_a?(Array)
+      bgg_mechanics.each do |mechanic|
+        site_category = bgg_mechanic_to_category_map[mechanic]
+        if site_category.present?
+          categories << site_category unless categories.include?(site_category)
+        end
+      end
+    end
+
+    # BGGのカテゴリーをカテゴリーに変換
+    if bgg_categories.is_a?(Array)
+      bgg_categories.each do |category|
+        site_category = bgg_category_to_category_map[category]
+        if site_category.present?
+          categories << site_category unless categories.include?(site_category)
+        end
+      end
+    end
+
+    # BGGのカテゴリーをメカニクスに変換
+    if bgg_categories.is_a?(Array)
+      bgg_categories.each do |category|
+        site_mechanic = bgg_category_to_mechanic_map[category]
+        if site_mechanic.present?
+          mechanics << site_mechanic unless mechanics.include?(site_mechanic)
+        end
+      end
+    end
+
+    # BGGのメカニクスをメカニクスに変換
+    if bgg_mechanics.is_a?(Array)
+      bgg_mechanics.each do |mechanic|
+        site_mechanic = bgg_mechanic_to_mechanic_map[mechanic]
+        if site_mechanic.present?
+          mechanics << site_mechanic unless mechanics.include?(site_mechanic)
+        end
+      end
+    end
+
+    # プレイ人数に応じたカテゴリを追加
+    if recommended_players.present?
+      # ソロ向きの場合
+      if recommended_players.include?('1')
+        categories << 'ソロ向き' unless categories.include?('ソロ向き')
+      end
+      
+      # 2人用の場合
+      if recommended_players.include?('2') && !recommended_players.any? { |p| p.to_i > 2 }
+        categories << '2人用' unless categories.include?('2人用')
+      end
+      
+      # パーティー向きの場合
+      if recommended_players.any? { |p| p.to_i >= 5 }
+        categories << 'パーティー' unless categories.include?('パーティー')
+      end
+    end
+
+    # 結果をブロックでコールバック
+    yield categories, mechanics if block_given?
+
+    # または結果を配列として返す
+    [categories, mechanics]
+  end
 end 
