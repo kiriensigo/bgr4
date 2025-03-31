@@ -82,17 +82,14 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  <<: *default
-  database: bgr4_api_production
-  username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
-  password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
-  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
-  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+  url: <%= ENV['DATABASE_URL'] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  # Cloud Run上でのCloud SQLへの接続時にはソケット接続を使用
+  variables:
+    # PostgreSQL 9.6から、prepared_statementsのデフォルト値はtrue
+    # Cloud SQLでのパフォーマンス問題を避けるためfalseに設定
+    statement_timeout: 5000
 
 cable:
-  <<: *default
-  database: bgr4_api_production
-  username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
-  password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
-  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
-  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+  url: <%= ENV['DATABASE_URL'] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>

@@ -1,0 +1,28 @@
+# syntax = docker/dockerfile:1
+
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール
+RUN apt-get update -qq && \
+    apt-get install -y postgresql-client build-essential libpq-dev curl gnupg2 git less
+
+# 作業ディレクトリを設定
+WORKDIR /rails
+
+# アプリケーションの依存関係をインストール
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# アプリケーションコードをコピー
+COPY . .
+
+# ファイルの実行権限を確保
+RUN chmod +x bin/* && \
+    chmod +x bin/docker-entrypoint bin/wait-for-postgres.sh
+
+# 環境変数を設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+
+# 起動コマンド
+CMD ["bash", "-c", "bin/rails db:prepare && bin/rails server -b 0.0.0.0 -p ${PORT}"]

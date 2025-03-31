@@ -1,75 +1,51 @@
-# syntax=docker/dockerfile:1
-# check=error=true
+FROM ruby:3.3.0-slim
 
-# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
-# docker build -t bgr4_api .
-# docker run -d -p 80:80 -e RAILS_MASTER_KEY=<value from config/master.key> --name bgr4_api bgr4_api
+# 必要なパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    curl \
+    git \
+    less \
+    libjemalloc2 \
+    lsof \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# For a containerized dev environment, see Dev Containers: https://guides.rubyonrails.org/getting_started_with_devcontainer.html
-
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=3.3.4
-FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
-
-# Rails app lives here
+# 作業ディレクトリの設定
 WORKDIR /rails
 
-# Install base packages
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+# jemalloc設定（メモリ使用量削減のため）
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
 
-# Set development environment
-ENV RAILS_ENV="development" \
-    BUNDLE_DEPLOYMENT="0" \
-    BUNDLE_PATH="/usr/local/bundle" \
-    RAILS_LOG_TO_STDOUT="1"
-
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build gems
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev pkg-config && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
-
-# Install application gems
+# アプリケーションの依存関係をインストール
 COPY Gemfile Gemfile.lock ./
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    bundle exec bootsnap precompile --gemfile
+RUN gem install bundler && \
+    bundle config set --local without 'development test' && \
+    bundle install --jobs 4 --retry 3
 
-# Copy application code
+# アプリケーションコードをコピー
 COPY . .
 
-# Precompile bootsnap code for faster boot times
-RUN bundle exec bootsnap precompile app/ lib/
-
-# Adjust binfiles to be executable on Linux
+# ファイルの実行権限を確保
 RUN chmod +x bin/* && \
-    sed -i "s/\r$//g" bin/* && \
-    sed -i 's/ruby\.exe$/ruby/' bin/*
+    chmod +x /rails/bin/docker-entrypoint
 
-# Final stage for app image
-FROM base
+# Cloud SQLソケットディレクトリを作成
+RUN mkdir -p /cloudsql
 
-# Copy built artifacts: gems, application
-COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
-COPY --from=build /rails /rails
+# 環境変数を設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_LOG_TO_STDOUT=true
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV BINDING="tcp://0.0.0.0:${PORT}"
+ENV PIDFILE="/rails/tmp/pids/server.pid"
 
-# データベース接続待機スクリプトを追加
-COPY ./bin/wait-for-postgres.sh /usr/bin/
-RUN chmod +x /usr/bin/wait-for-postgres.sh
+# 起動時に古いPIDファイルがあれば削除
+RUN mkdir -p /rails/tmp/pids && \
+    if [ -f /rails/tmp/pids/server.pid ]; then rm -f /rails/tmp/pids/server.pid; fi
 
-# Run and own only the runtime files as a non-root user for security
-RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
-USER 1000:1000
-
-# ENTRYPOINT設定
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-
-# Start server
-EXPOSE 8080
-CMD ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "8080"]
+# Railsサーバーを起動
+CMD ["bash", "-c", "rm -f /rails/tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p ${PORT}"]

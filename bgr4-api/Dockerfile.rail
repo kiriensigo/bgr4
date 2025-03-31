@@ -1,0 +1,35 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    postgresql-client \
+    libpq-dev \
+    curl \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /rails
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+
+# Gemfileとロックファイルのコピー
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# アプリケーションコードのコピー
+COPY . .
+
+# 実行ファイルの権限設定
+RUN chmod +x bin/*
+
+# デバッグ用の起動時メッセージ
+RUN echo "#!/bin/bash\necho \"Starting Rails server in $RAILS_ENV mode\"\necho \"Database URL: $DATABASE_URL\"\nbin/rails server -b 0.0.0.0 -p \${PORT}" > /rails/start.sh && \
+    chmod +x /rails/start.sh
+
+# サーバーの起動
+CMD ["/rails/start.sh"] 

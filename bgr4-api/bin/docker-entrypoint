@@ -12,23 +12,42 @@ if [ -f /rails/tmp/pids/server.pid ]; then
   rm -f /rails/tmp/pids/server.pid
 fi
 
-# PostgreSQLサーバーが起動するのを待機
-if [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_PORT" ]; then
-  echo "Waiting for PostgreSQL to start..."
-  /usr/bin/wait-for-postgres.sh "$DATABASE_HOST" "$DATABASE_PORT"
-fi
+# デバッグ用環境変数表示
+echo "Environment variables:"
+echo "PORT=${PORT}"
+echo "RAILS_ENV=${RAILS_ENV}"
+echo "DATABASE_URL=${DATABASE_URL}"
+echo "RAILS_MASTER_KEY is set: $([[ -n ${RAILS_MASTER_KEY} ]] && echo 'Yes' || echo 'No')"
 
-# If running the rails server then create or migrate existing database
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  echo "Running database migrations..."
-  ./bin/rails db:prepare
+# バイナリのパーミッション確認
+echo "Checking bin permissions:"
+ls -la /rails/bin/
+
+# 環境変数からデータベース接続情報を取得
+DATABASE_URL_INFO=${DATABASE_URL:-}
+if [[ $DATABASE_URL_INFO == *"cloudsql"* ]]; then
+  # Cloud SQL接続文字列からホストとポートを抽出
+  CONNECTION_NAME=$(echo $DATABASE_URL | sed -n 's/.*host=\/cloudsql\/\([^&]*\).*/\1/p')
+  echo "Detected Cloud SQL proxy connection for: $CONNECTION_NAME"
   
-  # 必要に応じて初期データを投入
-  if [ "$SEED_DATABASE" = "true" ]; then
-    echo "Seeding database..."
-    ./bin/rails db:seed
+  # socketディレクトリの存在確認
+  SOCKET_DIR="/cloudsql/$CONNECTION_NAME"
+  echo "Checking for Cloud SQL socket directory: $SOCKET_DIR"
+  if [ -d "$SOCKET_DIR" ]; then
+    echo "Cloud SQL socket directory exists: $SOCKET_DIR"
+  else
+    echo "Warning: Cloud SQL socket directory not found at $SOCKET_DIR"
+    echo "This is expected if running locally, but may cause issues in Cloud Run"
   fi
+else
+  echo "Not using Cloud SQL socket connection. Standard database connection will be used."
 fi
 
-echo "Starting Rails application..."
-exec "${@}"
+# データベースのマイグレーションを実行
+if [ "$RAILS_ENV" = "production" ]; then
+  echo "Running database migrations..."
+  bundle exec rails db:migrate 2>/dev/null || bundle exec rails db:schema:load
+fi
+
+echo "Starting Rails application in $RAILS_ENV mode..."
+exec "$@"

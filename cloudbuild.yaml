@@ -32,7 +32,11 @@ steps:
         "--set-secrets",
         "RAILS_MASTER_KEY=rails-master-key:latest,DATABASE_URL=database-url:latest",
         "--set-env-vars",
-        "RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true",
+        "RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,RAILS_SERVE_STATIC_FILES=true,PORT=8080",
+        "--command",
+        "/rails/bin/docker-entrypoint",
+        "--args",
+        "bundle,exec,rails,server,-b,0.0.0.0,-p,8080",
       ]
 
   # APIサービスのURLを取得

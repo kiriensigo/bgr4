@@ -1,0 +1,38 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /rails
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV DATABASE_URL_DISABLED=true
+
+# Gemfileとロックファイルのコピー
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# アプリケーションコードのコピー
+COPY . .
+
+# 実行ファイルの権限設定
+RUN chmod +x bin/*
+
+# データベース接続を無効化するための設定
+RUN echo "class ApplicationRecord < ActiveRecord::Base\n  def self.connection\n    raise 'Database connection is disabled in this deployment'\n  end\nend" > app/models/application_record.rb
+
+# アプリ起動前の準備
+RUN mkdir -p tmp/pids && \
+    RAILS_ENV=production SECRET_KEY_BASE=dummy bundle exec rake assets:precompile
+
+# サーバーの起動
+CMD ["bash", "-c", "echo 'Starting Rails server on port ${PORT}' && bin/rails server -b 0.0.0.0 -p ${PORT}"] 
