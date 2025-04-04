@@ -1,0 +1,32 @@
+steps:
+  # Dockerイメージのビルド
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/bgr4-api-rack-simple:v1",
+        "-f",
+        "Dockerfile.rack.simple",
+        ".",
+      ]
+
+  # イメージをContainer Registryにプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/bgr4-api-rack-simple:v1"]
+
+  # Cloud Runへのデプロイ
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "bgr4-api-rack-simple"
+      - "--image=gcr.io/$PROJECT_ID/bgr4-api-rack-simple:v1"
+      - "--region=asia-northeast1"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+
+# ビルドで生成されるイメージ
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-api-rack-simple:v1"

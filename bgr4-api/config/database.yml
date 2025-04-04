@@ -20,8 +20,8 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: postgres
   password: postgres
-  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
-  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+  host: localhost
+  port: 5432
 
 development:
   <<: *default
@@ -60,6 +60,10 @@ development:
 test:
   <<: *default
   database: bgr4_api_test
+  username: postgres
+  password: postgres
+  host: localhost
+  port: 5432
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -82,13 +86,27 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
+  <<: *default
+  # Cloud Run上でのCloud SQL接続設定
+  # DATABASE_URLが設定されている場合はそれを優先
   url: <%= ENV['DATABASE_URL'] %>
+
+  # ソケット接続（Cloud SQL Proxy経由）
+  # Cloud SQLとの接続にはソケットを使用することを推奨
+  # <%= ENV['DB_SOCKET_DIR'] %>/cloudsql/<%= ENV['CLOUD_SQL_CONNECTION_NAME'] %>
+
+  # コネクションプール設定
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  # Cloud Run上でのCloud SQLへの接続時にはソケット接続を使用
+
+  # PostgreSQL 9.6以降でのパフォーマンス最適化
   variables:
-    # PostgreSQL 9.6から、prepared_statementsのデフォルト値はtrue
-    # Cloud SQLでのパフォーマンス問題を避けるためfalseに設定
-    statement_timeout: 5000
+    statement_timeout: 5000 # ミリ秒
+
+# ※ production環境では、以下の環境変数が必要です:
+# DATABASE_URL - 完全なPostgreSQL接続URL（例: postgres://user:password@host:port/dbname）
+# または
+# DB_SOCKET_DIR - Cloud SQL接続ソケットのディレクトリ（通常は /cloudsql）
+# CLOUD_SQL_CONNECTION_NAME - Cloud SQLインスタンス名（例: project-id:region:instance-name）
 
 cable:
   url: <%= ENV['DATABASE_URL'] %>

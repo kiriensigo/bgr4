@@ -1,0 +1,29 @@
+FROM ruby:3.3.0-slim
+
+# 必要最小限のパッケージだけをインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+
+# シンプルなRackアプリケーションの作成
+RUN echo 'require "rack"\n\nrun lambda { |env| [200, {"Content-Type" => "text/plain"}, ["Hello from BGRv4 API on Cloud Run!"]] }' > config.ru
+
+# Rackとpumaのみをインストール
+RUN gem install rack puma
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash\nset -e\necho "Starting Rack server on port ${PORT}"\npuma -p ${PORT}' > start.sh
+RUN chmod +x start.sh
+
+# ポート8080を公開
+EXPOSE 8080
+
+# サーバーの起動
+CMD ["./start.sh"] 

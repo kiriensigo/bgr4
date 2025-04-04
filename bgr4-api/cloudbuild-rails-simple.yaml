@@ -1,0 +1,35 @@
+steps:
+  # Dockerイメージのビルド
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/bgr4-api-rails-simple:v1",
+        "-f",
+        "Dockerfile.rails-simple",
+        ".",
+      ]
+
+  # イメージをContainer Registryにプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/bgr4-api-rails-simple:v1"]
+
+  # Cloud Runへのデプロイ
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "bgr4-api-rails-simple"
+      - "--image=gcr.io/$PROJECT_ID/bgr4-api-rails-simple:v1"
+      - "--region=asia-northeast1"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true"
+      - "--timeout=300s"
+      - "--memory=512Mi"
+
+# ビルドで生成されるイメージ
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-api-rails-simple:v1"

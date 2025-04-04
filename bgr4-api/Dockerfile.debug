@@ -1,0 +1,34 @@
+FROM ruby:3.3.0-slim
+
+# デバッグ用の環境変数設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV DEBUGMODE=true
+
+# 必要最小限のパッケージだけをインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    iputils-ping \
+    net-tools \
+    procps \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# デバッグ用ファイルのコピー
+COPY debug/config.ru /app/config.ru
+COPY debug/start.sh /app/start.sh
+
+# Rackとpumaのインストール
+RUN gem install rack puma
+
+# 実行権限の付与
+RUN chmod +x /app/start.sh
+
+# ポートを公開
+EXPOSE 8080
+
+# サーバーの起動
+CMD ["./start.sh"] 
