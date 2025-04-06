@@ -1,0 +1,125 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール
+RUN apt-get update -qq && \
+    apt-get install -y build-essential libpq-dev nodejs postgresql-client \
+    procps net-tools curl jemalloc libjemalloc-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+ENV LOG_LEVEL=info
+ENV MALLOC_CONF="background_thread:true,metadata_thp:auto,dirty_decay_ms:30000,muzzy_decay_ms:30000"
+
+# jemallocを有効化して起動するためのプリロード設定
+ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+
+# Gemfileとlockファイルを先にコピーし、依存関係をインストール
+# これによりキャッシュを活用できます
+COPY Gemfile Gemfile.lock ./
+RUN gem install bundler && \
+    bundle config set --local without 'development test' && \
+    bundle install --jobs 4 --retry 3
+
+# ログ設定用の初期化ファイルを作成
+RUN mkdir -p config/initializers
+RUN echo 'Rails.application.configure do\n\
+  config.log_level = ENV["LOG_LEVEL"]&.to_sym || :info\n\
+  \n\
+  # JSON形式のログ出力を設定\n\
+  if ENV["RAILS_LOG_TO_STDOUT"].present? && ENV["LOG_FORMAT"] == "json"\n\
+    config.logger = ActiveSupport::Logger.new(STDOUT)\n\
+    config.logger.formatter = proc do |severity, datetime, progname, msg|\n\
+      {\n\
+        time: datetime.iso8601,\n\
+        level: severity,\n\
+        progname: progname,\n\
+        message: msg,\n\
+        service: "bgr4-api",\n\
+        env: Rails.env\n\
+      }.to_json + "\n"\n\
+    end\n\
+  elsif ENV["RAILS_LOG_TO_STDOUT"].present?\n\
+    logger           = ActiveSupport::Logger.new(STDOUT)\n\
+    logger.formatter = config.log_formatter\n\
+    config.logger    = ActiveSupport::TaggedLogging.new(logger)\n\
+  end\n\
+end' > config/initializers/logging.rb
+
+# アプリケーションコードをコピー
+COPY . .
+
+# スクリプトに実行権限を付与
+RUN chmod +x /app/bin/wait-for-postgres.sh
+RUN chmod +x /app/bin/docker-entrypoint
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# 環境変数とシステム情報を表示\n\
+echo "=============== STARTUP INFO ==============="\n\
+echo "Ruby version: $(ruby -v)"\n\
+echo "Rails version: $(bundle exec rails -v)"\n\
+echo "PORT: ${PORT}"\n\
+echo "RAILS_ENV: ${RAILS_ENV}"\n\
+echo "LOG_LEVEL: ${LOG_LEVEL}"\n\
+echo "LOG_FORMAT: ${LOG_FORMAT}"\n\
+echo "DATABASE_URL is set: $([[ -n ${DATABASE_URL} ]] && echo '\''Yes'\'' || echo '\''No'\'')"\n\
+echo "RAILS_MASTER_KEY is set: $([[ -n ${RAILS_MASTER_KEY} ]] && echo '\''Yes'\'' || echo '\''No'\'')"\n\
+\n\
+# PIGファイルの削除\n\
+if [ -f /app/tmp/pids/server.pid ]; then\n\
+  echo "Removing old server.pid file..."\n\
+  rm -f /app/tmp/pids/server.pid\n\
+fi\n\
+\n\
+# PostgreSQLの準備を待つ\n\
+if [[ -z "${DISABLE_DATABASE_CONNECTION}" || "${DISABLE_DATABASE_CONNECTION}" != "true" ]]; then\n\
+  echo "Checking database connection..."\n\
+  /app/bin/wait-for-postgres.sh $DATABASE_URL\n\
+  \n\
+  # データベースの準備\n\
+  echo "Preparing database..."\n\
+  bundle exec rails db:prepare\n\
+else\n\
+  echo "Database connection is disabled. Skipping database operations."\n\
+fi\n\
+\n\
+# ログレベルの設定\n\
+if [[ -n "${LOG_LEVEL}" ]]; then\n\
+  echo "Setting log level to ${LOG_LEVEL}"\n\
+fi\n\
+\n\
+# Railsサーバーの起動\n\
+echo "Starting Rails server on port ${PORT}..."\n\
+if [[ "${LOG_LEVEL}" == "debug" ]]; then\n\
+  bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080} --debug\n\
+else\n\
+  bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}\n\
+fi\n\
+' > /app/start.sh
+
+# スクリプトに実行権限を付与
+RUN chmod +x /app/start.sh
+
+# ディレクトリの権限設定
+RUN mkdir -p /app/tmp/pids /app/log && \
+    chmod -R 777 /app/tmp /app/log
+
+# ポートを公開
+EXPOSE 8080
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/ || exit 1
+
+# 起動コマンド
+CMD ["/app/start.sh"] 
