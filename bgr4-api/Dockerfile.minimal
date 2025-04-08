@@ -1,23 +1,63 @@
 FROM ruby:3.3.0-slim
 
-# 必要なパッケージのインストール
-RUN apt-get update && apt-get install -y \
+RUN apt-get update -qq && apt-get install -y \
     build-essential \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    libpq-dev \
+    nodejs \
+    curl \
+    net-tools
 
-# 作業ディレクトリの設定
 WORKDIR /app
 
-# 環境変数の設定
+# 環境変数設定
 ENV PORT=8080
 ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+ENV DISABLE_DATABASE_CONNECTION=true
+ENV RAILS_MASTER_KEY=cf8dee1c404263fe64df934d04335c9f
+ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
 
-# シンプルなRackアプリケーションの作成
-RUN echo 'require "rack"\n\napp = Rack::Builder.new do\n  map "/" do\n    run lambda { |env| [200, {"Content-Type" => "text/html"}, ["Hello from Rails API on Cloud Run!"]]}  \n  end\nend\n\nrun app' > config.ru
+# GemfileとGemfile.lockをコピー
+COPY Gemfile Gemfile.lock ./
 
-# HTTPサーバーのインストール
-RUN gem install webrick puma
+# Bundlerのインストールと依存関係のインストール
+RUN gem install bundler && \
+    bundle config set --local without 'development test' && \
+    bundle install --jobs 4 --retry 3
 
-# サーバーの起動
-CMD ["bash", "-c", "echo 'Starting minimal Rack server on port ${PORT}' && ruby -rwebrick -e 'WEBrick::HTTPServer.new(:Port => ENV[\"PORT\"], :DocumentRoot => \".\").tap { |server| server.mount(\"/\", WEBrick::HTTPServlet::CGIHandler, \"config.ru\") }.start'"] 
+# アプリケーションコードのコピー
+COPY . .
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash\n\
+echo "Starting Rails in minimal mode..."\n\
+rm -f /app/tmp/pids/server.pid\n\
+\n\
+# 環境変数の確認\n\
+echo "RAILS_ENV=${RAILS_ENV}"\n\
+echo "PORT=${PORT}"\n\
+echo "RAILS_MASTER_KEY is set: $([ -n "$RAILS_MASTER_KEY" ] && echo "Yes" || echo "No")"\n\
+echo "SECRET_KEY_BASE is set: $([ -n "$SECRET_KEY_BASE" ] && echo "Yes" || echo "No")"\n\
+echo "DISABLE_DATABASE_CONNECTION=${DISABLE_DATABASE_CONNECTION}"\n\
+\n\
+# Railsサーバー起動\n\
+exec bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}\n\
+' > /app/start-minimal.sh
+
+# 起動スクリプトに実行権限を付与
+RUN chmod +x /app/start-minimal.sh
+
+# 必要なディレクトリの作成と権限設定
+RUN mkdir -p /app/tmp/pids /app/log && \
+    chmod -R 777 /app/tmp /app/log
+
+# ポートの公開
+EXPOSE 8080
+
+# ヘルスチェック
+HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/ || exit 1
+
+# 起動コマンド
+CMD ["/app/start-minimal.sh"] 

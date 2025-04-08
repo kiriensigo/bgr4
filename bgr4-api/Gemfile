@@ -76,3 +76,6 @@ gem "httparty", "~> 0.22.0"
 
 # JSONシリアライズ用のgem
 gem "active_model_serializers", "~> 0.10.13"
+
+# nulldbアダプターを追加
+gem 'activerecord-nulldb-adapter', group: :production

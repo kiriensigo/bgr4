@@ -3,7 +3,7 @@ FROM ruby:3.3.0-slim
 # 必要なパッケージをインストール
 RUN apt-get update -qq && \
     apt-get install -y build-essential libpq-dev nodejs postgresql-client \
-    procps net-tools curl jemalloc libjemalloc-dev && \
+    procps net-tools curl libjemalloc2 libjemalloc-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -72,6 +72,13 @@ echo "PORT: ${PORT}"\n\
 echo "RAILS_ENV: ${RAILS_ENV}"\n\
 echo "LOG_LEVEL: ${LOG_LEVEL}"\n\
 echo "LOG_FORMAT: ${LOG_FORMAT}"\n\
+\n\
+# 個別の環境変数からDATABASE_URLを構築\n\
+if [[ -n "${DB_USER}" && -n "${DB_NAME}" && -n "${DB_INSTANCE}" ]]; then\n\
+  export DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@localhost/${DB_NAME}?host=/cloudsql/${DB_INSTANCE}"\n\
+  echo "DATABASE_URL constructed from individual variables: postgres://${DB_USER}:******@localhost/${DB_NAME}?host=/cloudsql/${DB_INSTANCE}"\n\
+fi\n\
+\n\
 echo "DATABASE_URL is set: $([[ -n ${DATABASE_URL} ]] && echo '\''Yes'\'' || echo '\''No'\'')"\n\
 echo "RAILS_MASTER_KEY is set: $([[ -n ${RAILS_MASTER_KEY} ]] && echo '\''Yes'\'' || echo '\''No'\'')"\n\
 \n\

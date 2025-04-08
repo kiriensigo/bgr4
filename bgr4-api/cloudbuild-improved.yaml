@@ -15,7 +15,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/bgr4-api-improved:v1"]
 
-  # Cloud Runへのデプロイ
+  # Cloud Runへのデプロイ - シンプル化したバージョン
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -26,25 +26,15 @@ steps:
       - "--region=asia-northeast1"
       - "--platform=managed"
       - "--allow-unauthenticated"
-      - "--set-env-vars=PORT=8080,RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DATABASE_URL=postgres://${_DB_USER}:${_DB_PASSWORD}@localhost/${_DB_NAME}?host=/cloudsql/${_CLOUDSQL_CONNECTION_NAME},LOG_LEVEL=${_LOG_LEVEL},LOG_FORMAT=${_LOG_FORMAT},POSTGRES_MAX_TRIES=${_POSTGRES_MAX_TRIES},POSTGRES_SLEEP_TIME=${_POSTGRES_SLEEP_TIME},POSTGRES_CONTINUE_ON_ERROR=${_POSTGRES_CONTINUE_ON_ERROR}"
+      - "--set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DB_USER=${_DB_USER},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME},DB_INSTANCE=${_CLOUDSQL_CONNECTION_NAME},LOG_LEVEL=${_LOG_LEVEL},LOG_FORMAT=${_LOG_FORMAT},POSTGRES_MAX_TRIES=${_POSTGRES_MAX_TRIES},POSTGRES_SLEEP_TIME=${_POSTGRES_SLEEP_TIME},POSTGRES_CONTINUE_ON_ERROR=${_POSTGRES_CONTINUE_ON_ERROR}"
       - "--add-cloudsql-instances=${_CLOUDSQL_CONNECTION_NAME}"
       - "--cpu=${_CPU}"
       - "--memory=${_MEMORY}"
       - "--min-instances=${_MIN_INSTANCES}"
       - "--max-instances=${_MAX_INSTANCES}"
       - "--timeout=${_TIMEOUT}"
-      - "--concurrency=${_CONCURRENCY}"
       - "--set-secrets=RAILS_MASTER_KEY=rails-master-key:latest"
-      - "--vpc-connector=${_VPC_CONNECTOR}"
-      # スケーリング設定
-      - "--min-instance-request-concurrency=${_MIN_REQUEST_CONCURRENCY}"
-      - "--session-affinity"
-      - "--cpu-throttling"
-      - "--execution-environment=gen2"
-      # スケーリングの自動調整
-      - "--cpu-boost"
-      # コールドスタート時のパフォーマンス向上
-      - "--startup-cpu-boost"
+      # 基本的なHTTP/2設定のみ維持
       - "--use-http2"
 
 # ビルドで生成されるイメージ
@@ -57,7 +47,6 @@ substitutions:
   _DB_USER: "postgres" # データベースユーザー名
   _DB_PASSWORD: "postgres" # データベースパスワード（本番環境では Secret Manager を使用）
   _DB_NAME: "bgr4_production" # データベース名
-  _VPC_CONNECTOR: "bgr4-vpc-connector" # VPCコネクタ名
   _LOG_LEVEL: "info" # ログレベル（debug, info, warn, error, fatal）
   _LOG_FORMAT: "text" # ログフォーマット（text, json）
   _CPU: "1" # CPU割り当て（例：1, 2, 4）
@@ -65,11 +54,9 @@ substitutions:
   _MIN_INSTANCES: "1" # 最小インスタンス数
   _MAX_INSTANCES: "5" # 最大インスタンス数
   _TIMEOUT: "300s" # リクエストタイムアウト
-  _CONCURRENCY: "80" # コンカレンシー設定
-  _MIN_REQUEST_CONCURRENCY: "10" # 最小リクエスト同時実行数
   _POSTGRES_MAX_TRIES: "60" # PostgreSQL接続最大試行回数
   _POSTGRES_SLEEP_TIME: "2" # PostgreSQL接続試行間隔（秒）
   _POSTGRES_CONTINUE_ON_ERROR: "false" # PostgreSQL接続エラー時に続行するかどうか
 
-# タイムアウト設定
-timeout: "1800s"
+# タイムアウト設定を1時間に延長
+timeout: "3600s"
