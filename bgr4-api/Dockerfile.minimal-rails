@@ -1,0 +1,34 @@
+FROM ruby:3.3.0-slim
+
+# 必要最小限のパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_LOG_TO_STDOUT=true
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
+
+# 最小限のRailsアプリケーションを作成
+RUN gem install rails -v 8.0.1 && \
+    rails new . --minimal --api --skip-active-record --skip-test --skip-system-test --skip-jbuilder
+
+# config/routes.rbを上書きして簡単なレスポンスを返すようにする
+RUN echo 'Rails.application.routes.draw do\n  get "/", to: proc { |env| [200, {"Content-Type" => "text/plain"}, ["Hello from Rails App on Cloud Run!"]] }\nend' > config/routes.rb
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash\nset -e\necho "Starting minimal Rails application..."\nbundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}' > start.sh
+RUN chmod +x start.sh
+
+# ポートを公開
+EXPOSE 8080
+
+# 起動コマンド
+CMD ["./start.sh"] 

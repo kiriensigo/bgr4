@@ -1,0 +1,77 @@
+FROM ruby:3.3.0-slim
+
+# パフォーマンスのためのキャッシュ設定
+ENV BUNDLE_DEPLOYMENT=1
+ENV BUNDLE_WITHOUT=development:test
+ENV RAILS_ENV=production
+ENV RAILS_LOG_TO_STDOUT=true
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV PORT=8080
+# 本番環境では、実際の値を環境変数として外部から指定することを推奨
+ENV RAILS_MASTER_KEY=cf8dee1c404263fe64df934d04335c9f
+ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
+ENV DISABLE_DATABASE_CONNECTION=true
+
+# 必要最小限のパッケージをインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# GemfileとGemfile.lockをコピー
+COPY Gemfile Gemfile.lock ./
+
+# Bundlerのインストールとキャッシュ済み依存関係のインストール
+RUN gem install bundler && \
+    bundle config set --local without 'development test' && \
+    bundle install --jobs 4 --retry 3 && \
+    bundle clean --force
+
+# アプリケーションコードのコピー
+COPY . .
+
+# データベース接続なしでも動作するための設定
+RUN mkdir -p config/initializers
+RUN echo 'Rails.application.config.after_initialize do\n  if ENV["DISABLE_DATABASE_CONNECTION"] == "true"\n    ActiveRecord::Base.establish_connection adapter: "nulldb", schema: "schema.rb"\n    puts "Database connection is disabled. Using nulldb adapter."\n  end\nend' > config/initializers/disable_database.rb
+
+# nulldb adapterを追加
+RUN bundle add activerecord-nulldb-adapter --group production
+
+# 高速化のためにアセットのプリコンパイルとキャッシュのウォームアップを行う
+RUN if [ -d "app/assets" ]; then bundle exec rails assets:precompile; fi
+
+# 起動スクリプトの作成（シンプル化して起動を高速化）
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+echo "Starting Rails in minimal mode..."\n\
+rm -f /app/tmp/pids/server.pid\n\
+\n\
+# 環境変数確認（デバッグ用）\n\
+echo "RAILS_ENV=${RAILS_ENV}"\n\
+echo "PORT=${PORT}"\n\
+echo "RAILS_MASTER_KEY is set: $([ -n "$RAILS_MASTER_KEY" ] && echo "Yes" || echo "No")"\n\
+echo "SECRET_KEY_BASE is set: $([ -n "$SECRET_KEY_BASE" ] && echo "Yes" || echo "No")"\n\
+echo "DISABLE_DATABASE_CONNECTION=${DISABLE_DATABASE_CONNECTION}"\n\
+\n\
+# Railsサーバーを起動\n\
+exec bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}\n\
+' > /app/start.sh
+
+# 実行権限の付与
+RUN chmod +x /app/start.sh
+
+# 必要なディレクトリの作成と権限設定
+RUN mkdir -p /app/tmp/pids /app/log && \
+    chmod -R 777 /app/tmp /app/log
+
+# ポート公開
+EXPOSE 8080
+
+# 起動コマンド
+CMD ["/app/start.sh"] 

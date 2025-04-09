@@ -1,0 +1,39 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+
+# Gemfileの作成
+RUN echo "source 'https://rubygems.org'" > Gemfile && \
+    echo "gem 'rack', '~> 3.0'" >> Gemfile && \
+    echo "gem 'puma', '~> 6.0'" >> Gemfile
+
+# Gemのインストール
+RUN bundle install
+
+# 最小限のRackアプリケーションの作成
+RUN echo 'require "rack"\n\n' > config.ru && \
+    echo 'app = lambda do |env|' >> config.ru && \
+    echo '  [200, { "Content-Type" => "text/plain" }, ["Hello from BGR4 Minimal Rack Application!"]]' >> config.ru && \
+    echo 'end\n\n' >> config.ru && \
+    echo 'run app' >> config.ru
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/sh' > start.sh && \
+    echo 'bundle exec puma -p $PORT config.ru' >> start.sh && \
+    chmod +x start.sh
+
+# ポートの公開
+EXPOSE 8080
+
+# アプリケーションの起動
+CMD ["./start.sh"] 
