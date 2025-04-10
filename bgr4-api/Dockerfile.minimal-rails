@@ -1,8 +1,9 @@
 FROM ruby:3.3.0-slim
 
-# 必要最小限のパッケージのインストール
+# 必要なパッケージのインストール（Gitを含む）
 RUN apt-get update && apt-get install -y \
     build-essential \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -21,10 +22,10 @@ RUN gem install rails -v 8.0.1 && \
     rails new . --minimal --api --skip-active-record --skip-test --skip-system-test --skip-jbuilder
 
 # config/routes.rbを上書きして簡単なレスポンスを返すようにする
-RUN echo 'Rails.application.routes.draw do\n  get "/", to: proc { |env| [200, {"Content-Type" => "text/plain"}, ["Hello from Rails App on Cloud Run!"]] }\nend' > config/routes.rb
+RUN echo 'Rails.application.routes.draw do\n  root to: proc { |env| [200, {"Content-Type" => "text/plain"}, ["BGRv4 Minimal Rails API is running!"]] }\n  get "*path", to: proc { |env| [200, {"Content-Type" => "application/json"}, ["{\"status\":\"ok\",\"message\":\"BGRv4 API endpoint\",\"path\":\"#{env["PATH_INFO"]}\"}"]] }\nend' > config/routes.rb
 
-# 起動スクリプトの作成
-RUN echo '#!/bin/bash\nset -e\necho "Starting minimal Rails application..."\nbundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}' > start.sh
+# 起動スクリプトの作成（エラーハンドリングを強化）
+RUN echo '#!/bin/bash\nset -e\necho "Starting minimal Rails application..."\necho "Environment: $RAILS_ENV"\necho "Port: $PORT"\necho "SECRET_KEY_BASE is set: $([ -n "$SECRET_KEY_BASE" ] && echo Yes || echo No)"\necho "RAILS_MASTER_KEY is set: $([ -n "$RAILS_MASTER_KEY" ] && echo Yes || echo No)"\necho "Starting Rails in minimal mode..."\nexec bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}\n' > start.sh
 RUN chmod +x start.sh
 
 # ポートを公開

@@ -1,0 +1,76 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    postgresql-client \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /rails
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+
+# Gemfileとロックファイルのコピー
+COPY Gemfile Gemfile.lock ./
+
+# 依存関係のインストール
+RUN bundle config set --local without 'development test'
+RUN bundle install --jobs 4 --retry 3
+
+# アプリケーションコードのコピー
+COPY . .
+
+# compileアセット（APIモードなので必要なし、念のため記述）
+RUN bundle exec rails assets:precompile || true
+
+# DBマイグレーションとセットアップスクリプトを作成
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+echo "Starting Rails application in $RAILS_ENV mode"\n\
+\n\
+# 環境変数のチェック\n\
+if [ "$DISABLE_DATABASE_CONNECTION" = "true" ]; then\n\
+  echo "Database connection is disabled. Running in API-only mode."\n\
+elif [ -z "$DATABASE_URL" ]; then\n\
+  echo "WARNING: DATABASE_URL is not set. Running without database."\n\
+  export DISABLE_DATABASE_CONNECTION=true\n\
+else\n\
+  echo "Waiting for database connection..."\n\
+  # PostgreSQLへの接続テスト\n\
+  timeout=30\n\
+  while ! pg_isready -h $(echo $DATABASE_URL | sed -E "s/.*@([^:]+):.*/\\1/") > /dev/null 2>&1; do\n\
+    timeout=$((timeout - 1))\n\
+    if [ $timeout -eq 0 ]; then\n\
+      echo "Could not connect to database, falling back to API-only mode"\n\
+      export DISABLE_DATABASE_CONNECTION=true\n\
+      break\n\
+    fi\n\
+    echo "Waiting for database... $timeout seconds left"\n\
+    sleep 1\n\
+  done\n\
+  \n\
+  if [ "$DISABLE_DATABASE_CONNECTION" != "true" ]; then\n\
+    echo "Database is ready. Running migrations..."\n\
+    bundle exec rails db:migrate\n\
+  fi\n\
+fi\n\
+\n\
+echo "Starting Rails server on port $PORT"\n\
+bundle exec rails server -b 0.0.0.0 -p ${PORT}' > /rails/start.sh
+
+# 実行権限を設定
+RUN chmod +x /rails/start.sh
+
+# ポートを公開
+EXPOSE 8080
+
+# アプリケーションの起動
+CMD ["/rails/start.sh"] 
