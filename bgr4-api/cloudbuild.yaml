@@ -14,7 +14,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/bgr4-api:$COMMIT_SHA"]
 
-  # Cloud Runへのデプロイ（最適化パラメータ追加）
+  # Cloud Runへのデプロイ（データベース接続情報を含む）
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -25,10 +25,12 @@ steps:
       - "--region=asia-northeast1"
       - "--platform=managed"
       - "--allow-unauthenticated"
-      - "--set-env-vars=PORT=8080,RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true"
-      - "--add-cloudsql-instances=$PROJECT_ID:asia-northeast1:bgr4-db-instance"
+      - "--set-env-vars=PORT=8080,RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true"
+      - "--set-env-vars=SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
+      - "--set-env-vars=DATABASE_URL=postgres://${_DB_USER}:${_DB_PASSWORD}@${_DB_HOST}:5432/${_DB_NAME}"
+      - "--add-cloudsql-instances=$PROJECT_ID:asia-northeast1:${_DB_INSTANCE}"
       - "--cpu=1"
-      - "--memory=512Mi"
+      - "--memory=1Gi"
       - "--min-instances=1"
       - "--max-instances=10"
       - "--timeout=300s"
@@ -39,6 +41,14 @@ steps:
 images:
   - "gcr.io/$PROJECT_ID/bgr4-api:$COMMIT_SHA"
   - "gcr.io/$PROJECT_ID/bgr4-api:latest"
+
+# サブスティテューション変数（Secret Managerから取得する変数）
+substitutions:
+  _DB_USER: "postgres"
+  _DB_PASSWORD: "dummy-password" # 本番環境では Secret Manager から取得したものを使用
+  _DB_HOST: "10.0.0.3" # 実際の内部IPアドレスに置き換え
+  _DB_NAME: "bgr4_production"
+  _DB_INSTANCE: "bgr4-db-instance"
 
 # ビルドプロセスのタイムアウト設定（ビルドに時間がかかる場合に対応）
 timeout: "3600s"

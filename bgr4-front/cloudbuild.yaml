@@ -42,6 +42,6 @@ images:
   - "gcr.io/$PROJECT_ID/bgr4-front"
 
 substitutions:
-  _API_URL: "https://bgr4-api-ultra-minimal-y2i5irl3rq-an.a.run.app" # APIのURLを指定（デプロイ後に更新）
+  _API_URL: "https://bgr4-api-y2i5irl3rq-an.a.run.app" # APIのURLを更新（デプロイ後に更新）
 
 timeout: 1800s

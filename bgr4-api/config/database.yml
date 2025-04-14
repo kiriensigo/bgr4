@@ -18,14 +18,14 @@ default: &default
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  username: postgres
-  password: postgres
-  host: localhost
-  port: 5432
 
 development:
   <<: *default
-  database: bgr4_api_development
+  database: bgr4_development
+  username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DB_PORT") { 5432 } %>
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
@@ -59,11 +59,11 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: bgr4_api_test
-  username: postgres
-  password: postgres
-  host: localhost
-  port: 5432
+  database: bgr4_test
+  username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DB_PORT") { 5432 } %>
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -87,20 +87,20 @@ test:
 #
 production:
   <<: *default
-  # Cloud Run上でのCloud SQL接続設定
-  # DATABASE_URLが設定されている場合はそれを優先
   url: <%= ENV['DATABASE_URL'] %>
-
-  # ソケット接続（Cloud SQL Proxy経由）
-  # Cloud SQLとの接続にはソケットを使用することを推奨
-  # <%= ENV['DB_SOCKET_DIR'] %>/cloudsql/<%= ENV['CLOUD_SQL_CONNECTION_NAME'] %>
-
-  # コネクションプール設定
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-
-  # PostgreSQL 9.6以降でのパフォーマンス最適化
-  variables:
-    statement_timeout: 5000 # ミリ秒
+  # バックアップ接続設定（DATABASE_URLが提供されていない場合）
+  database: <%= ENV.fetch("DB_NAME") { "bgr4_production" } %>
+  username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "" } %>
+  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DB_PORT") { 5432 } %>
+  # Cloud SQL固有の設定
+  sslmode: <%= ENV.fetch("DB_SSLMODE") { "disable" } %>
+  # 本番環境に適したパフォーマンス設定
+  pool: <%= ENV.fetch("DB_POOL") { 25 } %> # より多くの同時接続
+  checkout_timeout: 5 # 接続タイムアウト
+  reaping_frequency: 10 # 10秒ごとに死んだ接続を刈り取る
+  prepared_statements: true # プリペアドステートメントを使用
 
 # ※ production環境では、以下の環境変数が必要です:
 # DATABASE_URL - 完全なPostgreSQL接続URL（例: postgres://user:password@host:port/dbname）
