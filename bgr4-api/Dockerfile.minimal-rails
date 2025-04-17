@@ -16,17 +16,64 @@ ENV RAILS_ENV=production
 ENV RAILS_LOG_TO_STDOUT=true
 ENV RAILS_SERVE_STATIC_FILES=true
 ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
+ENV DISABLE_DATABASE_CONNECTION=true
 
 # 最小限のRailsアプリケーションを作成
 RUN gem install rails -v 8.0.1 && \
     rails new . --minimal --api --skip-active-record --skip-test --skip-system-test --skip-jbuilder
 
-# config/routes.rbを上書きして簡単なレスポンスを返すようにする
-RUN echo 'Rails.application.routes.draw do\n  root to: proc { |env| [200, {"Content-Type" => "text/plain"}, ["BGRv4 Minimal Rails API is running!"]] }\n  get "*path", to: proc { |env| [200, {"Content-Type" => "application/json"}, ["{\"status\":\"ok\",\"message\":\"BGRv4 API endpoint\",\"path\":\"#{env["PATH_INFO"]}\"}"]] }\nend' > config/routes.rb
+# routes.rbを作成（エスケープ問題を避けるために別々のRUN命令を使用）
+RUN echo 'Rails.application.routes.draw do' > config/routes.rb && \
+    echo '  root to: proc { |env| [200, {"Content-Type" => "text/plain"}, ["BGRv4 API is running!"]] }' >> config/routes.rb && \
+    echo '' >> config/routes.rb && \
+    echo '  namespace :api do' >> config/routes.rb && \
+    echo '    namespace :v1 do' >> config/routes.rb && \
+    echo '      # ゲーム関連のエンドポイント' >> config/routes.rb && \
+    echo '      get "/games", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","data":{"games":[],"pagination":{"total_count":0,"total_pages":1,"current_page":1,"per_page":24}}})]] }' >> config/routes.rb && \
+    echo '      get "/games/:id", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","data":{"id":"sample","name":"サンプルゲーム","description":"このゲームはサンプルです。","image_url":"https://via.placeholder.com/300","min_players":2,"max_players":4,"play_time":30}})]] }' >> config/routes.rb && \
+    echo '      get "/games/search", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","data":{"games":[],"pagination":{"total_count":0,"total_pages":1,"current_page":1,"per_page":24}}})]] }' >> config/routes.rb && \
+    echo '' >> config/routes.rb && \
+    echo '      # レビュー関連のエンドポイント' >> config/routes.rb && \
+    echo '      get "/reviews", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","data":{"reviews":[],"pagination":{"total_count":0,"total_pages":1,"current_page":1,"per_page":24}}})]] }' >> config/routes.rb && \
+    echo '' >> config/routes.rb && \
+    echo '      # ユーザー認証関連のエンドポイント' >> config/routes.rb && \
+    echo '      post "/auth/sign_in", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","data":{"token":"sample-token","user":{"id":1,"name":"サンプルユーザー","email":"sample@example.com"}}})]] }' >> config/routes.rb && \
+    echo '      post "/auth/sign_up", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","data":{"token":"sample-token","user":{"id":1,"name":"サンプルユーザー","email":"sample@example.com"}}})]] }' >> config/routes.rb && \
+    echo '' >> config/routes.rb && \
+    echo '      # その他のワイルドカードルート' >> config/routes.rb && \
+    echo '      get "*path", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","message":"BGRv4 API endpoint","path":"#{env["PATH_INFO"]}"})]] }' >> config/routes.rb && \
+    echo '    end' >> config/routes.rb && \
+    echo '  end' >> config/routes.rb && \
+    echo '' >> config/routes.rb && \
+    echo '  # ルートパス以外のすべてのリクエストに対するフォールバック' >> config/routes.rb && \
+    echo '  get "*path", to: proc { |env| [200, {"Content-Type" => "application/json"}, [%({"status":"ok","message":"BGRv4 API endpoint","path":"#{env["PATH_INFO"]}"})]] }' >> config/routes.rb && \
+    echo 'end' >> config/routes.rb
+
+# CORSの設定ファイルを作成
+RUN echo 'Rails.application.config.middleware.insert_before 0, Rack::Cors do' > config/initializers/cors.rb && \
+    echo '  allow do' >> config/initializers/cors.rb && \
+    echo '    origins "*"' >> config/initializers/cors.rb && \
+    echo '    resource "*",' >> config/initializers/cors.rb && \
+    echo '      headers: :any,' >> config/initializers/cors.rb && \
+    echo '      methods: [:get, :post, :put, :patch, :delete, :options, :head]' >> config/initializers/cors.rb && \
+    echo '  end' >> config/initializers/cors.rb && \
+    echo 'end' >> config/initializers/cors.rb
+
+# rack-corsのインストール
+RUN bundle add rack-cors
 
 # 起動スクリプトの作成（エラーハンドリングを強化）
-RUN echo '#!/bin/bash\nset -e\necho "Starting minimal Rails application..."\necho "Environment: $RAILS_ENV"\necho "Port: $PORT"\necho "SECRET_KEY_BASE is set: $([ -n "$SECRET_KEY_BASE" ] && echo Yes || echo No)"\necho "RAILS_MASTER_KEY is set: $([ -n "$RAILS_MASTER_KEY" ] && echo Yes || echo No)"\necho "Starting Rails in minimal mode..."\nexec bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}\n' > start.sh
-RUN chmod +x start.sh
+RUN echo '#!/bin/bash' > start.sh && \
+    echo 'set -e' >> start.sh && \
+    echo 'echo "Starting BGRv4 API application..."' >> start.sh && \
+    echo 'echo "Environment: $RAILS_ENV"' >> start.sh && \
+    echo 'echo "Port: $PORT"' >> start.sh && \
+    echo 'echo "Database Connection: $([ "$DISABLE_DATABASE_CONNECTION" == "true" ] && echo "Disabled" || echo "Enabled")"' >> start.sh && \
+    echo 'echo "SECRET_KEY_BASE is set: $([ -n "$SECRET_KEY_BASE" ] && echo Yes || echo No)"' >> start.sh && \
+    echo 'echo "RAILS_MASTER_KEY is set: $([ -n "$RAILS_MASTER_KEY" ] && echo Yes || echo No)"' >> start.sh && \
+    echo 'echo "Starting Rails in API mode..."' >> start.sh && \
+    echo 'exec bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}' >> start.sh && \
+    chmod +x start.sh
 
 # ポートを公開
 EXPOSE 8080
