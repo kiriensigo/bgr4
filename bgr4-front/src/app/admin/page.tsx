@@ -4,104 +4,124 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Button,
-  Container,
   Typography,
+  Container,
+  Button,
   Box,
-  Card,
-  CardContent,
-  Grid,
   CircularProgress,
+  Paper,
   List,
   ListItem,
   ListItemText,
-  Paper,
   Divider,
 } from "@mui/material";
+import LogoutIcon from "@mui/icons-material/Logout";
+import GamesIcon from "@mui/icons-material/Games";
+import PeopleIcon from "@mui/icons-material/People";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
+import DashboardIcon from "@mui/icons-material/Dashboard";
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, isLoading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      // 管理者権限を確認
-      setIsAdmin(user.is_admin === true);
-      if (!user.is_admin) {
-        // 管理者でない場合はホームページにリダイレクト
+    if (!authLoading) {
+      setLoading(false);
+      if (!user || !user.is_admin) {
         router.push("/");
       }
-    } else if (!authLoading && !user) {
-      // ログインしていない場合はログインページにリダイレクト
-      router.push("/login");
     }
-  }, [authLoading, user, router]);
+  }, [user, authLoading, router]);
 
-  if (authLoading || !isAdmin) {
+  const handleLogout = () => {
+    router.push("/");
+  };
+
+  const navigateTo = (path: string) => {
+    router.push(path);
+  };
+
+  if (loading || authLoading) {
     return (
-      <Container sx={{ py: 4, display: "flex", justifyContent: "center" }}>
+      <Container
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "80vh",
+        }}
+      >
         <CircularProgress />
       </Container>
     );
   }
 
+  if (!user || !user.is_admin) {
+    return null;
+  }
+
+  const adminLinks = [
+    { title: "ゲーム管理", icon: <GamesIcon />, path: "/admin/games" },
+    { title: "ユーザー管理", icon: <PeopleIcon />, path: "/admin/users" },
+    { title: "レビュー管理", icon: <StarBorderIcon />, path: "/admin/reviews" },
+    {
+      title: "ダッシュボード",
+      icon: <DashboardIcon />,
+      path: "/admin/dashboard",
+    },
+  ];
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        管理者ページ
-      </Typography>
+      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography variant="h4" component="h1" gutterBottom>
+            管理者ページ
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+          >
+            ログアウト
+          </Button>
+        </Box>
 
-      <Box mt={4}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  サイト管理
-                </Typography>
-                <List>
-                  <ListItem
-                    button
-                    component="a"
-                    href="/admin/edit-histories"
-                    divider
-                  >
-                    <ListItemText primary="ゲーム編集履歴" />
-                  </ListItem>
-                  <ListItem
-                    button
-                    component="a"
-                    href="/admin/bgg-top100"
-                    divider
-                  >
-                    <ListItemText primary="BGG TOP 100 ゲーム登録" />
-                  </ListItem>
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
+        <Typography variant="body1" gutterBottom>
+          ようこそ、{user.name}さん！
+        </Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+          管理者機能にアクセスできます。
+        </Typography>
 
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  システム情報
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2, bgcolor: "#f5f5f5" }}>
-                  <Typography variant="body2">
-                    ユーザー名: {user.name}
-                  </Typography>
-                  <Typography variant="body2">メール: {user.email}</Typography>
-                  <Typography variant="body2">
-                    権限: {user.is_admin ? "管理者" : "一般ユーザー"}
-                  </Typography>
-                </Paper>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Box>
+        <List>
+          {adminLinks.map((link, index) => (
+            <Box key={link.path}>
+              <ListItem
+                button
+                onClick={() => navigateTo(link.path)}
+                sx={{
+                  borderRadius: 1,
+                  "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
+                }}
+              >
+                <Box sx={{ mr: 2 }}>{link.icon}</Box>
+                <ListItemText primary={link.title} />
+              </ListItem>
+              {index < adminLinks.length - 1 && <Divider component="li" />}
+            </Box>
+          ))}
+        </List>
+      </Paper>
     </Container>
   );
 }

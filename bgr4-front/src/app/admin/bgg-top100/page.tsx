@@ -34,7 +34,7 @@ import ErrorIcon from "@mui/icons-material/Error";
 import InfoIcon from "@mui/icons-material/Info";
 
 export default function BggTop100Page() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [topGames, setTopGames] = useState<any[]>([]);
@@ -52,18 +52,18 @@ export default function BggTop100Page() {
   const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!isLoading && user) {
       // 管理者権限を確認
       setIsAdmin(user.is_admin === true);
       if (!user.is_admin) {
         // 管理者でない場合はホームページにリダイレクト
         router.push("/");
       }
-    } else if (!authLoading && !user) {
+    } else if (!isLoading && !user) {
       // ログインしていない場合はログインページにリダイレクト
       router.push("/login");
     }
-  }, [authLoading, user, router]);
+  }, [isLoading, user, router]);
 
   const fetchTopGames = useCallback(async () => {
     setLoading(true);
@@ -156,7 +156,7 @@ export default function BggTop100Page() {
     setIsRegistering(false);
   };
 
-  if (authLoading || !isAdmin) {
+  if (isLoading || !isAdmin) {
     return (
       <Container sx={{ py: 4, display: "flex", justifyContent: "center" }}>
         <CircularProgress />
