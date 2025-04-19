@@ -85,8 +85,4 @@ images:
   - "gcr.io/$PROJECT_ID/bgr4-api:v1"
   - "gcr.io/$PROJECT_ID/bgr4-front:v1"
 
-substitutions:
-  _RAILS_MASTER_KEY: "" # Secret Managerで管理するか、デプロイ時に指定
-  _DATABASE_URL: "" # Cloud SQLの接続文字列。例: postgresql://postgres:password@/bgr4_production?host=/cloudsql/PROJECT_ID:REGION:INSTANCE_NAME
-
 timeout: 3600s

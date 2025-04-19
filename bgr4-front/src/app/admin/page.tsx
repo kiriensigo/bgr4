@@ -107,11 +107,11 @@ export default function AdminPage() {
           {adminLinks.map((link, index) => (
             <Box key={link.path}>
               <ListItem
-                button
                 onClick={() => navigateTo(link.path)}
                 sx={{
                   borderRadius: 1,
                   "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.04)" },
+                  cursor: "pointer",
                 }}
               >
                 <Box sx={{ mr: 2 }}>{link.icon}</Box>
