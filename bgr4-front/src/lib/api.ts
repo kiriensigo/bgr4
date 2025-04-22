@@ -48,7 +48,7 @@ export const gameCache: Record<string, { data: Game; timestamp: number }> = {};
 // キャッシュの有効期限（15分に延長）
 export const CACHE_EXPIRY = 15 * 60 * 1000;
 
-// 進行中のリクエストを追跡する（重複リクエスト削減用）
+// 型定義を追加: pendingRequestsの型を適切に定義
 const pendingRequests: Record<string, Promise<any>> = {};
 
 // デバッグ用のAPIリクエスト関数をラップする
@@ -220,7 +220,7 @@ export async function getGames(
   const cacheKey = `getGames_${page}_${per_page}_${sort_by}`;
 
   // 同一リクエストが進行中の場合はそれを再利用
-  if (pendingRequests[cacheKey]) {
+  if (cacheKey in pendingRequests) {
     console.log(`Reusing pending request for ${cacheKey}`);
     return pendingRequests[cacheKey];
   }
@@ -292,6 +292,13 @@ export async function getGames(
         } catch (error) {
           console.error("API error in getGames:", error);
           reject(error);
+        } finally {
+          // リクエスト完了後にpendingRequestsから削除
+          setTimeout(() => {
+            if (cacheKey in pendingRequests) {
+              delete pendingRequests[cacheKey];
+            }
+          }, 1000);
         }
       }
     );
@@ -299,13 +306,7 @@ export async function getGames(
     // 進行中のリクエストとして登録
     pendingRequests[cacheKey] = requestPromise;
 
-    // リクエスト完了後にpendingRequestsから削除（1秒後）
-    const result = await requestPromise;
-    setTimeout(() => {
-      delete pendingRequests[cacheKey];
-    }, 1000);
-
-    return result;
+    return await requestPromise;
   } catch (error) {
     // エラー時もpendingRequestsからは削除
     delete pendingRequests[cacheKey];
@@ -649,8 +650,8 @@ export const postReview = async (
     console.log("Review data:", reviewData);
 
     // IDにnon-ASCII文字が含まれている場合はエンコードする
-    const encodedGameId = /[^\x00-\x7F]/.test(gameId) 
-      ? encodeURIComponent(gameId) 
+    const encodedGameId = /[^\x00-\x7F]/.test(gameId)
+      ? encodeURIComponent(gameId)
       : gameId;
 
     // ヘッダーを単純化して送信
@@ -712,10 +713,10 @@ export const postReview = async (
 export async function getReviews(gameId: string) {
   try {
     // IDにnon-ASCII文字が含まれている場合はエンコードする
-    const encodedGameId = /[^\x00-\x7F]/.test(gameId) 
-      ? encodeURIComponent(gameId) 
+    const encodedGameId = /[^\x00-\x7F]/.test(gameId)
+      ? encodeURIComponent(gameId)
       : gameId;
-      
+
     const response = await fetchWithDebug(
       `${getApiBaseUrl()}/games/${encodedGameId}/reviews?exclude_system=true`,
       {
