@@ -32,11 +32,12 @@ steps:
       - "--max-instances=2"
       - "--timeout=300s"
       - "--set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true"
-      - "--set-env-vars=RAILS_MASTER_KEY=cf8dee1c404263fe64df934d04335c9f,SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
+      - "--set-secrets=RAILS_MASTER_KEY=rails-master-key:latest"
+      - "--set-env-vars=SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
 
 # ビルドで生成されるイメージ
 images:
   - "gcr.io/$PROJECT_ID/bgr4-api-rails:v1"
 
 # タイムアウト設定（ビルドが長時間かかる場合のため）
-timeout: "3600s" 
+timeout: "3600s"

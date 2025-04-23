@@ -15,7 +15,9 @@ ENV PORT=8080
 ENV RAILS_SERVE_STATIC_FILES=true
 ENV RAILS_LOG_TO_STDOUT=true
 # ※ 本番環境では、実際の値を環境変数として外部から指定することを推奨します
-ENV RAILS_MASTER_KEY=cf8dee1c404263fe64df934d04335c9f
+# ENV RAILS_MASTER_KEY=cf8dee1c404263fe64df934d04335c9f
+# 実行時に環境変数から取得するように変更
+ENV RAILS_MASTER_KEY=${RAILS_MASTER_KEY}
 ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
 
 # GemfileとGemfile.lockをコピー

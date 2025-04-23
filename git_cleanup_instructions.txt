@@ -1,0 +1,59 @@
+# マスターキーを履歴から削除する手順
+
+## 1. GitのBFG Repo-Cleanerをインストール
+BFG Repo-Cleaner（https://rtyley.github.io/bfg-repo-cleaner/）をダウンロードします。
+これはGit履歴から特定のデータを削除するための効率的なツールです。
+
+## 2. マスターキーを含むテキストファイルを作成
+`secrets.txt`という名前のファイルを作成し、以下の内容を記載します：
+```
+cf8dee1c404263fe64df934d04335c9f
+```
+
+## 3. リポジトリをミラーリングしてクリーンアップ
+以下のコマンドを順に実行します：
+
+```powershell
+# 作業用の一時ディレクトリを作成
+mkdir C:\temp\git-cleanup
+cd C:\temp\git-cleanup
+
+# リポジトリをミラーとしてクローン
+git clone --mirror git@github.com:your-username/bgr4.git bgr4.git
+cd bgr4.git
+
+# BFG Repo-Cleanerを使ってマスターキーを含むテキストを置換
+java -jar C:\path\to\bfg.jar --replace-text C:\path\to\secrets.txt .
+
+# リポジトリをクリーンアップ
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# 変更をプッシュ
+git push
+```
+
+## 4. Google Cloud Secretsマネージャーへキーを保存
+Google Cloudのシークレットマネージャーにマスターキーを保存します：
+
+```powershell
+# シークレットを作成（存在しない場合）
+gcloud secrets create rails-master-key --replication-policy="automatic"
+
+# 最新バージョンのシークレットを追加
+echo "cf8dee1c404263fe64df934d04335c9f" | gcloud secrets versions add rails-master-key --data-file=-
+```
+
+## 5. 既存のリポジトリの再クローン
+すべての開発者は既存のリポジトリを再クローンする必要があります。
+
+## 6. 重要な注意事項
+- この操作はGitの履歴を書き換えるため、チーム全体で協調が必要です
+- master.keyファイルは.gitignoreにすでに含まれていることを確認してください
+- デプロイパイプラインがシークレットマネージャーからmaster keyを取得するように設定されていることを確認してください
+
+## 7. 暗号化キーの管理ベストプラクティス
+- 本番環境のキーをソースコード管理に含めない
+- 環境ごとに異なるキーを使用する
+- 定期的にキーをローテーションする
+- アクセス権限を適切に設定する
