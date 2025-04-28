@@ -6,6 +6,7 @@ RUN apt-get update -qq && apt-get install -y \
     libpq-dev \
     curl \
     gnupg2 \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -19,16 +20,37 @@ ENV RAILS_SERVE_STATIC_FILES=true
 ENV RAILS_LOG_TO_STDOUT=true
 ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
 
-# 最小限のRailsアプリケーションを作成
-RUN rails new . --minimal --api --skip-active-record --skip-test --skip-system-test --skip-jbuilder
+# Railsのインストール
+RUN gem install rails -v 7.1.3
 
-# ゲームデータ用のファイルを作成
+# 最小限のRailsアプリケーションを作成
+RUN rails new . --minimal --api --skip-active-record --skip-test --skip-system-test --skip-jbuilder --skip-git
+
+# 必要なディレクトリを作成
 RUN mkdir -p app/controllers/api/v1
 RUN mkdir -p app/models
+
+# アプリケーションコントローラーの作成
+RUN echo 'class ApplicationController < ActionController::API' > app/controllers/application_controller.rb
+RUN echo '  def health' >> app/controllers/application_controller.rb
+RUN echo '    render json: { message: "BGRv4 API is running!" }' >> app/controllers/application_controller.rb
+RUN echo '  end' >> app/controllers/application_controller.rb
+RUN echo 'end' >> app/controllers/application_controller.rb
 
 # APIコントローラーの作成
 RUN echo 'module Api' > app/controllers/api/api_controller.rb
 RUN echo '  class ApiController < ActionController::API' >> app/controllers/api/api_controller.rb
+RUN echo '    # CORSを許可する' >> app/controllers/api/api_controller.rb
+RUN echo '    before_action :set_cors_headers' >> app/controllers/api/api_controller.rb
+RUN echo '' >> app/controllers/api/api_controller.rb
+RUN echo '    private' >> app/controllers/api/api_controller.rb
+RUN echo '' >> app/controllers/api/api_controller.rb
+RUN echo '    def set_cors_headers' >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Allow-Origin'] = '*'" >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'" >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization, X-Requested-With'" >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Max-Age'] = '1728000'" >> app/controllers/api/api_controller.rb
+RUN echo '    end' >> app/controllers/api/api_controller.rb
 RUN echo '  end' >> app/controllers/api/api_controller.rb
 RUN echo 'end' >> app/controllers/api/api_controller.rb
 
@@ -45,29 +67,23 @@ RUN echo 'module Api' > app/controllers/api/v1/games_controller.rb
 RUN echo '  module V1' >> app/controllers/api/v1/games_controller.rb
 RUN echo '    class GamesController < V1Controller' >> app/controllers/api/v1/games_controller.rb
 RUN echo '      def index' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        page = (params[:page] || 1).to_i' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        per_page = (params[:per_page] || 24).to_i' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        sort_by = params[:sort_by] || "review_date"' >> app/controllers/api/v1/games_controller.rb
-RUN echo '' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        games = Game.all(page, per_page, sort_by)' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        total_count = Game.count' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        total_pages = (total_count.to_f / per_page).ceil' >> app/controllers/api/v1/games_controller.rb
-RUN echo '' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        render json: {' >> app/controllers/api/v1/games_controller.rb
-RUN echo '          games: games,' >> app/controllers/api/v1/games_controller.rb
-RUN echo '          pagination: {' >> app/controllers/api/v1/games_controller.rb
-RUN echo '            total_count: total_count,' >> app/controllers/api/v1/games_controller.rb
-RUN echo '            total_pages: total_pages,' >> app/controllers/api/v1/games_controller.rb
-RUN echo '            current_page: page,' >> app/controllers/api/v1/games_controller.rb
-RUN echo '            per_page: per_page' >> app/controllers/api/v1/games_controller.rb
-RUN echo '          }' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        games = [' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          { id: 1, name: "Catan", description: "A popular board game", rating: 4.5 },' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          { id: 2, name: "Ticket to Ride", description: "Railway-themed board game", rating: 4.7 },' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          { id: 3, name: "Pandemic", description: "Cooperative board game", rating: 4.6 }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        ]' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        render json: { games: games, total: 3, pages: 1 }' >> app/controllers/api/v1/games_controller.rb
 RUN echo '      end' >> app/controllers/api/v1/games_controller.rb
 RUN echo '' >> app/controllers/api/v1/games_controller.rb
 RUN echo '      def show' >> app/controllers/api/v1/games_controller.rb
-RUN echo '        game = Game.find(params[:id])' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        games = {' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          "1" => { id: 1, name: "Catan", description: "A popular board game", rating: 4.5 },' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          "2" => { id: 2, name: "Ticket to Ride", description: "Railway-themed board game", rating: 4.7 },' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          "3" => { id: 3, name: "Pandemic", description: "Cooperative board game", rating: 4.6 }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        game = games[params[:id].to_s]' >> app/controllers/api/v1/games_controller.rb
 RUN echo '        if game' >> app/controllers/api/v1/games_controller.rb
-RUN echo '          render json: { game: game }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          render json: game' >> app/controllers/api/v1/games_controller.rb
 RUN echo '        else' >> app/controllers/api/v1/games_controller.rb
 RUN echo '          render json: { error: "Game not found" }, status: :not_found' >> app/controllers/api/v1/games_controller.rb
 RUN echo '        end' >> app/controllers/api/v1/games_controller.rb
@@ -81,22 +97,34 @@ RUN echo 'module Api' > app/controllers/api/v1/reviews_controller.rb
 RUN echo '  module V1' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '    class ReviewsController < V1Controller' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '      def index' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        page = (params[:page] || 1).to_i' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        per_page = (params[:per_page] || 24).to_i' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        game_id = params[:game_id]' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        if game_id' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          reviews = [' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            { id: 1, game_id: game_id.to_i, user: "User1", rating: 4, comment: "Great game!" },' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            { id: 2, game_id: game_id.to_i, user: "User2", rating: 5, comment: "Excellent!" }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          ]' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        else' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          reviews = [' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            { id: 1, game_id: 1, user: "User1", rating: 4, comment: "Great game!" },' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            { id: 2, game_id: 1, user: "User2", rating: 5, comment: "Excellent!" },' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            { id: 3, game_id: 2, user: "User3", rating: 4, comment: "Very fun!" }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          ]' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        render json: { reviews: reviews, total: reviews.length, pages: 1 }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        reviews = Review.all(page, per_page)' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        total_count = Review.count' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        total_pages = (total_count.to_f / per_page).ceil' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        render json: {' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '          reviews: reviews,' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '          pagination: {' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '            total_count: total_count,' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '            total_pages: total_pages,' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '            current_page: page,' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '            per_page: per_page' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      def create' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        # 実際にはDBに保存するコードになりますが、モックとして成功レスポンスを返す' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        render json: {" >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          success: true,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          review: {' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            id: rand(100),' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            game_id: params[:review][:game_id],' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            user: "CurrentUser",' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            rating: params[:review][:rating],' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            comment: params[:review][:comment]' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '          }' >> app/controllers/api/v1/reviews_controller.rb
-RUN echo '        }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        }, status: :created' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '    end' >> app/controllers/api/v1/reviews_controller.rb
 RUN echo '  end' >> app/controllers/api/v1/reviews_controller.rb
@@ -242,26 +270,22 @@ RUN echo 'end' >> app/models/review.rb
 # ルーティングの設定
 RUN echo 'Rails.application.routes.draw do' > config/routes.rb
 RUN echo '  # ルートパスでのアクセス' >> config/routes.rb
-RUN echo '  root "application#index"' >> config/routes.rb
-RUN echo '  get "/", to: "application#index"' >> config/routes.rb
+RUN echo '  root "application#health"' >> config/routes.rb
+RUN echo '  get "/", to: "application#health"' >> config/routes.rb
+RUN echo '' >> config/routes.rb
+RUN echo '  # CORSプリフライトリクエストへの対応' >> config/routes.rb
+RUN echo '  match "*path", to: "application#health", via: :options' >> config/routes.rb
 RUN echo '' >> config/routes.rb
 RUN echo '  # APIエンドポイント' >> config/routes.rb
 RUN echo '  namespace :api do' >> config/routes.rb
 RUN echo '    namespace :v1 do' >> config/routes.rb
 RUN echo '      resources :games, only: [:index, :show] do' >> config/routes.rb
-RUN echo '        resources :reviews, only: [:index]' >> config/routes.rb
+RUN echo '        resources :reviews, only: [:index, :create]' >> config/routes.rb
 RUN echo '      end' >> config/routes.rb
 RUN echo '      resources :reviews, only: [:index]' >> config/routes.rb
 RUN echo '    end' >> config/routes.rb
 RUN echo '  end' >> config/routes.rb
 RUN echo 'end' >> config/routes.rb
-
-# アプリケーションコントローラーの修正
-RUN echo 'class ApplicationController < ActionController::API' > app/controllers/application_controller.rb
-RUN echo '  def index' >> app/controllers/application_controller.rb
-RUN echo '    render plain: "BGRv4 API is running!"' >> app/controllers/application_controller.rb
-RUN echo '  end' >> app/controllers/application_controller.rb
-RUN echo 'end' >> app/controllers/application_controller.rb
 
 # 起動スクリプトの作成
 RUN echo '#!/bin/bash' > start.sh
