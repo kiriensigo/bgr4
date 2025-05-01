@@ -1,0 +1,536 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update -qq && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    gnupg2 \
+    git \
+    postgresql-client \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
+
+# Railsのインストール
+RUN gem install rails -v 7.1.3
+RUN gem install pg
+
+# 最小限のRailsアプリケーションを作成（データベース接続あり）
+RUN rails new . --minimal --api --skip-test --skip-system-test --skip-jbuilder --skip-git --database=postgresql
+
+# データベース設定を上書き
+RUN echo 'default: &default' > config/database.yml
+RUN echo '  adapter: postgresql' >> config/database.yml
+RUN echo '  encoding: unicode' >> config/database.yml
+RUN echo '  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>' >> config/database.yml
+RUN echo '  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>' >> config/database.yml
+RUN echo '  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>' >> config/database.yml
+RUN echo '  username: <%= ENV.fetch("DATABASE_USERNAME") { "postgres" } %>' >> config/database.yml
+RUN echo '  password: <%= ENV.fetch("DATABASE_PASSWORD") { "postgres" } %>' >> config/database.yml
+RUN echo '' >> config/database.yml
+RUN echo 'development:' >> config/database.yml
+RUN echo '  <<: *default' >> config/database.yml
+RUN echo '  database: bgr4_development' >> config/database.yml
+RUN echo '' >> config/database.yml
+RUN echo 'test:' >> config/database.yml
+RUN echo '  <<: *default' >> config/database.yml
+RUN echo '  database: bgr4_test' >> config/database.yml
+RUN echo '' >> config/database.yml
+RUN echo 'production:' >> config/database.yml
+RUN echo '  <<: *default' >> config/database.yml
+RUN echo '  database: <%= ENV.fetch("DATABASE_NAME") { "bgr4_production" } %>' >> config/database.yml
+
+# 必要なディレクトリを作成
+RUN mkdir -p app/controllers/api/v1
+RUN mkdir -p app/models
+
+# データベース初期化スクリプトの作成
+RUN echo '#!/bin/bash' > init-db.sh
+RUN echo 'set -e' >> init-db.sh
+RUN echo '' >> init-db.sh
+RUN echo '# データベースへの接続を待つ' >> init-db.sh
+RUN echo 'echo "PostgreSQLへの接続を待機しています..."' >> init-db.sh
+RUN echo 'until pg_isready -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USERNAME; do' >> init-db.sh
+RUN echo '  echo "PostgreSQL接続待機中..."' >> init-db.sh
+RUN echo '  sleep 2' >> init-db.sh
+RUN echo 'done' >> init-db.sh
+RUN echo 'echo "PostgreSQLに接続しました。"' >> init-db.sh
+RUN echo '' >> init-db.sh
+RUN echo '# データベースの作成' >> init-db.sh
+RUN echo 'echo "データベースを初期化します..."' >> init-db.sh
+RUN echo 'bundle exec rails db:create db:migrate db:seed' >> init-db.sh
+RUN echo 'echo "データベースの初期化が完了しました。"' >> init-db.sh
+RUN chmod +x init-db.sh
+
+# モデルの作成 - Gameモデル
+RUN echo 'class CreateGames < ActiveRecord::Migration[7.1]' > db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '  def change' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '    create_table :games, id: :string do |t|' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :bgg_id, null: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :name, null: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :japanese_name' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.text :description' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.text :japanese_description' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :image_url' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :japanese_image_url' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.integer :min_players' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.integer :max_players' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.integer :play_time' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.integer :min_play_time' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.float :weight' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :publisher' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :designer' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.date :release_date' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.string :japanese_publisher' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.date :japanese_release_date' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.jsonb :metadata, default: {}' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '      t.timestamps' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '    end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '    add_index :games, :bgg_id, unique: true' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo '  end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+RUN echo 'end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_games.rb
+
+# ユーザーモデルのマイグレーションを作成
+RUN echo 'class CreateUsers < ActiveRecord::Migration[7.1]' > db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '  def change' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '    create_table :users do |t|' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '      t.string :name, null: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '      t.string :email, null: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '      t.string :avatar_url' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '      t.boolean :admin, default: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '      t.timestamps' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '    end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '    add_index :users, :email, unique: true' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo '  end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+RUN echo 'end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_users.rb
+
+# レビューモデルのマイグレーションを作成
+RUN echo 'class CreateReviews < ActiveRecord::Migration[7.1]' > db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '  def change' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '    create_table :reviews do |t|' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.references :user, null: false, foreign_key: true' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.string :game_id, null: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.float :overall_score, null: false' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.float :rule_complexity' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.float :luck_factor' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.float :interaction' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.float :downtime' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.integer :play_time' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.text :short_comment' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.string :recommended_players, array: true, default: []' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.string :mechanics, array: true, default: []' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.string :categories, array: true, default: []' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.string :custom_tags, array: true, default: []' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '      t.timestamps' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '    end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '    add_foreign_key :reviews, :games, column: :game_id, primary_key: :id' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '    add_index :reviews, [:user_id, :game_id], unique: true' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo '  end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+RUN echo 'end' >> db/migrate/$(date +%Y%m%d%H%M%S)_create_reviews.rb
+
+# アプリケーションコントローラーの作成
+RUN echo 'class ApplicationController < ActionController::API' > app/controllers/application_controller.rb
+RUN echo '  def health' >> app/controllers/application_controller.rb
+RUN echo '    render json: { message: "BGRv4 API is running!" }' >> app/controllers/application_controller.rb
+RUN echo '  end' >> app/controllers/application_controller.rb
+RUN echo 'end' >> app/controllers/application_controller.rb
+
+# APIコントローラーの作成
+RUN echo 'module Api' > app/controllers/api/api_controller.rb
+RUN echo '  class ApiController < ActionController::API' >> app/controllers/api/api_controller.rb
+RUN echo '    # CORSを許可する' >> app/controllers/api/api_controller.rb
+RUN echo '    before_action :set_cors_headers' >> app/controllers/api/api_controller.rb
+RUN echo '' >> app/controllers/api/api_controller.rb
+RUN echo '    private' >> app/controllers/api/api_controller.rb
+RUN echo '' >> app/controllers/api/api_controller.rb
+RUN echo '    def set_cors_headers' >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Allow-Origin'] = '*'" >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'" >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Authorization, X-Requested-With'" >> app/controllers/api/api_controller.rb
+RUN echo "      headers['Access-Control-Max-Age'] = '1728000'" >> app/controllers/api/api_controller.rb
+RUN echo '    end' >> app/controllers/api/api_controller.rb
+RUN echo '  end' >> app/controllers/api/api_controller.rb
+RUN echo 'end' >> app/controllers/api/api_controller.rb
+
+# V1コントローラーの作成
+RUN echo 'module Api' > app/controllers/api/v1/v1_controller.rb
+RUN echo '  module V1' >> app/controllers/api/v1/v1_controller.rb
+RUN echo '    class V1Controller < Api::ApiController' >> app/controllers/api/v1/v1_controller.rb
+RUN echo '    end' >> app/controllers/api/v1/v1_controller.rb
+RUN echo '  end' >> app/controllers/api/v1/v1_controller.rb
+RUN echo 'end' >> app/controllers/api/v1/v1_controller.rb
+
+# ゲームコントローラーの作成
+RUN echo 'module Api' > app/controllers/api/v1/games_controller.rb
+RUN echo '  module V1' >> app/controllers/api/v1/games_controller.rb
+RUN echo '    class GamesController < V1Controller' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      before_action :set_game, only: [:show, :update_system_reviews]' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      def index' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        page = params[:page].present? ? params[:page].to_i : 1' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        per_page = params[:per_page].present? ? params[:per_page].to_i : 24' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        sort_by = params[:sort_by] || "created_at"' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        # ソート条件に基づいてゲームを取得' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        games = case sort_by' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          when "review_date"' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            Game.recently_reviewed' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          when "name"' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            Game.order(:name)' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          else' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            Game.order(created_at: :desc)' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        # ページネーション' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        games = games.page(page).per(per_page)' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        render json: {' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          status: "ok",' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          data: {' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            games: games,' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            pagination: {' >> app/controllers/api/v1/games_controller.rb
+RUN echo '              total_count: Game.count,' >> app/controllers/api/v1/games_controller.rb
+RUN echo '              total_pages: (Game.count.to_f / per_page).ceil,' >> app/controllers/api/v1/games_controller.rb
+RUN echo '              current_page: page,' >> app/controllers/api/v1/games_controller.rb
+RUN echo '              per_page: per_page' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      def show' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        if @game' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          render json: { status: "ok", data: @game }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        else' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          render json: { status: "error", message: "Game not found" }, status: :not_found' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      def update_system_reviews' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        if @game' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          if @game.update_system_reviews' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            render json: { status: "ok", message: "System reviews updated successfully" }' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          else' >> app/controllers/api/v1/games_controller.rb
+RUN echo '            render json: { status: "error", message: "Failed to update system reviews" }, status: :unprocessable_entity' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        else' >> app/controllers/api/v1/games_controller.rb
+RUN echo '          render json: { status: "error", message: "Game not found" }, status: :not_found' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      private' >> app/controllers/api/v1/games_controller.rb
+RUN echo '' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      def set_game' >> app/controllers/api/v1/games_controller.rb
+RUN echo '        @game = Game.find_by(id: params[:id])' >> app/controllers/api/v1/games_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '    end' >> app/controllers/api/v1/games_controller.rb
+RUN echo '  end' >> app/controllers/api/v1/games_controller.rb
+RUN echo 'end' >> app/controllers/api/v1/games_controller.rb
+
+# レビューコントローラーの作成
+RUN echo 'module Api' > app/controllers/api/v1/reviews_controller.rb
+RUN echo '  module V1' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '    class ReviewsController < V1Controller' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      before_action :set_game, only: [:index, :create]' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      def index' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        page = params[:page].present? ? params[:page].to_i : 1' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        per_page = params[:per_page].present? ? params[:per_page].to_i : 24' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        if @game' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          # 特定のゲームのレビューを取得' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          reviews = @game.reviews.recent.includes(:user)' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        else' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          # 全てのレビューを取得' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          reviews = Review.recent.includes(:user, :game)' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        # ページネーション' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        total_count = reviews.count' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        reviews = reviews.offset((page - 1) * per_page).limit(per_page)' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        render json: {' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          status: "ok",' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          data: {' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            reviews: reviews.map { |review| format_review(review) },' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            pagination: {' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '              total_count: total_count,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '              total_pages: (total_count.to_f / per_page).ceil,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '              current_page: page,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '              per_page: per_page' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      def create' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        # 簡易的な実装（実際にはユーザー認証が必要）' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        user = User.find_or_create_by(email: "user@example.com") do |u|' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          u.name = "Example User"' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        if @game' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          review = @game.reviews.new(review_params)' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          review.user = user' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          if review.save' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            render json: { status: "ok", data: format_review(review) }, status: :created' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          else' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            render json: { status: "error", message: review.errors.full_messages }, status: :unprocessable_entity' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        else' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          render json: { status: "error", message: "Game not found" }, status: :not_found' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      private' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      def set_game' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        @game = Game.find_by(id: params[:game_id]) if params[:game_id]' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      def review_params' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        params.require(:review).permit(' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          :overall_score, :rule_complexity, :luck_factor, :interaction, :downtime,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          :play_time, :short_comment, recommended_players: [], mechanics: [], categories: [], custom_tags: []' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        )' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      def format_review(review)' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        {' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          id: review.id,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          game_id: review.game_id,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          user: {' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            id: review.user.id,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            name: review.user.name,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '            avatar_url: review.user.avatar_url' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          },' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          overall_score: review.overall_score,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          rule_complexity: review.rule_complexity,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          luck_factor: review.luck_factor,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          interaction: review.interaction,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          downtime: review.downtime,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          play_time: review.play_time,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          recommended_players: review.recommended_players,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          mechanics: review.mechanics,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          categories: review.categories,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          custom_tags: review.custom_tags,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          short_comment: review.short_comment,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          created_at: review.created_at,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          updated_at: review.updated_at,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          likes_count: 0,' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '          liked_by_current_user: false' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '        }' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '      end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '    end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo '  end' >> app/controllers/api/v1/reviews_controller.rb
+RUN echo 'end' >> app/controllers/api/v1/reviews_controller.rb
+
+# ゲームモデルの作成
+RUN echo 'class Game < ApplicationRecord' > app/models/game.rb
+RUN echo '  # リレーションシップ' >> app/models/game.rb
+RUN echo '  has_many :reviews, primary_key: :id, foreign_key: :game_id, dependent: :destroy' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '  # バリデーション' >> app/models/game.rb
+RUN echo '  validates :bgg_id, presence: true, uniqueness: true' >> app/models/game.rb
+RUN echo '  validates :name, presence: true' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '  # スコープ' >> app/models/game.rb
+RUN echo '  scope :recently_reviewed, -> { order(created_at: :desc) }' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '  # kaminariを使用してページネーションを実装' >> app/models/game.rb
+RUN echo '  def self.page(page)' >> app/models/game.rb
+RUN echo '    offset = (page - 1) * 24' >> app/models/game.rb
+RUN echo '    limit(24).offset(offset)' >> app/models/game.rb
+RUN echo '  end' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '  def self.per(per_page)' >> app/models/game.rb
+RUN echo '    limit(per_page)' >> app/models/game.rb
+RUN echo '  end' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '  # メタデータ操作メソッド' >> app/models/game.rb
+RUN echo '  def store_metadata(key, value)' >> app/models/game.rb
+RUN echo '    self.metadata ||= {}' >> app/models/game.rb
+RUN echo '    self.metadata[key] = value' >> app/models/game.rb
+RUN echo '    save' >> app/models/game.rb
+RUN echo '  end' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '  # システムレビュー更新' >> app/models/game.rb
+RUN echo '  def update_system_reviews' >> app/models/game.rb
+RUN echo '    system_user = User.find_by(email: "system@boardgamereview.com")' >> app/models/game.rb
+RUN echo '    return false unless system_user' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '    # システムユーザーの既存のレビューを検索' >> app/models/game.rb
+RUN echo '    system_review = reviews.find_by(user: system_user)' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '    # レビューデータを生成（実際にはBGGなどから取得）' >> app/models/game.rb
+RUN echo '    review_data = {' >> app/models/game.rb
+RUN echo '      overall_score: rand(3.0..5.0).round(1),' >> app/models/game.rb
+RUN echo '      rule_complexity: weight || rand(1.0..5.0).round(1),' >> app/models/game.rb
+RUN echo '      luck_factor: rand(1.0..5.0).round(1),' >> app/models/game.rb
+RUN echo '      interaction: rand(1.0..5.0).round(1),' >> app/models/game.rb
+RUN echo '      downtime: rand(1.0..5.0).round(1),' >> app/models/game.rb
+RUN echo '      play_time: play_time || 60,' >> app/models/game.rb
+RUN echo '      recommended_players: ["2", "3", "4"],' >> app/models/game.rb
+RUN echo '      mechanics: ["Dice Rolling", "Card Drafting"],' >> app/models/game.rb
+RUN echo '      categories: ["Strategy", "Family"],' >> app/models/game.rb
+RUN echo '      short_comment: "System generated review for #{name}"' >> app/models/game.rb
+RUN echo '    }' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '    if system_review' >> app/models/game.rb
+RUN echo '      # 既存のレビューを更新' >> app/models/game.rb
+RUN echo '      system_review.update(review_data)' >> app/models/game.rb
+RUN echo '    else' >> app/models/game.rb
+RUN echo '      # 新しいレビューを作成' >> app/models/game.rb
+RUN echo '      reviews.create(review_data.merge(user: system_user))' >> app/models/game.rb
+RUN echo '    end' >> app/models/game.rb
+RUN echo '' >> app/models/game.rb
+RUN echo '    # 成功を返す' >> app/models/game.rb
+RUN echo '    true' >> app/models/game.rb
+RUN echo '  end' >> app/models/game.rb
+RUN echo 'end' >> app/models/game.rb
+
+# ユーザーモデルの作成
+RUN echo 'class User < ApplicationRecord' > app/models/user.rb
+RUN echo '  # リレーションシップ' >> app/models/user.rb
+RUN echo '  has_many :reviews, dependent: :destroy' >> app/models/user.rb
+RUN echo '' >> app/models/user.rb
+RUN echo '  # バリデーション' >> app/models/user.rb
+RUN echo '  validates :name, presence: true' >> app/models/user.rb
+RUN echo '  validates :email, presence: true, uniqueness: true' >> app/models/user.rb
+RUN echo '' >> app/models/user.rb
+RUN echo '  # システムユーザー取得' >> app/models/user.rb
+RUN echo '  def self.system_user' >> app/models/user.rb
+RUN echo '    find_or_create_by(email: "system@boardgamereview.com") do |user|' >> app/models/user.rb
+RUN echo '      user.name = "System"' >> app/models/user.rb
+RUN echo '      user.admin = true' >> app/models/user.rb
+RUN echo '    end' >> app/models/user.rb
+RUN echo '  end' >> app/models/user.rb
+RUN echo 'end' >> app/models/user.rb
+
+# レビューモデルの作成
+RUN echo 'class Review < ApplicationRecord' > app/models/review.rb
+RUN echo '  # リレーションシップ' >> app/models/review.rb
+RUN echo '  belongs_to :user' >> app/models/review.rb
+RUN echo '  belongs_to :game, primary_key: :id, foreign_key: :game_id' >> app/models/review.rb
+RUN echo '' >> app/models/review.rb
+RUN echo '  # バリデーション' >> app/models/review.rb
+RUN echo '  validates :overall_score, presence: true, numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: 5 }' >> app/models/review.rb
+RUN echo '  validates :user_id, uniqueness: { scope: :game_id, message: "ユーザーは1つのゲームに対して1つのレビューしか投稿できません" }' >> app/models/review.rb
+RUN echo '' >> app/models/review.rb
+RUN echo '  # スコープ' >> app/models/review.rb
+RUN echo '  scope :recent, -> { order(created_at: :desc) }' >> app/models/review.rb
+RUN echo '  scope :exclude_system_user, -> {' >> app/models/review.rb
+RUN echo '    system_user = User.find_by(email: "system@boardgamereview.com")' >> app/models/review.rb
+RUN echo '    where.not(user_id: system_user&.id)' >> app/models/review.rb
+RUN echo '  }' >> app/models/review.rb
+RUN echo 'end' >> app/models/review.rb
+
+# ルーティングの設定
+RUN echo 'Rails.application.routes.draw do' > config/routes.rb
+RUN echo '  # ルートパスでのアクセス' >> config/routes.rb
+RUN echo '  root "application#health"' >> config/routes.rb
+RUN echo '  get "/", to: "application#health"' >> config/routes.rb
+RUN echo '' >> config/routes.rb
+RUN echo '  # CORSプリフライトリクエストへの対応' >> config/routes.rb
+RUN echo '  match "*path", to: "application#health", via: :options' >> config/routes.rb
+RUN echo '' >> config/routes.rb
+RUN echo '  # APIエンドポイント' >> config/routes.rb
+RUN echo '  namespace :api do' >> config/routes.rb
+RUN echo '    namespace :v1 do' >> config/routes.rb
+RUN echo '      resources :games, only: [:index, :show] do' >> config/routes.rb
+RUN echo '        resources :reviews, only: [:index, :create]' >> config/routes.rb
+RUN echo '        member do' >> config/routes.rb
+RUN echo '          put :update_system_reviews' >> config/routes.rb
+RUN echo '        end' >> config/routes.rb
+RUN echo '      end' >> config/routes.rb
+RUN echo '      resources :reviews, only: [:index]' >> config/routes.rb
+RUN echo '    end' >> config/routes.rb
+RUN echo '  end' >> config/routes.rb
+RUN echo 'end' >> config/routes.rb
+
+# シードデータの作成
+RUN echo '# システムユーザーの作成' > db/seeds.rb
+RUN echo 'User.find_or_create_by(email: "system@boardgamereview.com") do |user|' >> db/seeds.rb
+RUN echo '  user.name = "System"' >> db/seeds.rb
+RUN echo '  user.admin = true' >> db/seeds.rb
+RUN echo 'end' >> db/seeds.rb
+RUN echo '' >> db/seeds.rb
+RUN echo '# 一般ユーザーの作成' >> db/seeds.rb
+RUN echo 'User.find_or_create_by(email: "user@example.com") do |user|' >> db/seeds.rb
+RUN echo '  user.name = "Example User"' >> db/seeds.rb
+RUN echo 'end' >> db/seeds.rb
+RUN echo '' >> db/seeds.rb
+RUN echo '# サンプルゲームデータを作成' >> db/seeds.rb
+RUN echo 'Game.find_or_create_by(id: "224517", bgg_id: "224517") do |game|' >> db/seeds.rb
+RUN echo '  game.name = "Brass: Birmingham"' >> db/seeds.rb
+RUN echo '  game.japanese_name = "ブラス:バーミンガム"' >> db/seeds.rb
+RUN echo '  game.description = "Brass: Birmingham is a sequel to Martin Wallace\'s industrial revolution masterpiece."' >> db/seeds.rb
+RUN echo '  game.image_url = "https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__imagepagezoom/img/7a0LOL48K-7JNIOSGi9c7nfqV3Y=/fit-in/1200x900/filters:no_upscale():strip_icc()/pic3490053.jpg"' >> db/seeds.rb
+RUN echo '  game.min_players = 2' >> db/seeds.rb
+RUN echo '  game.max_players = 4' >> db/seeds.rb
+RUN echo '  game.play_time = 120' >> db/seeds.rb
+RUN echo '  game.min_play_time = 90' >> db/seeds.rb
+RUN echo '  game.weight = 3.9' >> db/seeds.rb
+RUN echo '  game.publisher = "Roxley Games"' >> db/seeds.rb
+RUN echo '  game.designer = "Gavan Brown, Matt Tolman, and Martin Wallace"' >> db/seeds.rb
+RUN echo '  game.release_date = Date.parse("2018-08-10")' >> db/seeds.rb
+RUN echo 'end' >> db/seeds.rb
+RUN echo '' >> db/seeds.rb
+RUN echo 'Game.find_or_create_by(id: "342942", bgg_id: "342942") do |game|' >> db/seeds.rb
+RUN echo '  game.name = "Ark Nova"' >> db/seeds.rb
+RUN echo '  game.japanese_name = "アークノヴァ"' >> db/seeds.rb
+RUN echo '  game.description = "In Ark Nova, you plan and build a modern zoo that focuses on conservation and animal welfare."' >> db/seeds.rb
+RUN echo '  game.image_url = "https://cf.geekdo-images.com/SoU8p28Sk1s8MSvoM4N8pQ__imagepage/img/qR1EvTSNPjDa-0-lmRuQSQ9p7rA=/fit-in/900x600/filters:no_upscale():strip_icc()/pic6293412.jpg"' >> db/seeds.rb
+RUN echo '  game.min_players = 1' >> db/seeds.rb
+RUN echo '  game.max_players = 4' >> db/seeds.rb
+RUN echo '  game.play_time = 150' >> db/seeds.rb
+RUN echo '  game.min_play_time = 90' >> db/seeds.rb
+RUN echo '  game.weight = 4.1' >> db/seeds.rb
+RUN echo '  game.publisher = "Feuerland Spiele"' >> db/seeds.rb
+RUN echo '  game.designer = "Mathias Wigge"' >> db/seeds.rb
+RUN echo '  game.release_date = Date.parse("2021-10-01")' >> db/seeds.rb
+RUN echo 'end' >> db/seeds.rb
+RUN echo '' >> db/seeds.rb
+RUN echo '# 各ゲームにシステムレビューを作成' >> db/seeds.rb
+RUN echo 'puts "システムレビューを作成しています..."' >> db/seeds.rb
+RUN echo 'Game.all.each do |game|' >> db/seeds.rb
+RUN echo '  puts "ゲーム: #{game.name} のシステムレビューを作成/更新"' >> db/seeds.rb
+RUN echo '  game.update_system_reviews' >> db/seeds.rb
+RUN echo 'end' >> db/seeds.rb
+RUN echo 'puts "シードデータの作成が完了しました！"' >> db/seeds.rb
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash' > start.sh
+RUN echo 'set -e' >> start.sh
+RUN echo '' >> start.sh
+RUN echo '# データベースの初期化' >> start.sh
+RUN echo 'if [ "${INITIALIZE_DB}" = "true" ]; then' >> start.sh
+RUN echo '  ./init-db.sh' >> start.sh
+RUN echo 'fi' >> start.sh
+RUN echo '' >> start.sh
+RUN echo '# Railsサーバーを起動' >> start.sh
+RUN echo 'bundle exec rails server -p ${PORT:-8080} -b 0.0.0.0' >> start.sh
+RUN chmod +x start.sh
+
+# コンテナ内でGemfileを更新
+RUN bundle add kaminari
+
+# Gemfileを更新しbundle install実行
+RUN bundle install
+
+# ポートの公開
+EXPOSE 8080
+
+# コマンドの設定
+CMD ["./start.sh"] 
