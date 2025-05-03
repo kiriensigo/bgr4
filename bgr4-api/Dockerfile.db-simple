@@ -1,0 +1,68 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update -qq && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    gnupg2 \
+    git \
+    postgresql-client \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
+
+# Railsのインストール
+RUN gem install rails -v 7.1.3
+RUN gem install pg
+
+# アプリケーションファイルのコピー
+COPY app/ /app/app/
+COPY bin/ /app/bin/
+COPY config/ /app/config/
+COPY db/ /app/db/
+COPY lib/ /app/lib/
+COPY public/ /app/public/
+COPY Gemfile Gemfile.lock Rakefile config.ru .ruby-version /app/
+COPY scripts/ /app/scripts/
+
+# 依存関係のインストール
+RUN bundle install
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash' > start.sh && \
+    echo 'set -e' >> start.sh && \
+    echo '' >> start.sh && \
+    echo '# データベースへの接続を待つ' >> start.sh && \
+    echo 'echo "PostgreSQLへの接続を待機しています..."' >> start.sh && \
+    echo 'until pg_isready -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USERNAME; do' >> start.sh && \
+    echo '  echo "PostgreSQL接続待機中..."' >> start.sh && \
+    echo '  sleep 2' >> start.sh && \
+    echo 'done' >> start.sh && \
+    echo 'echo "PostgreSQLに接続しました。"' >> start.sh && \
+    echo '' >> start.sh && \
+    echo '# データベースの作成' >> start.sh && \
+    echo 'if [ "${INITIALIZE_DB}" = "true" ]; then' >> start.sh && \
+    echo '  echo "データベースを初期化します..."' >> start.sh && \
+    echo '  bundle exec rails db:create db:migrate db:seed' >> start.sh && \
+    echo '  echo "データベースの初期化が完了しました。"' >> start.sh && \
+    echo 'fi' >> start.sh && \
+    echo '' >> start.sh && \
+    echo '# Railsサーバーを起動' >> start.sh && \
+    echo 'bundle exec rails server -p ${PORT:-8080} -b 0.0.0.0' >> start.sh && \
+    chmod +x start.sh
+
+# ポートの公開
+EXPOSE 8080
+
+# コマンドの設定
+CMD ["./start.sh"] 

@@ -1,0 +1,30 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+
+development:
+  <<: *default
+  host: <%= ENV['DATABASE_HOST'] || 'localhost' %>
+  port: <%= ENV['DATABASE_PORT'] || 5432 %>
+  username: <%= ENV['DATABASE_USERNAME'] || 'postgres' %>
+  password: <%= ENV['DATABASE_PASSWORD'] || 'postgres' %>
+  database: <%= ENV['DATABASE_NAME'] || 'bgr4_development' %>
+
+test:
+  <<: *default
+  host: <%= ENV['DATABASE_HOST'] || 'localhost' %>
+  port: <%= ENV['DATABASE_PORT'] || 5432 %>
+  username: <%= ENV['DATABASE_USERNAME'] || 'postgres' %>
+  password: <%= ENV['DATABASE_PASSWORD'] || 'postgres' %>
+  database: <%= ENV['DATABASE_NAME'] || 'bgr4_test' %>
+
+production:
+  <<: *default
+  host: <%= ENV['DATABASE_HOST'] || 'localhost' %>
+  port: <%= ENV['DATABASE_PORT'] || 5432 %>
+  username: <%= ENV['DATABASE_USERNAME'] %>
+  password: <%= ENV['DATABASE_PASSWORD'] %>
+  database: <%= ENV['DATABASE_NAME'] || 'bgr4_production' %>
+  sslmode: <%= ENV['DATABASE_SSLMODE'] || 'prefer' %> 

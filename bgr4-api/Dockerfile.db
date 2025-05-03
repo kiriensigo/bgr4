@@ -21,7 +21,7 @@ ENV RAILS_SERVE_STATIC_FILES=true
 ENV RAILS_LOG_TO_STDOUT=true
 ENV SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7
 
-# Railsのインストール
+# Railsのインストール - 正しいバージョンに修正
 RUN gem install rails -v 7.1.3
 RUN gem install pg
 
@@ -53,6 +53,7 @@ RUN echo '  database: <%= ENV.fetch("DATABASE_NAME") { "bgr4_production" } %>' >
 # 必要なディレクトリを作成
 RUN mkdir -p app/controllers/api/v1
 RUN mkdir -p app/models
+RUN mkdir -p db/migrate
 
 # データベース初期化スクリプトの作成
 RUN echo '#!/bin/bash' > init-db.sh

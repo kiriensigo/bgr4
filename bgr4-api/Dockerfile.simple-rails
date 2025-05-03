@@ -1,0 +1,44 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージのインストール
+RUN apt-get update -qq && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    nodejs \
+    git \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリの設定
+WORKDIR /app
+
+# 環境変数の設定
+ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+
+# Railsのインストール
+RUN gem install rails -v 7.1.3 && \
+    gem install pg
+
+# アプリケーションファイルのコピー
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --retry 3
+
+# アプリケーションコードのコピー
+COPY . .
+
+# 必要なディレクトリの作成
+RUN mkdir -p tmp/pids log db/migrate app/controllers/api/v1 app/models
+
+# スタートアップスクリプトの権限設定
+COPY bgr4-api/scripts/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# ポートのエクスポート
+EXPOSE 8080
+
+# コンテナ起動時に実行するコマンド
+CMD ["/app/start.sh"] 

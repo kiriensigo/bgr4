@@ -1,0 +1,51 @@
+steps:
+  # ビルドステップ
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/bgr4-api-simple-rails:v1",
+        "-f",
+        "Dockerfile.simple-rails",
+        ".",
+      ]
+    dir: "bgr4-api"
+    id: "build"
+    timeout: "1800s"
+
+  # イメージのプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/bgr4-api-simple-rails:v1"]
+    id: "push"
+    timeout: "900s"
+
+  # デプロイ
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      [
+        "run",
+        "deploy",
+        "bgr4-api-simple-rails",
+        "--image",
+        "gcr.io/$PROJECT_ID/bgr4-api-simple-rails:v1",
+        "--platform",
+        "managed",
+        "--region",
+        "asia-northeast1",
+        "--allow-unauthenticated",
+        "--memory",
+        "1Gi",
+        "--cpu",
+        "1",
+        "--port",
+        "8080",
+        "--set-env-vars",
+        "RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DATABASE_HOST=your-db-host,DATABASE_PORT=5432,DATABASE_USERNAME=iamtomatoo,DATABASE_PASSWORD=psotria1,DATABASE_NAME=bgr4db,SECRET_KEY_BASE=e54cc3944808af10de45a9d1b61d248bbca31c5b1aa6f6daf16669bb04e16d9b9fce29ec5f2cd9c4336f5fa66df3be1cfe5cc84a50f53b54bd0af6cea1d6af6b",
+      ]
+    id: "deploy"
+    timeout: "900s"
+
+# タイムアウト（30分）
+timeout: "1800s"

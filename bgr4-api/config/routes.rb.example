@@ -1,0 +1,53 @@
+Rails.application.routes.draw do
+  # ヘルスチェック用のエンドポイント
+  get "/health", to: proc { [200, {}, ["OK"]] }
+
+  # API namespace
+  namespace :api do
+    namespace :v1 do
+      # ゲーム関連のエンドポイント
+      resources :games, only: [:index, :show, :create, :update] do
+        collection do
+          get 'search'
+          get 'search_by_publisher'
+          get 'search_by_designer'
+          get 'hot'
+        end
+        
+        member do
+          put 'update_from_bgg'
+          put 'update_japanese_name'
+          put 'update_system_reviews'
+        end
+        
+        # レビュー関連
+        resources :reviews, only: [:index, :create, :update, :destroy]
+      end
+      
+      # レビュー関連のエンドポイント
+      resources :reviews, only: [] do
+        collection do
+          get 'all'
+        end
+        
+        member do
+          post 'like'
+          delete 'unlike'
+        end
+      end
+      
+      # ウィッシュリスト関連のエンドポイント
+      resources :wishlist_items, only: [:index, :create, :destroy]
+    end
+  end
+
+  # 認証関連（Deviseを使用）
+  devise_for :users, path: 'auth', controllers: {
+    sessions: 'users/sessions',
+    registrations: 'users/registrations',
+    omniauth_callbacks: 'users/omniauth_callbacks'
+  }
+
+  # OAuth redirect
+  get '/auth/redirect', to: 'api/v1/auth#redirect'
+end 
