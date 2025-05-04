@@ -32,7 +32,7 @@ steps:
       - "--max-instances=2"
       - "--timeout=300s"
       - "--port=8080"
-      - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,INITIALIZE_DB=true,DATABASE_HOST=your-db-host,DATABASE_PORT=5432,DATABASE_USERNAME=iamtomatoo,DATABASE_PASSWORD=psotria1,DATABASE_NAME=bgr4db,SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
+      - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,INITIALIZE_DB=true,DATABASE_HOST=${_DATABASE_HOST},DATABASE_PORT=${_DATABASE_PORT},DATABASE_USERNAME=${_DATABASE_USERNAME},DATABASE_PASSWORD=${_DATABASE_PASSWORD},DATABASE_NAME=${_DATABASE_NAME},SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
 
 # 生成されるイメージの指定
 images:
@@ -40,3 +40,11 @@ images:
 
 # タイムアウトの設定（30分）
 timeout: "1800s"
+
+# 代入変数の定義
+substitutions:
+  _DATABASE_HOST: "your-db-host"
+  _DATABASE_PORT: "5432"
+  _DATABASE_USERNAME: "postgres"
+  _DATABASE_PASSWORD: "password"
+  _DATABASE_NAME: "bgr4_production"
