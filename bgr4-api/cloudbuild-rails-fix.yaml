@@ -33,7 +33,7 @@ steps:
       - "--timeout=300s"
       - "--set-env-vars=RAILS_ENV=production,RAILS_SERVE_STATIC_FILES=true,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true"
       - "--set-secrets=RAILS_MASTER_KEY=rails-master-key:latest"
-      - "--set-env-vars=SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
+      - "--set-env-vars=SECRET_KEY_BASE=YOUR_SECRET_KEY_BASE_HERE"
 
 # ビルドで生成されるイメージ
 images:

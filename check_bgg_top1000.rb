@@ -13,10 +13,10 @@ api_url = "http://localhost:8080/api/v1/games"
 
 # 管理者の認証トークン
 admin_tokens = {
-  "access-token" => "Ypzsqs4fm6Xv0YIXqKvlkw",
+  "access-token" => "YOUR_ACCESS_TOKEN_HERE",
   "token-type" => "Bearer",
-  "client" => "16wkxgfIwTY73UuaH8amiw",
-  "expiry" => "1743954292",
+  "client" => "YOUR_CLIENT_ID_HERE",
+  "expiry" => "YOUR_EXPIRY_HERE",
   "uid" => "admin@example.com"
 }
 

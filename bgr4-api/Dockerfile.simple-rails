@@ -18,27 +18,57 @@ WORKDIR /app
 ENV RAILS_ENV=production
 ENV RAILS_SERVE_STATIC_FILES=true
 ENV RAILS_LOG_TO_STDOUT=true
+ENV PORT=8080
 
 # Railsのインストール
 RUN gem install rails -v 7.1.3 && \
     gem install pg
 
-# アプリケーションファイルのコピー
-COPY Gemfile Gemfile.lock ./
-RUN bundle install --jobs 4 --retry 3
+# 最小限のRailsアプリケーションの作成
+RUN rails new . --minimal --api --skip-test --database=postgresql
 
-# アプリケーションコードのコピー
-COPY . .
+# データベース設定の上書き
+RUN echo 'default: &default' > config/database.yml && \
+    echo '  adapter: postgresql' >> config/database.yml && \
+    echo '  encoding: unicode' >> config/database.yml && \
+    echo '  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>' >> config/database.yml && \
+    echo '  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>' >> config/database.yml && \
+    echo '  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>' >> config/database.yml && \
+    echo '  username: <%= ENV.fetch("DATABASE_USERNAME") { "postgres" } %>' >> config/database.yml && \
+    echo '  password: <%= ENV.fetch("DATABASE_PASSWORD") { "postgres" } %>' >> config/database.yml && \
+    echo 'development:' >> config/database.yml && \
+    echo '  <<: *default' >> config/database.yml && \
+    echo '  database: bgr4_development' >> config/database.yml && \
+    echo 'test:' >> config/database.yml && \
+    echo '  <<: *default' >> config/database.yml && \
+    echo '  database: bgr4_test' >> config/database.yml && \
+    echo 'production:' >> config/database.yml && \
+    echo '  <<: *default' >> config/database.yml && \
+    echo '  database: <%= ENV.fetch("DATABASE_NAME") { "bgr4_production" } %>' >> config/database.yml
+
+# ヘルスチェック用コントローラの作成
+RUN mkdir -p app/controllers/api/v1
+RUN echo 'class ApplicationController < ActionController::API' > app/controllers/application_controller.rb && \
+    echo '  def health' >> app/controllers/application_controller.rb && \
+    echo '    render json: { status: "ok", message: "BGRv4 API is running!" }' >> app/controllers/application_controller.rb && \
+    echo '  end' >> app/controllers/application_controller.rb && \
+    echo 'end' >> app/controllers/application_controller.rb
+
+# ルートの設定
+RUN echo 'Rails.application.routes.draw do' > config/routes.rb && \
+    echo '  root "application#health"' >> config/routes.rb && \
+    echo '  get "/health", to: "application#health"' >> config/routes.rb && \
+    echo 'end' >> config/routes.rb
 
 # 必要なディレクトリの作成
-RUN mkdir -p tmp/pids log db/migrate app/controllers/api/v1 app/models
+RUN mkdir -p tmp/pids log
 
-# スタートアップスクリプトの権限設定
-COPY bgr4-api/scripts/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+# Gemfileに必要なgemを追加してインストール
+RUN bundle add rack-cors
+RUN bundle install
 
 # ポートのエクスポート
 EXPOSE 8080
 
 # コンテナ起動時に実行するコマンド
-CMD ["/app/start.sh"] 
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "8080"] 

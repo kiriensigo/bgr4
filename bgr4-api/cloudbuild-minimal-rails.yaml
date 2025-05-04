@@ -38,7 +38,7 @@ steps:
       # RAILS_MASTER_KEYを直接記載しない
       # - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true,SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
       # 安全な方法で設定
-      - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true,SECRET_KEY_BASE=64b0847d9dcb93bdeb87994cbe3b060d4ddd5c2943936ab77aff0ff84ccd9fef91e60ec172f4deac2c7d85f4de1a68a1dbb0be1b0d0bdcd9f79ec75aea86efd7"
+      - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true,SECRET_KEY_BASE=YOUR_SECRET_KEY_BASE_HERE"
       - "--set-secrets=RAILS_MASTER_KEY=rails-master-key:latest"
 
 # ビルドで生成されるイメージ
