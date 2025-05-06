@@ -4,6 +4,56 @@
 # belong in git's global ignore instead:
 # `$XDG_CONFIG_HOME/git/ignore` or `~/.config/git/ignore`
 
+# 個人用メモや手順書
+/personal_notes/
+/docs/personal/
+*_personal.*
+*_private.*
+*_memo.*
+*_notes.*
+*.personal.md
+*.private.md
+PERSONAL_*.md
+MEMO_*.md
+MY_*.md
+TODO_*.md
+HOWTO_personal.md
+setup_personal.md
+manual_personal.md
+
+# BGRプロジェクト固有の個人用ファイル
+bgr4_personal_setup.md
+bgr4_my_commands.sh
+bgr4_commands_memo.txt
+bgr4_deploy_personal.md
+bgr4_api_personal_notes.md
+bgr4_front_personal_notes.md
+bgr4_personal_workflow.md
+personal_token_notes.txt
+my_token_backup.txt
+api_token_personal.txt
+local_environment_setup.md
+gcp_personal_setup.md
+docker_personal_commands.sh
+test_data_personal.rb
+dev_notes_*.md
+
+# シークレットとトークンのバックアップ
+*_secrets_backup.*
+*_tokens_backup.*
+secrets_backup/
+tokens_backup/
+.secrets/
+.tokens/
+my_master_key_backup.txt
+bgg_api_key_personal.txt
+google_credentials_backup.json
+rails_master_key_copy.txt
+database_credentials_personal.txt
+auth_tokens_personal.json
+deploy_keys_personal/
+service_account_keys_backup/
+
 # Dependencies
 /node_modules
 /.pnp
