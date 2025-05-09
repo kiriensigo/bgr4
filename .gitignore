@@ -138,3 +138,21 @@ yarn-error.log*
 *.7z
 *.rar
 
+# 機密情報ファイル（追加）
+*_key.txt
+*_password.txt
+*_credentials.json
+*.pem
+*.key
+*master.key*
+gcloud_credentials.json
+cloud_sql_credentials.json
+secrets.txt
+.secret
+*secret*
+*password*
+*credential*
+*key_backup*
+*secret_backup*
+api_keys.txt
+

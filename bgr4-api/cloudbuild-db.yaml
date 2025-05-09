@@ -32,7 +32,9 @@ steps:
       - "--max-instances=2"
       - "--timeout=300s"
       - "--port=8080"
-      - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,INITIALIZE_DB=true,DATABASE_HOST=${_DATABASE_HOST},DATABASE_PORT=${_DATABASE_PORT},DATABASE_USERNAME=${_DATABASE_USERNAME},DATABASE_PASSWORD=${_DATABASE_PASSWORD},DATABASE_NAME=${_DATABASE_NAME},SECRET_KEY_BASE=YOUR_SECRET_KEY_BASE_HERE"
+      - "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,INITIALIZE_DB=true,DATABASE_HOST=${_DATABASE_HOST},DATABASE_PORT=${_DATABASE_PORT},DATABASE_USERNAME=${_DATABASE_USERNAME}"
+      - "--set-secrets=DATABASE_PASSWORD=db-password:latest,SECRET_KEY_BASE=secret-key-base:latest,RAILS_MASTER_KEY=rails-master-key:latest"
+      - "--set-env-vars=DATABASE_NAME=${_DATABASE_NAME}"
 
 # 生成されるイメージの指定
 images:
@@ -46,5 +48,4 @@ substitutions:
   _DATABASE_HOST: "your-db-host"
   _DATABASE_PORT: "5432"
   _DATABASE_USERNAME: "postgres"
-  _DATABASE_PASSWORD: "password"
   _DATABASE_NAME: "bgr4_production"

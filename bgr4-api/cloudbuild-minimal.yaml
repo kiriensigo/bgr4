@@ -34,8 +34,7 @@ steps:
         "--timeout=60s",
         "--port=8080",
         "--set-env-vars=RAILS_ENV=production,RAILS_LOG_TO_STDOUT=true,DISABLE_DATABASE_CONNECTION=true",
-        "--set-env-vars=RAILS_MASTER_KEY=YOUR_MASTER_KEY_HERE",
-        "--set-env-vars=SECRET_KEY_BASE=YOUR_SECRET_KEY_BASE_HERE",
+        "--set-secrets=RAILS_MASTER_KEY=rails-master-key:latest,SECRET_KEY_BASE=secret-key-base:latest",
       ]
 
 # ビルドで生成されるイメージ

@@ -17,7 +17,7 @@ ENV PORT=8080
 ENV RAILS_ENV=production
 ENV RAILS_SERVE_STATIC_FILES=true
 ENV RAILS_LOG_TO_STDOUT=true
-ENV SECRET_KEY_BASE=YOUR_SECRET_KEY_BASE_HERE
+ENV SECRET_KEY_BASE=${SECRET_KEY_BASE}
 
 # 最小限のRailsアプリケーションを作成
 RUN rails new . --minimal --api --skip-active-record --skip-test --skip-system-test --skip-jbuilder
