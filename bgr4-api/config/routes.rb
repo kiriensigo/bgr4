@@ -85,5 +85,8 @@ Rails.application.routes.draw do
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
 
   # ヘルスチェック用エンドポイント
-  root to: proc { [200, {}, ['OK']] }
+  get '/health', to: proc { [200, {'Content-Type' => 'application/json'}, ['{"status":"ok","message":"BGRv4 API is running","mode":"minimal"}']] }
+  
+  # ルートエンドポイント
+  root to: proc { [200, {'Content-Type' => 'application/json'}, ['{"status":"ok","api":"bgr4-api","version":"minimal"}']] }
 end

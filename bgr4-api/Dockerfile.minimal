@@ -5,7 +5,9 @@ RUN apt-get update -qq && apt-get install -y \
     libpq-dev \
     nodejs \
     curl \
-    net-tools
+    net-tools \
+    lsof \
+    vim
 
 WORKDIR /app
 
@@ -19,45 +21,39 @@ ENV RAILS_MASTER_KEY=${RAILS_MASTER_KEY}
 ENV SECRET_KEY_BASE=${SECRET_KEY_BASE}
 
 # GemfileとGemfile.lockをコピー
-COPY Gemfile Gemfile.lock ./
+COPY bgr4-api/Gemfile bgr4-api/Gemfile.lock ./
 
-# Bundlerのインストールと依存関係のインストール
+# nulldb-adapterを追加
+RUN echo "gem 'activerecord-nulldb-adapter', group: :production" >> Gemfile
+
+# 依存関係をインストール
 RUN gem install bundler && \
     bundle config set --local without 'development test' && \
     bundle install --jobs 4 --retry 3
 
 # アプリケーションコードのコピー
-COPY . .
+COPY bgr4-api/ .
 
-# 起動スクリプトの作成
-RUN echo '#!/bin/bash\n\
-echo "Starting Rails in minimal mode..."\n\
-rm -f /app/tmp/pids/server.pid\n\
-\n\
-# 環境変数の確認\n\
-echo "RAILS_ENV=${RAILS_ENV}"\n\
-echo "PORT=${PORT}"\n\
-echo "RAILS_MASTER_KEY is set: $([ -n "$RAILS_MASTER_KEY" ] && echo "Yes" || echo "No")"\n\
-echo "SECRET_KEY_BASE is set: $([ -n "$SECRET_KEY_BASE" ] && echo "Yes" || echo "No")"\n\
-echo "DISABLE_DATABASE_CONNECTION=${DISABLE_DATABASE_CONNECTION}"\n\
-\n\
-# Railsサーバー起動\n\
-exec bundle exec rails server -b 0.0.0.0 -p ${PORT:-8080}\n\
-' > /app/start-minimal.sh
+# 起動スクリプトを作成
+COPY bgr4-api/start-minimal.sh /app/start-minimal.sh
 
-# 起動スクリプトに実行権限を付与
+# スクリプトに実行権限を付与
 RUN chmod +x /app/start-minimal.sh
 
 # 必要なディレクトリの作成と権限設定
 RUN mkdir -p /app/tmp/pids /app/log && \
     chmod -R 777 /app/tmp /app/log
 
+# デバッグ用コマンドを追加
+RUN echo "#!/bin/bash\necho '環境変数:'\nenv | sort\necho ''\necho 'Gemfile内容:'\ncat Gemfile\necho ''\necho 'インストールされたGem:'\nbundle list\necho ''\necho 'ディレクトリ構造:'\nfind /app -type d -maxdepth 3 | sort\necho ''\necho 'コンフィグファイル一覧:'\nfind /app/config -type f | sort\n" > /app/debug.sh && \
+    chmod +x /app/debug.sh
+
 # ポートの公開
 EXPOSE 8080
 
-# ヘルスチェック
-HEALTHCHECK --interval=5s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT}/ || exit 1
+# ヘルスチェック - タイムアウトを延長
+HEALTHCHECK --interval=5s --timeout=3s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # 起動コマンド
 CMD ["/app/start-minimal.sh"] 

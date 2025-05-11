@@ -33,6 +33,26 @@ port ENV.fetch("PORT", 3000)
 # Bind to all network interfaces and listen on specified port
 bind "tcp://0.0.0.0:#{ENV.fetch("PORT", 3000)}"
 
+# デバッグログを有効にする
+if ENV['RAILS_LOG_TO_STDOUT'] == 'true'
+  stdout_redirect '/dev/stdout', '/dev/stderr', true
+end
+
+# Cloud Run環境で安定して動作するようにワーカー数を1に固定
+workers ENV.fetch("WEB_CONCURRENCY", 1)
+
+# プリロードアプリケーションの設定 - Cloud Run環境では無効化する
+preload_app! unless ENV['DISABLE_DATABASE_CONNECTION'] == 'true'
+
+# ワーカー起動タイムアウトを延長
+worker_timeout 120
+
+# 再起動時の猶予時間（秒）
+worker_shutdown_timeout 30
+
+# プロセスの再起動を許可する
+prune_bundler
+
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
 
@@ -42,3 +62,12 @@ plugin :solid_queue if ENV["SOLID_QUEUE_IN_PUMA"]
 # Specify the PID file. Defaults to tmp/pids/server.pid in development.
 # In other environments, only set the PID file if requested.
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
+
+# 起動完了時にメッセージをログに出力
+on_worker_boot do
+  puts "✅ Pumaワーカーが起動しました"
+end
+
+on_worker_shutdown do
+  puts "📴 Pumaワーカーをシャットダウンしています..."
+end
