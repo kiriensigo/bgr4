@@ -4,18 +4,18 @@ steps:
     args:
       - "build"
       - "-t"
-      - "gcr.io/$PROJECT_ID/bgr4-api-minimal:latest"
+      - "gcr.io/$PROJECT_ID/bgr4-api-fixed:latest"
       - "-f"
-      - "bgr4-api/Dockerfile.minimal"
+      - "bgr4-api/Dockerfile.fixed"
       - "."
 
   # GCRへのイメージのプッシュ
   - name: "gcr.io/cloud-builders/docker"
     args:
       - "push"
-      - "gcr.io/$PROJECT_ID/bgr4-api-minimal:latest"
+      - "gcr.io/$PROJECT_ID/bgr4-api-fixed:latest"
 
 images:
-  - "gcr.io/$PROJECT_ID/bgr4-api-minimal:latest"
+  - "gcr.io/$PROJECT_ID/bgr4-api-fixed:latest"
 
 timeout: "1800s"

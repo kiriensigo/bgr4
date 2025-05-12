@@ -1,0 +1,52 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: bgr4-api-v2
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "5"
+        autoscaling.knative.dev/minScale: "1"
+        run.googleapis.com/cloudsql-instances: bgr4-project:asia-northeast1:bgr4-db
+      labels:
+        run.googleapis.com/startupProbeType: Default
+    spec:
+      containerConcurrency: 80
+      containers:
+        - env:
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: secret-key-base
+            - name: RAILS_ENV
+              value: production
+            - name: RAILS_LOG_TO_STDOUT
+              value: "true"
+            - name: TZ
+              value: Asia/Tokyo
+            - name: DISABLE_DATABASE_CONNECTION
+              value: "true"
+            - name: RAILS_SERVE_STATIC_FILES
+              value: "true"
+            - name: RAILS_STANDALONE_MODE
+              value: "true"
+          image: gcr.io/bgr4-project/bgr4-api-new-minimal:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          startupProbe:
+            failureThreshold: 1
+            periodSeconds: 240
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 240
+      serviceAccountName: bgr4-cloudrun-sa@bgr4-project.iam.gserviceaccount.com
+      timeoutSeconds: 600
+  traffic:
+    - percent: 100
+      latestRevision: true

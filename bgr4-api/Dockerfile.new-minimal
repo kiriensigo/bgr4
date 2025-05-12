@@ -1,0 +1,72 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    nodejs \
+    procps \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# アプリケーションディレクトリの作成
+WORKDIR /app
+
+# 環境変数の設定
+ENV PORT=8080
+ENV RAILS_ENV=production
+ENV RAILS_SERVE_STATIC_FILES=true
+ENV RAILS_LOG_TO_STDOUT=true
+ENV DISABLE_DATABASE_CONNECTION=true
+ENV BINDING=0.0.0.0
+ENV SECRET_KEY_BASE=dummy_key_for_build_only
+
+# GemfileとGemfile.lockをコピー
+COPY bgr4-api/Gemfile bgr4-api/Gemfile.lock ./
+
+# Production環境用にnulldbアダプターを追加
+RUN echo "gem 'activerecord-nulldb-adapter', group: :production" >> Gemfile
+
+# 依存関係のインストール
+RUN gem install bundler && \
+    bundle config set --local without 'development test' && \
+    bundle install --jobs 4 --retry 3
+
+# アプリケーションのコピー
+COPY bgr4-api/ .
+
+# 必要なディレクトリの作成と権限設定
+RUN mkdir -p /app/tmp/pids /app/log && \
+    chmod -R 777 /app/tmp /app/log
+
+# 初期化ファイルの確認と作成
+RUN if [ ! -f config/initializers/disable_database.rb ]; then \
+    echo "ActiveRecord::Base.establish_connection adapter: 'nulldb'" > config/initializers/disable_database.rb; \
+    fi
+
+# 起動スクリプトの作成
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo 'cd /app' >> /app/start.sh && \
+    echo 'rm -f /app/tmp/pids/server.pid' >> /app/start.sh && \
+    echo 'echo "Starting Rails API with Puma..."' >> /app/start.sh && \
+    echo 'echo "PORT: $PORT"' >> /app/start.sh && \
+    echo 'echo "RAILS_ENV: $RAILS_ENV"' >> /app/start.sh && \
+    echo 'echo "DISABLE_DATABASE_CONNECTION: $DISABLE_DATABASE_CONNECTION"' >> /app/start.sh && \
+    echo 'exec bundle exec puma -p ${PORT:-8080} -w 0' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# ヘルスチェックエンドポイントの追加
+RUN if ! grep -q "get '/health'" config/routes.rb; then \
+    echo "Rails.application.routes.draw do" > /tmp/new_routes.rb && \
+    echo "  get '/health', to: proc { [200, {\"Content-Type\" => \"application/json\"}, [\"{\\\"status\\\":\\\"ok\\\"}\"]] }" >> /tmp/new_routes.rb && \
+    cat config/routes.rb >> /tmp/new_routes.rb && \
+    mv /tmp/new_routes.rb config/routes.rb; \
+    fi
+
+# ポートの公開
+EXPOSE 8080
+
+# コンテナ起動時のコマンド
+CMD ["/app/start.sh"] 

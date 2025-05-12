@@ -1,0 +1,47 @@
+FROM ruby:3.3.0-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 必要最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile && \
+    echo 'gem "rack"' >> Gemfile
+
+# 依存関係のインストール
+RUN gem install bundler && \
+    bundle install
+
+# config.ruファイルを作成
+RUN echo 'require "sinatra/base"' > config.ru && \
+    echo 'class App < Sinatra::Base' >> config.ru && \
+    echo '  set :bind, "0.0.0.0"' >> config.ru && \
+    echo '  set :protection, false' >> config.ru && \
+    echo '' >> config.ru && \
+    echo '  get "/health" do' >> config.ru && \
+    echo '    content_type :json' >> config.ru && \
+    echo '    "{\"status\":\"ok\"}"' >> config.ru && \
+    echo '  end' >> config.ru && \
+    echo '' >> config.ru && \
+    echo '  get "/*" do' >> config.ru && \
+    echo '    "Hello from BGr4 API!"' >> config.ru && \
+    echo '  end' >> config.ru && \
+    echo 'end' >> config.ru && \
+    echo '' >> config.ru && \
+    echo 'run App.new' >> config.ru
+
+# スタートアップスクリプト
+RUN echo '#!/bin/bash' > start.sh && \
+    echo 'echo "Starting Sinatra app with Puma on port ${PORT:-8080}"' >> start.sh && \
+    echo 'echo "Disabling all protections and host validations"' >> start.sh && \
+    echo 'exec bundle exec puma -b tcp://0.0.0.0:${PORT:-8080} -e production config.ru' >> start.sh && \
+    chmod +x start.sh
+
+EXPOSE 8080
+
+CMD ["./start.sh"] 

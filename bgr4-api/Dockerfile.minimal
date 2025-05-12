@@ -1,59 +1,45 @@
 FROM ruby:3.3.0-slim
 
-RUN apt-get update -qq && apt-get install -y \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     build-essential \
-    libpq-dev \
-    nodejs \
-    curl \
-    net-tools \
-    lsof \
-    vim
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 環境変数設定
-ENV PORT=8080
-ENV RAILS_ENV=production
-ENV RAILS_SERVE_STATIC_FILES=true
-ENV RAILS_LOG_TO_STDOUT=true
-ENV DISABLE_DATABASE_CONNECTION=true
-ENV RAILS_MASTER_KEY=${RAILS_MASTER_KEY}
-ENV SECRET_KEY_BASE=${SECRET_KEY_BASE}
+# 必要最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile
 
-# GemfileとGemfile.lockをコピー
-COPY bgr4-api/Gemfile bgr4-api/Gemfile.lock ./
-
-# nulldb-adapterを追加
-RUN echo "gem 'activerecord-nulldb-adapter', group: :production" >> Gemfile
-
-# 依存関係をインストール
+# 依存関係のインストール
 RUN gem install bundler && \
-    bundle config set --local without 'development test' && \
-    bundle install --jobs 4 --retry 3
+    bundle install
 
-# アプリケーションコードのコピー
-COPY bgr4-api/ .
+# 最もシンプルなsinatraアプリを作成
+RUN echo 'require "sinatra"' > app.rb && \
+    echo 'class App < Sinatra::Base' >> app.rb && \
+    echo '  set :bind, "0.0.0.0"' >> app.rb && \
+    echo '  set :protection, :except => :host_header' >> app.rb && \
+    echo '  get "/health" do' >> app.rb && \
+    echo '    content_type :json' >> app.rb && \
+    echo '    "{\"status\":\"ok\"}"' >> app.rb && \
+    echo '  end' >> app.rb && \
+    echo '  get "/*" do' >> app.rb && \
+    echo '    "Hello World!"' >> app.rb && \
+    echo '  end' >> app.rb && \
+    echo 'end' >> app.rb
 
-# 起動スクリプトを作成
-COPY bgr4-api/start-minimal.sh /app/start-minimal.sh
+# Rackupファイルを作成
+RUN echo 'require "./app"' > config.ru && \
+    echo 'run App' >> config.ru
 
-# スクリプトに実行権限を付与
-RUN chmod +x /app/start-minimal.sh
+# スタートアップスクリプト
+RUN echo '#!/bin/bash' > start.sh && \
+    echo 'echo "Starting minimal Sinatra app with Puma on port ${PORT:-8080}"' >> start.sh && \
+    echo 'exec bundle exec puma -b tcp://0.0.0.0:${PORT:-8080} -e production config.ru' >> start.sh && \
+    chmod +x start.sh
 
-# 必要なディレクトリの作成と権限設定
-RUN mkdir -p /app/tmp/pids /app/log && \
-    chmod -R 777 /app/tmp /app/log
-
-# デバッグ用コマンドを追加
-RUN echo "#!/bin/bash\necho '環境変数:'\nenv | sort\necho ''\necho 'Gemfile内容:'\ncat Gemfile\necho ''\necho 'インストールされたGem:'\nbundle list\necho ''\necho 'ディレクトリ構造:'\nfind /app -type d -maxdepth 3 | sort\necho ''\necho 'コンフィグファイル一覧:'\nfind /app/config -type f | sort\n" > /app/debug.sh && \
-    chmod +x /app/debug.sh
-
-# ポートの公開
 EXPOSE 8080
 
-# ヘルスチェック - タイムアウトを延長
-HEALTHCHECK --interval=5s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:${PORT}/health || exit 1
-
-# 起動コマンド
-CMD ["/app/start-minimal.sh"] 
+CMD ["./start.sh"] 

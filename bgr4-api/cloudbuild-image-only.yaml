@@ -1,0 +1,25 @@
+steps:
+  # イメージのビルド
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/bgr4-api-new-minimal:latest",
+        "-f",
+        "bgr4-api/Dockerfile.new-minimal",
+        ".",
+        "--progress=plain",
+        "--no-cache",
+      ]
+
+  # Container Registryへのプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/bgr4-api-new-minimal:latest"]
+
+# 完了時に生成されるイメージ
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-api-new-minimal:latest"
+
+# ビルドのタイムアウト（3600秒 = 1時間）
+timeout: 3600s 

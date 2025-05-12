@@ -1,0 +1,44 @@
+FROM ruby:3.3.0-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 最も単純なヘルスチェックアプリを作成する
+RUN echo 'require "rack"' > app.rb && \
+    echo 'class HealthApp' >> app.rb && \
+    echo '  def call(env)' >> app.rb && \
+    echo '    req = Rack::Request.new(env)' >> app.rb && \
+    echo '    if req.path == "/health"' >> app.rb && \
+    echo '      [200, {"Content-Type" => "application/json"}, ["{\"status\":\"ok\"}"]]' >> app.rb && \
+    echo '    else' >> app.rb && \
+    echo '      [404, {"Content-Type" => "text/plain"}, ["Not Found"]]' >> app.rb && \
+    echo '    end' >> app.rb && \
+    echo '  end' >> app.rb && \
+    echo 'end' >> app.rb && \
+    echo 'run HealthApp.new' > config.ru
+
+# 最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "rack"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile
+
+# Bundlerをインストールし依存関係をインストール
+RUN gem install bundler && \
+    bundle install
+
+# スタートアップスクリプトの作成
+RUN echo '#!/bin/bash' > start.sh && \
+    echo 'set -e' >> start.sh && \
+    echo 'echo "Starting minimal Rack app with health check endpoint..."' >> start.sh && \
+    echo 'echo "ENVIRONMENT: ${RAILS_ENV:-development}"' >> start.sh && \
+    echo 'exec bundle exec rackup -p ${PORT:-8080} -o 0.0.0.0' >> start.sh && \
+    chmod +x start.sh
+
+EXPOSE 8080
+
+CMD ["./start.sh"] 
