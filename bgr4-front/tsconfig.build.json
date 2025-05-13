@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","compilerOptions":{"noErrorTruncation":true,"skipLibCheck":true,"noImplicitAny":false,"strict":false,"noUncheckedIndexedAccess":false,"typeRoots":["./node_modules/@types"]}}

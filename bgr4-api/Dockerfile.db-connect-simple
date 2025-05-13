@@ -1,0 +1,67 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 必要最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "sinatra-contrib"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile && \
+    echo 'gem "pg"' >> Gemfile
+
+# 依存関係のインストール
+RUN gem install bundler && \
+    bundle install
+
+# メインアプリケーションファイルを作成
+RUN echo 'require "sinatra/base"' > /app/app.rb && \
+    echo 'require "sinatra/json"' >> /app/app.rb && \
+    echo 'require "json"' >> /app/app.rb && \
+    echo 'require "pg"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo 'class App < Sinatra::Base' >> /app/app.rb && \
+    echo '  set :bind, "0.0.0.0"' >> /app/app.rb && \
+    echo '  set :protection, false' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  get "/health" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    begin' >> /app/app.rb && \
+    echo '      # データベース接続テスト (実際には接続しない)' >> /app/app.rb && \
+    echo '      if ENV["DB_NAME"] && ENV["DB_USER"] && ENV["DB_PASS"] && ENV["INSTANCE_CONNECTION_NAME"]' >> /app/app.rb && \
+    echo '        { status: "ok", database_config: "found" }.to_json' >> /app/app.rb && \
+    echo '      else' >> /app/app.rb && \
+    echo '        { status: "ok", database_config: "not found" }.to_json' >> /app/app.rb && \
+    echo '      end' >> /app/app.rb && \
+    echo '    rescue => e' >> /app/app.rb && \
+    echo '      status 500' >> /app/app.rb && \
+    echo '      { status: "error", message: e.message }.to_json' >> /app/app.rb && \
+    echo '    end' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  get "/" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    { message: "Welcome to BGr4 API with DB Config Checker!" }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo 'end' >> /app/app.rb
+
+# config.ruファイルを作成
+RUN echo 'require "./app"' > /app/config.ru && \
+    echo 'run App' >> /app/config.ru
+
+# スタートアップスクリプトを作成
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Starting BGr4 API DB Config Checker on port ${PORT:-8080}"' >> /app/start.sh && \
+    echo 'echo "Database config: DB_NAME=$DB_NAME, DB_USER=$DB_USER"' >> /app/start.sh && \
+    echo 'exec bundle exec puma -b tcp://0.0.0.0:${PORT:-8080} -e ${RACK_ENV:-production} config.ru' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+EXPOSE 8080
+
+CMD ["./start.sh"] 

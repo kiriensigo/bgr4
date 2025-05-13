@@ -30,10 +30,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/";
+  const redirect = searchParams?.get("redirect") || "/";
 
   useEffect(() => {
-    const errorParam = searchParams.get("error");
+    const errorParam = searchParams?.get("error");
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
     }

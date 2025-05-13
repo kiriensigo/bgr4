@@ -140,7 +140,13 @@ export default function RelatedGamesPage({ params }: RelatedGamesPageProps) {
         <Grid container spacing={3}>
           {allGames.map((game) => (
             <Grid item key={game.id} xs={12} sm={6} md={4} lg={3}>
-              <GameCard game={game} />
+              <GameCard
+                game={{
+                  ...game,
+                  id: typeof game.id === "number" ? String(game.id) : game.id,
+                }}
+                type="game"
+              />
             </Grid>
           ))}
         </Grid>

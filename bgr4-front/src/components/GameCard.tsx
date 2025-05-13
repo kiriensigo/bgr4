@@ -62,7 +62,7 @@ interface Review {
 interface GameCardProps {
   game: Game;
   review?: Review;
-  type: "game" | "review";
+  type?: "game" | "review";
   useOverallScoreDisplay?: boolean;
   overallScoreVariant?: "default" | "compact" | "large";
   showOverallScoreOverlay?: boolean;
@@ -74,7 +74,7 @@ interface GameCardProps {
 export default function GameCard({
   game,
   review,
-  type,
+  type = "game",
   useOverallScoreDisplay = false,
   overallScoreVariant = "compact",
   showOverallScoreOverlay = false,

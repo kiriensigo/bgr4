@@ -45,6 +45,8 @@ export interface GameListProps {
   showSort?: boolean;
   sortOptions?: SortOption[];
   showPagination?: boolean;
+  emptyMessage?: string;
+  gridItemProps?: any;
 }
 
 // デフォルトのソートオプション
@@ -91,6 +93,8 @@ export default function GameList({
   showSort = true,
   sortOptions = DEFAULT_SORT_OPTIONS,
   showPagination = true,
+  emptyMessage = "表示するゲームがありません",
+  gridItemProps,
 }: GameListProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -460,7 +464,7 @@ export default function GameList({
         </Alert>
       ) : games.length === 0 ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          表示するゲームがありません
+          {emptyMessage}
         </Alert>
       ) : (
         <>

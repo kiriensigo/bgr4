@@ -27,7 +27,7 @@ import Link from "next/link";
 
 export default function EditGamePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { user, loading: authLoading, getAuthHeaders } = useAuth();
+  const { user, isLoading: authLoading, getAuthHeaders } = useAuth();
   const [game, setGame] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -162,7 +162,9 @@ export default function EditGamePage({ params }: { params: { id: string } }) {
   const canEditGame = reviewCount >= 5 || isAdmin;
 
   // フォーム入力の処理
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -222,7 +224,7 @@ export default function EditGamePage({ params }: { params: { id: string } }) {
       console.log("Game data to update:", formData);
 
       // 数値フィールドの変換
-      const gameData = {
+      const gameData: any = {
         ...formData,
         min_players: formData.min_players
           ? parseInt(formData.min_players)

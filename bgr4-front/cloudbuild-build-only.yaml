@@ -1,0 +1,21 @@
+steps:
+  # DockerビルドとContainer Registry へのプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/bgr4-front",
+        "-f",
+        "Dockerfile.prod",
+        ".",
+      ]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/bgr4-front"]
+
+# イメージをContainer Registryに保存
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-front"
+
+timeout: 1800s

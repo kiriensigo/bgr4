@@ -1,0 +1,90 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール（PostgreSQLクライアントを含む）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 必要最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "sinatra-contrib"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile && \
+    echo 'gem "pg"' >> Gemfile && \
+    echo 'gem "sequel"' >> Gemfile && \
+    echo 'gem "json"' >> Gemfile
+
+# 依存関係のインストール
+RUN gem install bundler && \
+    bundle install
+
+# データベース接続モジュールを作成
+RUN echo 'require "sequel"' > /app/db.rb && \
+    echo 'require "logger"' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo 'module Database' >> /app/db.rb && \
+    echo '  class << self' >> /app/db.rb && \
+    echo '    def connection' >> /app/db.rb && \
+    echo '      @connection ||= begin' >> /app/db.rb && \
+    echo '        Sequel.connect(connection_string, logger: Logger.new($stdout))' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '    def connection_string' >> /app/db.rb && \
+    echo '      if ENV["INSTANCE_CONNECTION_NAME"] && ENV["DB_USER"] && ENV["DB_PASS"] && ENV["DB_NAME"]' >> /app/db.rb && \
+    echo '        socket = ENV["INSTANCE_CONNECTION_NAME"]' >> /app/db.rb && \
+    echo '        "postgres://#{ENV[\"DB_USER\"]}:#{ENV[\"DB_PASS\"]}@localhost/#{ENV[\"DB_NAME\"]}?host=/cloudsql/#{socket}"' >> /app/db.rb && \
+    echo '      else' >> /app/db.rb && \
+    echo '        "postgres://postgres:postgres@localhost/postgres"' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '  end' >> /app/db.rb && \
+    echo 'end' >> /app/db.rb
+
+# メインアプリケーションファイルを作成
+RUN echo 'require "sinatra/base"' > /app/app.rb && \
+    echo 'require "sinatra/json"' >> /app/app.rb && \
+    echo 'require "json"' >> /app/app.rb && \
+    echo 'require_relative "db"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo 'class App < Sinatra::Base' >> /app/app.rb && \
+    echo '  set :bind, "0.0.0.0"' >> /app/app.rb && \
+    echo '  set :protection, false' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  get "/health" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    begin' >> /app/app.rb && \
+    echo '      # データベース接続をテスト' >> /app/app.rb && \
+    echo '      Database.connection.test_connection' >> /app/app.rb && \
+    echo '      { status: "ok", database: "connected" }.to_json' >> /app/app.rb && \
+    echo '    rescue => e' >> /app/app.rb && \
+    echo '      status 500' >> /app/app.rb && \
+    echo '      { status: "error", message: e.message }.to_json' >> /app/app.rb && \
+    echo '    end' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  get "/" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    { message: "Welcome to BGr4 API with Database Connection!" }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo 'end' >> /app/app.rb
+
+# config.ruファイルを作成
+RUN echo 'require "./app"' > /app/config.ru && \
+    echo 'run App' >> /app/config.ru
+
+# スタートアップスクリプトを作成
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Starting BGr4 API with Database Connection on port ${PORT:-8080}"' >> /app/start.sh && \
+    echo 'echo "Database connection: $INSTANCE_CONNECTION_NAME"' >> /app/start.sh && \
+    echo 'exec bundle exec puma -b tcp://0.0.0.0:${PORT:-8080} -e ${RACK_ENV:-production} config.ru' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+EXPOSE 8080
+
+CMD ["./start.sh"] 

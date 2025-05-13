@@ -1,0 +1,57 @@
+steps:
+  # ビルドとプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-t", "gcr.io/$PROJECT_ID/bgr4-front-review", "."]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/bgr4-front-review"]
+
+  # Cloud Runへのデプロイ
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "deploy",
+        "bgr4-front-review",
+        "--image",
+        "gcr.io/$PROJECT_ID/bgr4-front-review",
+        "--region",
+        "asia-northeast1",
+        "--platform",
+        "managed",
+        "--allow-unauthenticated",
+        "--memory",
+        "256Mi",
+        "--min-instances",
+        "0",
+        "--max-instances",
+        "2",
+        "--port",
+        "8080",
+        "--set-env-vars",
+        "NODE_ENV=production,NEXT_PUBLIC_API_URL=https://bgr4-api-db-349403738734.asia-northeast1.run.app",
+      ]
+
+  # サービスを公開アクセス可能に設定
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "services",
+        "add-iam-policy-binding",
+        "bgr4-front-review",
+        "--region",
+        "asia-northeast1",
+        "--member",
+        "allUsers",
+        "--role",
+        "roles/run.invoker",
+      ]
+
+# イメージをContainer Registryに保存
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-front-review"
+
+timeout: 1800s

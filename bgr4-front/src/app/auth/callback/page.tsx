@@ -87,6 +87,11 @@ export default function AuthCallback() {
         // 既存のトークンをクリア
         clearAllAuthCookies();
 
+        // searchParamsがnullかチェック
+        if (!searchParams) {
+          throw new Error("URLパラメータを取得できませんでした");
+        }
+
         // URLパラメータからトークン情報を取得
         const accessToken = searchParams.get("access-token");
         const uid = searchParams.get("uid");

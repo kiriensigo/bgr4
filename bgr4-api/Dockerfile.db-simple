@@ -1,68 +1,53 @@
 FROM ruby:3.3.0-slim
 
-# 必要なパッケージのインストール
-RUN apt-get update -qq && apt-get install -y \
+# 必要なパッケージをインストール
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     build-essential \
-    libpq-dev \
-    curl \
-    gnupg2 \
-    git \
-    postgresql-client \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 作業ディレクトリの設定
 WORKDIR /app
 
-# 環境変数の設定
-ENV PORT=8080
-ENV RAILS_ENV=production
-ENV RAILS_SERVE_STATIC_FILES=true
-ENV RAILS_LOG_TO_STDOUT=true
-ENV SECRET_KEY_BASE=${SECRET_KEY_BASE}
-
-# Railsのインストール
-RUN gem install rails -v 7.1.3
-RUN gem install pg
-
-# アプリケーションファイルのコピー
-COPY app/ /app/app/
-COPY bin/ /app/bin/
-COPY config/ /app/config/
-COPY db/ /app/db/
-COPY lib/ /app/lib/
-COPY public/ /app/public/
-COPY Gemfile Gemfile.lock Rakefile config.ru .ruby-version /app/
-COPY scripts/ /app/scripts/
+# 必要最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "sinatra-contrib"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile
 
 # 依存関係のインストール
-RUN bundle install
+RUN gem install bundler && \
+    bundle install
 
-# 起動スクリプトの作成
-RUN echo '#!/bin/bash' > start.sh && \
-    echo 'set -e' >> start.sh && \
-    echo '' >> start.sh && \
-    echo '# データベースへの接続を待つ' >> start.sh && \
-    echo 'echo "PostgreSQLへの接続を待機しています..."' >> start.sh && \
-    echo 'until pg_isready -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USERNAME; do' >> start.sh && \
-    echo '  echo "PostgreSQL接続待機中..."' >> start.sh && \
-    echo '  sleep 2' >> start.sh && \
-    echo 'done' >> start.sh && \
-    echo 'echo "PostgreSQLに接続しました。"' >> start.sh && \
-    echo '' >> start.sh && \
-    echo '# データベースの作成' >> start.sh && \
-    echo 'if [ "${INITIALIZE_DB}" = "true" ]; then' >> start.sh && \
-    echo '  echo "データベースを初期化します..."' >> start.sh && \
-    echo '  bundle exec rails db:create db:migrate db:seed' >> start.sh && \
-    echo '  echo "データベースの初期化が完了しました。"' >> start.sh && \
-    echo 'fi' >> start.sh && \
-    echo '' >> start.sh && \
-    echo '# Railsサーバーを起動' >> start.sh && \
-    echo 'bundle exec rails server -p ${PORT:-8080} -b 0.0.0.0' >> start.sh && \
-    chmod +x start.sh
+# メインアプリケーションファイルを作成
+RUN echo 'require "sinatra/base"' > /app/app.rb && \
+    echo 'require "sinatra/json"' >> /app/app.rb && \
+    echo 'require "json"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo 'class App < Sinatra::Base' >> /app/app.rb && \
+    echo '  set :bind, "0.0.0.0"' >> /app/app.rb && \
+    echo '  set :protection, false' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  get "/health" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    { status: "ok" }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  get "/" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    { message: "Welcome to BGr4 API (Simple Version)!" }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo 'end' >> /app/app.rb
 
-# ポートの公開
+# config.ruファイルを作成
+RUN echo 'require "./app"' > /app/config.ru && \
+    echo 'run App' >> /app/config.ru
+
+# スタートアップスクリプトを作成
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Starting BGr4 API Simple on port ${PORT:-8080}"' >> /app/start.sh && \
+    echo 'exec bundle exec puma -b tcp://0.0.0.0:${PORT:-8080} -e ${RACK_ENV:-production} config.ru' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 EXPOSE 8080
 
-# コマンドの設定
 CMD ["./start.sh"] 

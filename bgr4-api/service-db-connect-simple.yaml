@@ -1,0 +1,49 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: bgr4-api-db-connect-simple
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "5"
+        autoscaling.knative.dev/minScale: "0"
+        # Cloud SQLインスタンス接続設定
+        run.googleapis.com/cloudsql-instances: bgr4-project:asia-northeast1:bgr4-db
+      labels:
+        run.googleapis.com/startupProbeType: Default
+    spec:
+      containerConcurrency: 80
+      containers:
+        - image: gcr.io/bgr4-project/bgr4-api-db-connect-simple:latest
+          ports:
+            - containerPort: 8080
+          env:
+            # データベース接続情報
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASS
+              value: bgr4-password-123
+            - name: DB_NAME
+              value: bgr4_db
+            - name: INSTANCE_CONNECTION_NAME
+              value: bgr4-project:asia-northeast1:bgr4-db
+            - name: RACK_ENV
+              value: production
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          startupProbe:
+            failureThreshold: 3
+            periodSeconds: 30
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 5
+      serviceAccountName: bgr4-cloudrun-sa@bgr4-project.iam.gserviceaccount.com
+      timeoutSeconds: 600
+  traffic:
+    - percent: 100
+      latestRevision: true 

@@ -1,0 +1,40 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: bgr4-front-minimal
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+    run.googleapis.com/ingress: all
+    autoscaling.knative.dev/minScale: "0"
+    autoscaling.knative.dev/maxScale: "2"
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "2"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - image: gcr.io/bgr4-project/bgr4-front:latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: 256Mi
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://bgr4-api-db-349403738734.asia-northeast1.run.app"
+            - name: NEXT_PUBLIC_BROWSER_API_URL
+              value: "https://bgr4-api-db-349403738734.asia-northeast1.run.app"
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3

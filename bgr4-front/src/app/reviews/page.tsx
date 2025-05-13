@@ -203,8 +203,8 @@ export default function ReviewsPage() {
   const searchParams = useSearchParams();
 
   // URLからパラメータを取得
-  const initialPage = parseInt(searchParams.get("page") || "1");
-  const initialPageSize = parseInt(searchParams.get("pageSize") || "24");
+  const initialPage = parseInt(searchParams?.get("page") || "1");
+  const initialPageSize = parseInt(searchParams?.get("pageSize") || "24");
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,12 +217,12 @@ export default function ReviewsPage() {
   // URLを更新する関数
   const updateUrl = useCallback(
     (newPage: number, newPageSize: number) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString() || "");
       params.set("page", newPage.toString());
       params.set("pageSize", newPageSize.toString());
       router.push(`${pathname}?${params.toString()}`);
     },
-    [pathname, router, searchParams]
+    [searchParams, pathname, router]
   );
 
   // レビューを取得する関数

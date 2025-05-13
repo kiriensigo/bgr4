@@ -1,0 +1,21 @@
+steps:
+  # Dockerコンテナのビルド
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/bgr4-api-db-connect-simple:latest"
+      - "-f"
+      - "bgr4-api/Dockerfile.db-connect-simple"
+      - "."
+
+  # GCRへのイメージのプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/bgr4-api-db-connect-simple:latest"
+
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-api-db-connect-simple:latest"
+
+timeout: "1800s"

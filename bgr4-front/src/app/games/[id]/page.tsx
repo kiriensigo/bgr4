@@ -339,15 +339,17 @@ export default function GamePage({ params }: GamePageProps) {
   const { user, getAuthHeaders, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const refresh = searchParams.get("refresh") === "true";
+  const refresh = searchParams?.get("refresh") === "true";
 
   // IDがundefinedの場合はゲーム一覧ページにリダイレクト
   useEffect(() => {
-    if (params.id === "undefined" || !params.id) {
-      console.log("Invalid game ID detected, redirecting to games list");
-      router.push("/games");
+    if (params?.id === "undefined" || !params?.id) {
+      console.log("Invalid game ID, skipping data fetch");
+      setError("無効なゲームIDです。ゲーム一覧ページに戻ってください。");
+      setLoading(false);
+      return;
     }
-  }, [params.id, router]);
+  }, [params?.id, router]);
 
   const [game, setGame] = useState<ExtendedGame | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -439,7 +441,7 @@ export default function GamePage({ params }: GamePageProps) {
   const fetchGameData = useCallback(
     async (forceRefresh = false) => {
       // IDがundefinedの場合は処理を中止
-      if (params.id === "undefined" || !params.id) {
+      if (params?.id === "undefined" || !params?.id) {
         console.log("Invalid game ID, skipping data fetch");
         setError("無効なゲームIDです。ゲーム一覧ページに戻ってください。");
         setLoading(false);
@@ -555,12 +557,12 @@ export default function GamePage({ params }: GamePageProps) {
         setLoading(false);
       }
     },
-    [params.id, user, getAuthHeaders]
+    [params?.id, user, getAuthHeaders]
   );
 
   useEffect(() => {
     // IDがundefinedの場合は処理を中止
-    if (params.id === "undefined" || !params.id) {
+    if (params?.id === "undefined" || !params?.id) {
       return;
     }
 
@@ -577,7 +579,7 @@ export default function GamePage({ params }: GamePageProps) {
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
     }
-  }, [fetchGameData, params.id, refresh]);
+  }, [fetchGameData, params?.id, refresh]);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -913,7 +915,7 @@ export default function GamePage({ params }: GamePageProps) {
               alignItems: "center",
               backdropFilter: "blur(3px)",
             }}
-            inert={updatingGame ? undefined : true}
+            inert={updatingGame ? true : false}
           >
             <Paper
               elevation={4}
@@ -1611,7 +1613,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseUpdateDialog}
           slotProps={{
             backdrop: {
-              inert: openUpdateDialog ? "true" : "false",
+              inert: openUpdateDialog ? true : false,
             },
           }}
         >
@@ -1652,7 +1654,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClose={handleCloseSystemReviewsDialog}
           slotProps={{
             backdrop: {
-              inert: openSystemReviewsDialog ? "true" : "false",
+              inert: openSystemReviewsDialog ? true : false,
             },
           }}
         >

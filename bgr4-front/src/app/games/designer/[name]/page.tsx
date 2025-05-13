@@ -8,7 +8,7 @@ import { useParams } from "next/navigation";
 
 export default function DesignerPage() {
   const params = useParams();
-  const designerName = decodeURIComponent(params.name as string);
+  const designerName = decodeURIComponent((params?.name as string) || "");
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>

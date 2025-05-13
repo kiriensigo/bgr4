@@ -17,9 +17,9 @@ import GameList from "@/components/GameList";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
-  const query = searchParams.get("query") || "";
-  const publisher = searchParams.get("publisher") || "";
-  const designer = searchParams.get("designer") || "";
+  const query = searchParams?.get("query") || "";
+  const publisher = searchParams?.get("publisher") || "";
+  const designer = searchParams?.get("designer") || "";
 
   const [searchTitle, setSearchTitle] = useState("ゲームを検索");
   const [loading, setLoading] = useState(true);
