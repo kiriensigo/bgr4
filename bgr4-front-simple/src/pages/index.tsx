@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Container,
   Typography,
   Box,
   Paper,
@@ -10,46 +9,10 @@ import {
   CardContent,
   Grid,
   Divider,
-  AppBar,
-  Toolbar,
-  createTheme,
-  ThemeProvider,
-  CssBaseline,
 } from "@mui/material";
-import Head from "next/head";
-
-// MUIテーマの作成
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#3f51b5", // インディゴ
-    },
-    secondary: {
-      main: "#f50057", // ピンク
-    },
-    background: {
-      default: "#f5f5f5",
-    },
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: "none",
-          borderRadius: 8,
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 12,
-          boxShadow: "0 4px 8px rgba(0,0,0,0.05)",
-        },
-      },
-    },
-  },
-});
+import GamesIcon from "@mui/icons-material/Games";
+import Link from "next/link";
+import Layout from "../components/Layout";
 
 export default function Home() {
   const [apiStatus, setApiStatus] = useState<"loading" | "success" | "error">(
@@ -103,160 +66,142 @@ export default function Home() {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Head>
-        <title>BGr4 フロントエンド (シンプル)</title>
-        <meta
-          name="description"
-          content="BGr4 フロントエンドアプリケーション"
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <Layout
+      title="ホーム"
+      description="BGr4 フロントエンドアプリケーション"
+      maxWidth="md"
+      currentPath="/"
+    >
+      <Typography variant="h4" component="h1" gutterBottom align="center">
+        BGr4 フロントエンド (シンプル)
+      </Typography>
 
-      <AppBar position="static" color="primary">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            BGr4 フロントエンド
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      <Typography
+        variant="subtitle1"
+        gutterBottom
+        align="center"
+        color="text.secondary"
+      >
+        バックエンドAPI接続テスト
+      </Typography>
 
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          BGr4 フロントエンド (シンプル)
-        </Typography>
-
-        <Typography
-          variant="subtitle1"
-          gutterBottom
-          align="center"
-          color="text.secondary"
+      <Box sx={{ mt: 4, mb: 4, display: "flex", justifyContent: "center" }}>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          component={Link}
+          href="/games"
+          startIcon={<GamesIcon />}
+          sx={{ py: 1.5, px: 4 }}
         >
-          バックエンドAPI接続テスト
-        </Typography>
+          ゲーム一覧を見る
+        </Button>
+      </Box>
 
-        <Divider sx={{ my: 3 }} />
+      <Divider sx={{ my: 3 }} />
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: "100%" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  API ルートエンドポイント
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                API ルートエンドポイント
+              </Typography>
+
+              <Box sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  エンドポイント: {`${apiUrl}/`}
                 </Typography>
 
-                <Box sx={{ my: 2 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    エンドポイント: {`${apiUrl}/`}
-                  </Typography>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 2,
+                    my: 2,
+                    minHeight: 100,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor:
+                      apiStatus === "error" ? "error.50" : "background.paper",
+                  }}
+                >
+                  {apiStatus === "loading" ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    <Typography
+                      color={apiStatus === "error" ? "error" : "textPrimary"}
+                    >
+                      {apiMessage}
+                    </Typography>
+                  )}
+                </Paper>
 
-                  <Paper
-                    elevation={1}
-                    sx={{
-                      p: 2,
-                      my: 2,
-                      minHeight: 100,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor:
-                        apiStatus === "error" ? "error.50" : "background.paper",
-                    }}
-                  >
-                    {apiStatus === "loading" ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      <Typography
-                        color={apiStatus === "error" ? "error" : "textPrimary"}
-                      >
-                        {apiMessage}
-                      </Typography>
-                    )}
-                  </Paper>
-
-                  <Button
-                    variant="outlined"
-                    onClick={fetchRootEndpoint}
-                    disabled={apiStatus === "loading"}
-                    fullWidth
-                  >
-                    再取得
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Card sx={{ height: "100%" }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  ヘルスチェックエンドポイント
-                </Typography>
-
-                <Box sx={{ my: 2 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    エンドポイント: {`${apiUrl}/health`}
-                  </Typography>
-
-                  <Paper
-                    elevation={1}
-                    sx={{
-                      p: 2,
-                      my: 2,
-                      minHeight: 100,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor:
-                        healthStatus === "error"
-                          ? "error.50"
-                          : "background.paper",
-                    }}
-                  >
-                    {healthStatus === "loading" ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      <Typography
-                        color={
-                          healthStatus === "error" ? "error" : "textPrimary"
-                        }
-                      >
-                        {healthMessage}
-                      </Typography>
-                    )}
-                  </Paper>
-
-                  <Button
-                    variant="outlined"
-                    onClick={fetchHealthEndpoint}
-                    disabled={healthStatus === "loading"}
-                    fullWidth
-                  >
-                    再取得
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+                <Button
+                  variant="outlined"
+                  onClick={fetchRootEndpoint}
+                  disabled={apiStatus === "loading"}
+                  fullWidth
+                >
+                  再取得
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
 
-        <Box sx={{ mt: 4, textAlign: "center" }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            このページはCloud Runでホストされています
-          </Typography>
-        </Box>
-      </Container>
-    </ThemeProvider>
+        <Grid item xs={12} md={6}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                ヘルスチェックエンドポイント
+              </Typography>
+
+              <Box sx={{ my: 2 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  エンドポイント: {`${apiUrl}/health`}
+                </Typography>
+
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 2,
+                    my: 2,
+                    minHeight: 100,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor:
+                      healthStatus === "error"
+                        ? "error.50"
+                        : "background.paper",
+                  }}
+                >
+                  {healthStatus === "loading" ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    <Typography
+                      color={healthStatus === "error" ? "error" : "textPrimary"}
+                    >
+                      {healthMessage}
+                    </Typography>
+                  )}
+                </Paper>
+
+                <Button
+                  variant="outlined"
+                  onClick={fetchHealthEndpoint}
+                  disabled={healthStatus === "loading"}
+                  fullWidth
+                >
+                  再取得
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Layout>
   );
 }

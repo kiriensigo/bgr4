@@ -1,0 +1,63 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Gemfileをコピーして依存関係をインストール
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "sinatra-contrib"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile && \
+    echo 'gem "rack-cors"' >> Gemfile
+
+RUN gem install bundler && \
+    bundle install
+
+# 非常にシンプルなアプリケーションファイルを作成
+RUN echo 'require "sinatra"' > app.rb && \
+    echo 'require "json"' >> app.rb && \
+    echo 'require "rack/cors"' >> app.rb && \
+    echo '' >> app.rb && \
+    echo 'use Rack::Cors do' >> app.rb && \
+    echo '  allow do' >> app.rb && \
+    echo '    origins "*"' >> app.rb && \
+    echo '    resource "*", headers: :any, methods: [:get, :post, :put, :delete, :options]' >> app.rb && \
+    echo '  end' >> app.rb && \
+    echo 'end' >> app.rb && \
+    echo '' >> app.rb && \
+    echo 'set :bind, "0.0.0.0"' >> app.rb && \
+    echo 'set :port, ENV["PORT"] || 8080' >> app.rb && \
+    echo '' >> app.rb && \
+    echo '# ヘルスチェックエンドポイント' >> app.rb && \
+    echo 'get "/health" do' >> app.rb && \
+    echo '  content_type :json' >> app.rb && \
+    echo '  { status: "ok" }.to_json' >> app.rb && \
+    echo 'end' >> app.rb && \
+    echo '' >> app.rb && \
+    echo '# ルートエンドポイント' >> app.rb && \
+    echo 'get "/" do' >> app.rb && \
+    echo '  content_type :json' >> app.rb && \
+    echo '  { message: "Welcome to BGr4 Games API!" }.to_json' >> app.rb && \
+    echo 'end' >> app.rb && \
+    echo '' >> app.rb && \
+    echo '# ゲーム一覧エンドポイント' >> app.rb && \
+    echo 'get "/games" do' >> app.rb && \
+    echo '  content_type :json' >> app.rb && \
+    echo '  games = [' >> app.rb && \
+    echo '    { id: 1, name: "カタン", min_players: 3, max_players: 4 },' >> app.rb && \
+    echo '    { id: 2, name: "ドミニオン", min_players: 2, max_players: 4 },' >> app.rb && \
+    echo '    { id: 3, name: "パンデミック", min_players: 2, max_players: 4 }' >> app.rb && \
+    echo '  ]' >> app.rb && \
+    echo '  { games: games, total_count: games.size }.to_json' >> app.rb && \
+    echo 'end'
+
+ENV PORT=8080
+EXPOSE 8080
+
+# より明示的に環境変数のポートを指定
+CMD ["ruby", "app.rb", "-o", "0.0.0.0", "-p", "8080"] 

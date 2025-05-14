@@ -1,0 +1,297 @@
+FROM ruby:3.3.0-slim
+
+# 必要なパッケージをインストール（PostgreSQLクライアントとライブラリを含む）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 必要最小限のGemfileを作成
+RUN echo 'source "https://rubygems.org"' > Gemfile && \
+    echo 'gem "sinatra"' >> Gemfile && \
+    echo 'gem "sinatra-contrib"' >> Gemfile && \
+    echo 'gem "puma"' >> Gemfile && \
+    echo 'gem "rack-cors"' >> Gemfile && \
+    echo 'gem "sequel"' >> Gemfile && \
+    echo 'gem "pg"' >> Gemfile
+
+# 依存関係のインストール
+RUN gem install bundler && \
+    bundle install
+
+# データベース接続モジュールを作成
+RUN echo 'require "sequel"' > /app/db.rb && \
+    echo 'require "logger"' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo 'module Database' >> /app/db.rb && \
+    echo '  class << self' >> /app/db.rb && \
+    echo '    def connection' >> /app/db.rb && \
+    echo '      @connection ||= begin' >> /app/db.rb && \
+    echo '        conn = Sequel.connect(connection_string, logger: Logger.new($stdout))' >> /app/db.rb && \
+    echo '        puts "データベース接続に成功しました！"' >> /app/db.rb && \
+    echo '        conn' >> /app/db.rb && \
+    echo '      rescue => e' >> /app/db.rb && \
+    echo '        puts "データベース接続エラー: #{e.message}"' >> /app/db.rb && \
+    echo '        puts "フォールバックとしてモックデータを使用します"' >> /app/db.rb && \
+    echo '        nil' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '    def connection_string' >> /app/db.rb && \
+    echo '      if ENV["DATABASE_URL"]' >> /app/db.rb && \
+    echo '        ENV["DATABASE_URL"]' >> /app/db.rb && \
+    echo '      elsif ENV["INSTANCE_CONNECTION_NAME"] && ENV["DB_USER"] && ENV["DB_PASS"] && ENV["DB_NAME"]' >> /app/db.rb && \
+    echo '        socket = ENV["INSTANCE_CONNECTION_NAME"]' >> /app/db.rb && \
+    echo '        "postgres://#{ENV[\"DB_USER\"]}:#{ENV[\"DB_PASS\"]}@localhost/#{ENV[\"DB_NAME\"]}?host=/cloudsql/#{socket}"' >> /app/db.rb && \
+    echo '      elsif ENV["DB_HOST"] && ENV["DB_USER"] && ENV["DB_PASS"] && ENV["DB_NAME"]' >> /app/db.rb && \
+    echo '        "postgres://#{ENV[\"DB_USER\"]}:#{ENV[\"DB_PASS\"]}@#{ENV[\"DB_HOST\"]}/#{ENV[\"DB_NAME\"]}"' >> /app/db.rb && \
+    echo '      else' >> /app/db.rb && \
+    echo '        puts "データベース接続情報が不足しています。環境変数を確認してください。"' >> /app/db.rb && \
+    echo '        "postgres://postgres:postgres@localhost/postgres"' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '    def fetch_games(page = 1, per_page = 10, keyword = nil)' >> /app/db.rb && \
+    echo '      return [] unless connection' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '      begin' >> /app/db.rb && \
+    echo '        query = connection[:games]' >> /app/db.rb && \
+    echo '        if keyword && !keyword.empty?' >> /app/db.rb && \
+    echo '          query = query.where(Sequel.ilike(:name, "%#{keyword}%"))' >> /app/db.rb && \
+    echo '        end' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '        total_count = query.count' >> /app/db.rb && \
+    echo '        offset = (page - 1) * per_page' >> /app/db.rb && \
+    echo '        games = query.limit(per_page).offset(offset).all' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '        return games, total_count' >> /app/db.rb && \
+    echo '      rescue => e' >> /app/db.rb && \
+    echo '        puts "ゲーム一覧取得エラー: #{e.message}"' >> /app/db.rb && \
+    echo '        return [], 0' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '    def fetch_game(id)' >> /app/db.rb && \
+    echo '      return nil unless connection' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '      begin' >> /app/db.rb && \
+    echo '        connection[:games].first(id: id)' >> /app/db.rb && \
+    echo '      rescue => e' >> /app/db.rb && \
+    echo '        puts "ゲーム詳細取得エラー: #{e.message}"' >> /app/db.rb && \
+    echo '        nil' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '    def fetch_reviews(game_id)' >> /app/db.rb && \
+    echo '      return [] unless connection' >> /app/db.rb && \
+    echo '' >> /app/db.rb && \
+    echo '      begin' >> /app/db.rb && \
+    echo '        connection[:reviews].where(game_id: game_id).all' >> /app/db.rb && \
+    echo '      rescue => e' >> /app/db.rb && \
+    echo '        puts "レビュー取得エラー: #{e.message}"' >> /app/db.rb && \
+    echo '        []' >> /app/db.rb && \
+    echo '      end' >> /app/db.rb && \
+    echo '    end' >> /app/db.rb && \
+    echo '  end' >> /app/db.rb && \
+    echo 'end' >> /app/db.rb
+
+# メインアプリケーションファイルを作成
+RUN echo 'require "sinatra/base"' > /app/app.rb && \
+    echo 'require "sinatra/json"' >> /app/app.rb && \
+    echo 'require "json"' >> /app/app.rb && \
+    echo 'require "rack/cors"' >> /app/app.rb && \
+    echo 'require_relative "db"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo 'class App < Sinatra::Base' >> /app/app.rb && \
+    echo '  set :bind, "0.0.0.0"' >> /app/app.rb && \
+    echo '  set :port, ENV["PORT"] || 8080' >> /app/app.rb && \
+    echo '  set :protection, false' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  use Rack::Cors do' >> /app/app.rb && \
+    echo '    allow do' >> /app/app.rb && \
+    echo '      origins "*"' >> /app/app.rb && \
+    echo '      resource "*", headers: :any, methods: [:get, :post, :put, :delete, :options]' >> /app/app.rb && \
+    echo '    end' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # モックゲームデータ' >> /app/app.rb && \
+    echo '  GAMES = [' >> /app/app.rb && \
+    echo '    {' >> /app/app.rb && \
+    echo '      id: 1,' >> /app/app.rb && \
+    echo '      name: "カタン",' >> /app/app.rb && \
+    echo '      image_url: "https://cf.geekdo-images.com/W3Bsga_uLP9kO91gZ7H8yw__imagepage/img/M_3Vg1j2HlNgkv7PL2xl2BJE2bw=/fit-in/900x600/filters:no_upscale():strip_icc()/pic2419375.jpg",' >> /app/app.rb && \
+    echo '      min_players: 3,' >> /app/app.rb && \
+    echo '      max_players: 4,' >> /app/app.rb && \
+    echo '      playing_time: 60,' >> /app/app.rb && \
+    echo '      description: "資源を集めて道や都市を作り、勝利点を競うゲーム。プレイヤーは開拓者となり、カタン島に入植します。サイコロの目に応じて資源カードを集め、道や集落、都市を建設していきます。交易も重要な要素で、他プレイヤーと資源を交換することができます。最初に勝利点10点を獲得したプレイヤーが勝利します。",' >> /app/app.rb && \
+    echo '      mechanics: ["サイコロ", "資源管理", "交渉", "道の建設"],' >> /app/app.rb && \
+    echo '      categories: ["戦略", "交渉", "文明"],' >> /app/app.rb && \
+    echo '      designer: "クラウス・トイバー",' >> /app/app.rb && \
+    echo '      publisher: "コスモス",' >> /app/app.rb && \
+    echo '      year_published: 1995,' >> /app/app.rb && \
+    echo '      complexity: 2.3,' >> /app/app.rb && \
+    echo '      bgg_rating: 7.1' >> /app/app.rb && \
+    echo '    },' >> /app/app.rb && \
+    echo '    {' >> /app/app.rb && \
+    echo '      id: 2,' >> /app/app.rb && \
+    echo '      name: "ドミニオン",' >> /app/app.rb && \
+    echo '      image_url: "https://cf.geekdo-images.com/j6iQpZ4XkemZP07HNCODBA__imagepage/img/_tNxKUkYOIWHGCPJuefIh-B1CSc=/fit-in/900x600/filters:no_upscale():strip_icc()/pic394356.jpg",' >> /app/app.rb && \
+    echo '      min_players: 2,' >> /app/app.rb && \
+    echo '      max_players: 4,' >> /app/app.rb && \
+    echo '      playing_time: 30,' >> /app/app.rb && \
+    echo '      description: "デッキ構築型のカードゲーム。プレイヤーは小さな王国の君主となり、自分の領土を拡大していきます。ゲーム開始時は基本的なカードのみを持っていますが、ゲーム中に様々なカードを購入してデッキを強化していきます。ゲーム終了時に最も多くの勝利点を獲得したプレイヤーが勝利します。",' >> /app/app.rb && \
+    echo '      mechanics: ["デッキ構築", "ハンド管理", "カード獲得"],' >> /app/app.rb && \
+    echo '      categories: ["戦略", "カードゲーム"],' >> /app/app.rb && \
+    echo '      designer: "ドナルド・X・ヴァッカリーノ",' >> /app/app.rb && \
+    echo '      publisher: "Rio Grande Games",' >> /app/app.rb && \
+    echo '      year_published: 2008,' >> /app/app.rb && \
+    echo '      complexity: 2.4,' >> /app/app.rb && \
+    echo '      bgg_rating: 7.6' >> /app/app.rb && \
+    echo '    },' >> /app/app.rb && \
+    echo '    {' >> /app/app.rb && \
+    echo '      id: 3,' >> /app/app.rb && \
+    echo '      name: "パンデミック",' >> /app/app.rb && \
+    echo '      image_url: "https://cf.geekdo-images.com/S3ybV1LAp-8SnHIXLLjVqA__imagepage/img/kIBu36OGgj4YZQBBjQoeWJccfQA=/fit-in/900x600/filters:no_upscale():strip_icc()/pic1534148.jpg",' >> /app/app.rb && \
+    echo '      min_players: 2,' >> /app/app.rb && \
+    echo '      max_players: 4,' >> /app/app.rb && \
+    echo '      playing_time: 45,' >> /app/app.rb && \
+    echo '      description: "協力型のボードゲーム。世界的な感染症の拡大を防ぐために、プレイヤーは様々な役割（科学者、研究者、衛生兵など）を担当し、チームとして協力します。感染を抑えながら、4種類の病気の治療法を発見することが目標です。時間との戦いでもあり、感染カードのデッキがなくなるか、アウトブレイクが多発すると全員の敗北となります。",' >> /app/app.rb && \
+    echo '      mechanics: ["協力プレイ", "ハンド管理", "ポイント・トゥ・ポイント移動", "役割の割り当て"],' >> /app/app.rb && \
+    echo '      categories: ["医学", "協力", "現代"],' >> /app/app.rb && \
+    echo '      designer: "マット・リーコック",' >> /app/app.rb && \
+    echo '      publisher: "Z-Man Games",' >> /app/app.rb && \
+    echo '      year_published: 2008,' >> /app/app.rb && \
+    echo '      complexity: 2.4,' >> /app/app.rb && \
+    echo '      bgg_rating: 7.6' >> /app/app.rb && \
+    echo '    }' >> /app/app.rb && \
+    echo '  ]' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # モックレビューデータ' >> /app/app.rb && \
+    echo '  REVIEWS = {' >> /app/app.rb && \
+    echo '    1 => [' >> /app/app.rb && \
+    echo '      {' >> /app/app.rb && \
+    echo '        id: 1,' >> /app/app.rb && \
+    echo '        user_name: "ボードゲーム愛好家",' >> /app/app.rb && \
+    echo '        rating: 4.5,' >> /app/app.rb && \
+    echo '        comment: "定番中の定番ゲーム。何度やっても楽しい！初心者にもおすすめです。",' >> /app/app.rb && \
+    echo '        created_at: "2023-05-15T09:30:00Z"' >> /app/app.rb && \
+    echo '      },' >> /app/app.rb && \
+    echo '      {' >> /app/app.rb && \
+    echo '        id: 2,' >> /app/app.rb && \
+    echo '        user_name: "ゲーマー太郎",' >> /app/app.rb && \
+    echo '        rating: 4.0,' >> /app/app.rb && \
+    echo '        comment: "交渉要素が面白い。ただ運の要素も強いので、その点は好みが分かれるかも。",' >> /app/app.rb && \
+    echo '        created_at: "2023-06-20T14:15:00Z"' >> /app/app.rb && \
+    echo '      }' >> /app/app.rb && \
+    echo '    ],' >> /app/app.rb && \
+    echo '    2 => [' >> /app/app.rb && \
+    echo '      {' >> /app/app.rb && \
+    echo '        id: 3,' >> /app/app.rb && \
+    echo '        user_name: "カードゲームマニア",' >> /app/app.rb && \
+    echo '        rating: 5.0,' >> /app/app.rb && \
+    echo '        comment: "デッキ構築ゲームの金字塔。拡張も含めると組み合わせは無限大！",' >> /app/app.rb && \
+    echo '        created_at: "2023-04-10T18:45:00Z"' >> /app/app.rb && \
+    echo '      }' >> /app/app.rb && \
+    echo '    ],' >> /app/app.rb && \
+    echo '    3 => [' >> /app/app.rb && \
+    echo '      {' >> /app/app.rb && \
+    echo '        id: 4,' >> /app/app.rb && \
+    echo '        user_name: "協力プレイ好き",' >> /app/app.rb && \
+    echo '        rating: 4.5,' >> /app/app.rb && \
+    echo '        comment: "協力ゲームとしては最高峰の一つ。難易度調整もできるので長く遊べます。",' >> /app/app.rb && \
+    echo '        created_at: "2023-07-05T21:20:00Z"' >> /app/app.rb && \
+    echo '      }' >> /app/app.rb && \
+    echo '    ]' >> /app/app.rb && \
+    echo '  }' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # ヘルスチェックエンドポイント' >> /app/app.rb && \
+    echo '  get "/health" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    puts "ヘルスチェックエンドポイントにアクセスがありました"' >> /app/app.rb && \
+    echo '    { status: "ok" }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # ルートエンドポイント' >> /app/app.rb && \
+    echo '  get "/" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    puts "ルートエンドポイントにアクセスがありました"' >> /app/app.rb && \
+    echo '    { message: "Welcome to BGr4 Games API!" }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # ゲーム一覧エンドポイント' >> /app/app.rb && \
+    echo '  get "/games" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    puts "ゲーム一覧エンドポイントにアクセスがありました"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    page = (params[:page] || 1).to_i' >> /app/app.rb && \
+    echo '    per_page = (params[:per_page] || 10).to_i' >> /app/app.rb && \
+    echo '    keyword = params[:keyword]' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    # キーワード検索' >> /app/app.rb && \
+    echo '    filtered_games = if keyword' >> /app/app.rb && \
+    echo '      GAMES.select { |game| game[:name].downcase.include?(keyword.downcase) }' >> /app/app.rb && \
+    echo '    else' >> /app/app.rb && \
+    echo '      GAMES' >> /app/app.rb && \
+    echo '    end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    # ページネーション' >> /app/app.rb && \
+    echo '    start_index = (page - 1) * per_page' >> /app/app.rb && \
+    echo '    paginated_games = filtered_games[start_index, per_page] || []' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    {' >> /app/app.rb && \
+    echo '      games: paginated_games,' >> /app/app.rb && \
+    echo '      total_count: filtered_games.size,' >> /app/app.rb && \
+    echo '      page: page,' >> /app/app.rb && \
+    echo '      per_page: per_page' >> /app/app.rb && \
+    echo '    }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # ゲーム詳細エンドポイント' >> /app/app.rb && \
+    echo '  get "/games/:id" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    puts "ゲーム詳細エンドポイントにアクセスがありました: ID=#{params[:id]}"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    id = params[:id].to_i' >> /app/app.rb && \
+    echo '    game = GAMES.find { |g| g[:id] == id }' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    if game' >> /app/app.rb && \
+    echo '      game.to_json' >> /app/app.rb && \
+    echo '    else' >> /app/app.rb && \
+    echo '      status 404' >> /app/app.rb && \
+    echo '      { error: "Game not found" }.to_json' >> /app/app.rb && \
+    echo '    end' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '  # ゲームレビューエンドポイント' >> /app/app.rb && \
+    echo '  get "/games/:id/reviews" do' >> /app/app.rb && \
+    echo '    content_type :json' >> /app/app.rb && \
+    echo '    puts "ゲームレビューエンドポイントにアクセスがありました: ID=#{params[:id]}"' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    id = params[:id].to_i' >> /app/app.rb && \
+    echo '    reviews = REVIEWS[id] || []' >> /app/app.rb && \
+    echo '' >> /app/app.rb && \
+    echo '    { reviews: reviews }.to_json' >> /app/app.rb && \
+    echo '  end' >> /app/app.rb && \
+    echo 'end' >> /app/app.rb
+
+# config.ruファイルを作成
+RUN echo 'require "./app"' > /app/config.ru && \
+    echo 'run App' >> /app/config.ru
+
+# スタートアップスクリプトを作成
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "Starting BGr4 Games API"' >> /app/start.sh && \
+    echo 'echo "PORT環境変数: ${PORT:-8080}"' >> /app/start.sh && \
+    echo 'echo "RACK_ENV環境変数: ${RACK_ENV:-production}"' >> /app/start.sh && \
+    echo 'export PORT=${PORT:-8080}' >> /app/start.sh && \
+    echo 'exec bundle exec puma -b tcp://0.0.0.0:${PORT} -e ${RACK_ENV:-production} -v config.ru' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# ポート設定
+EXPOSE 8080
+
+CMD ["/app/start.sh"] 

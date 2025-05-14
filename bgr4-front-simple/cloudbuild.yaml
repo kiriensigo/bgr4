@@ -30,7 +30,7 @@ steps:
         "--port",
         "8080",
         "--set-env-vars",
-        "NODE_ENV=production,NEXT_PUBLIC_API_URL=https://bgr4-api-db-349403738734.asia-northeast1.run.app",
+        "NODE_ENV=production,NEXT_PUBLIC_API_URL=https://bgr4-api-games-349403738734.asia-northeast1.run.app,NEXT_PUBLIC_USE_MOCK_DATA=false",
       ]
 
 # イメージをContainer Registryに保存

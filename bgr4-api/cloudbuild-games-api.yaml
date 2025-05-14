@@ -1,0 +1,21 @@
+steps:
+  # Dockerコンテナのビルド
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/bgr4-api-games:latest"
+      - "-f"
+      - "Dockerfile.games-api"
+      - "."
+
+  # GCRへのイメージのプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/bgr4-api-games:latest"
+
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-api-games:latest"
+
+timeout: "1800s"

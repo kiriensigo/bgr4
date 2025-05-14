@@ -1,0 +1,38 @@
+steps:
+  # Dockerコンテナのビルド
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/bgr4-api-games-db:latest"
+      - "-f"
+      - "Dockerfile.games-api-db"
+      - "."
+
+  # GCRへのイメージのプッシュ
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/bgr4-api-games-db:latest"
+
+  # Cloud Runへのデプロイ
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "bgr4-api-games-db"
+      - "--image"
+      - "gcr.io/$PROJECT_ID/bgr4-api-games-db:latest"
+      - "--region"
+      - "asia-northeast1"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+      - "--port"
+      - "8080"
+
+images:
+  - "gcr.io/$PROJECT_ID/bgr4-api-games-db:latest"
+
+timeout: "1800s"
