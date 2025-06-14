@@ -238,17 +238,17 @@ class Game < ApplicationRecord
 
   # 平均運要素を計算
   def average_luck_factor
-    reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
+    reviews.average(:luck_factor)&.round(1) || 0
   end
 
   # 平均インタラクションを計算
   def average_interaction
-    reviews.exclude_system_user.average(:interaction)&.round(1) || 0
+    reviews.average(:interaction)&.round(1) || 0
   end
 
   # 平均ダウンタイムを計算
   def average_downtime
-    reviews.exclude_system_user.average(:downtime)&.round(1) || 0
+    reviews.average(:downtime)&.round(1) || 0
   end
 
   # 平均総合評価を計算
@@ -262,7 +262,7 @@ class Game < ApplicationRecord
     avg_complexity = average_rule_complexity
     avg_interaction = average_interaction
     avg_downtime = average_downtime
-    avg_luck_factor = reviews.exclude_system_user.average(:luck_factor)&.round(1) || 0
+    avg_luck_factor = reviews.average(:luck_factor)&.round(1) || 0
     avg_score = average_overall_score
     
     # データベースに保存

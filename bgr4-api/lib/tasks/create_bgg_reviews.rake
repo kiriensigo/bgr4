@@ -210,7 +210,7 @@ namespace :reviews do
         downtime: downtime,
         recommended_players: recommended_players,
         mechanics: mechanics,
-        tags: tags,
+        categories: tags,
         short_comment: short_comment
       )
       
@@ -445,7 +445,7 @@ namespace :reviews do
           downtime: downtime,
           recommended_players: recommended_players,
           mechanics: mechanics,
-          tags: tags,
+          categories: tags,
           short_comment: short_comment
         )
         
