@@ -139,14 +139,17 @@ const GameImage = ({
             setImageError(false);
           }}
           onError={(e) => {
-            console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+            console.warn(
+              `画像の読み込みに失敗、プレースホルダーを使用: ${imageUrl}`
+            );
             setImageLoading(false);
             setImageError(true);
 
             // エラー処理
             const target = e.target as HTMLImageElement;
             target.onerror = null; // 無限ループを防ぐ
-            target.style.display = "none"; // 画像を非表示に
+            target.src = "/placeholder-game.svg";
+            target.style.display = "block"; // プレースホルダー画像を表示
           }}
         />
       ) : null}

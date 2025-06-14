@@ -5,8 +5,8 @@ import { getAuthHeaders } from "@/lib/auth";
 // コンテナ内からのアクセスを考慮し、コンテナ名か環境変数からAPIのURLを取得
 const API_URL =
   typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
-    : "http://api:8080"; // コンテナ名でアクセス
+    ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    : "http://api:3000"; // コンテナ名でアクセス
 const API_BASE_URL = `${API_URL}/api/v1`;
 
 // ゲーム情報のキャッシュ

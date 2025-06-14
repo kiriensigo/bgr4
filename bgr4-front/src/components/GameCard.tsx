@@ -171,12 +171,15 @@ export default function GameCard({
                   setImageError(false);
                 }}
                 onError={(e) => {
-                  console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+                  console.warn(
+                    `画像の読み込みに失敗、プレースホルダーを使用: ${imageUrl}`
+                  );
                   setImageLoading(false);
                   setImageError(true);
                   const target = e.target as HTMLImageElement;
                   target.onerror = null;
-                  target.style.display = "none";
+                  target.src = "/placeholder-game.svg";
+                  target.style.display = "block";
                 }}
               />
             ) : null}
@@ -347,12 +350,15 @@ export default function GameCard({
                     setImageError(false);
                   }}
                   onError={(e) => {
-                    console.error(`画像の読み込みに失敗しました: ${imageUrl}`);
+                    console.warn(
+                      `画像の読み込みに失敗、プレースホルダーを使用: ${imageUrl}`
+                    );
                     setImageLoading(false);
                     setImageError(true);
                     const target = e.target as HTMLImageElement;
                     target.onerror = null;
-                    target.style.display = "none";
+                    target.src = "/placeholder-game.svg";
+                    target.style.display = "block";
                   }}
                 />
               ) : null}

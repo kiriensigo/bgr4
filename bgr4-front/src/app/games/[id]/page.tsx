@@ -1014,11 +1014,14 @@ export default function GamePage({ params }: GamePageProps) {
                     }}
                     onError={(e) => {
                       // 画像の読み込みに失敗した場合の処理
-                      console.error("画像の読み込みに失敗しました", e);
+                      console.warn(
+                        "画像の読み込みに失敗、プレースホルダーを使用",
+                        e
+                      );
                       const target = e.target as HTMLImageElement;
                       target.onerror = null; // 無限ループを防ぐ
-                      // デフォルト画像のパスを修正（no-image.pngが存在しないため）
-                      target.style.display = "none"; // 画像を非表示に
+                      target.src = "/placeholder-game.svg";
+                      target.style.display = "block"; // プレースホルダー画像を表示
                       setImageLoading(false);
                       setImageError(true);
                     }}

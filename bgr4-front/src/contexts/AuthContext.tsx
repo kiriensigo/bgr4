@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("auth");
     }
 
-    console.log("Cleared all auth cookies:", {
+    console.debug("Cleared all auth cookies:", {
       accessToken: Cookies.get("access-token"),
       client: Cookies.get("client"),
       uid: Cookies.get("uid"),
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("Validating token with headers:", {
+      console.debug("Validating token with headers:", {
         "access-token": accessToken,
         client,
         uid,

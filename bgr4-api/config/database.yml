@@ -24,8 +24,10 @@ default: &default
   port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
 
 development:
-  <<: *default
-  database: bgr4_api_development
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  url: "postgresql://kiriensigo:m9HOiGXF-bI1KYGgz-oYeA@board-game-11560.j77.aws-ap-southeast-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
 
   # The specified database role being used to connect to PostgreSQL.
   # To create additional roles in PostgreSQL see `$ createuser --help`.
