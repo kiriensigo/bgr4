@@ -318,9 +318,9 @@ class Game < ApplicationRecord
     count_player_recommendations(reviews)
   end
 
-  # サイトのおすすめプレイ人数を取得（システムユーザーのレビューを除外）
+  # サイトのおすすめプレイ人数を取得（システムユーザーのレビューも含む）
   def site_recommended_players
-    count_player_recommendations(reviews.exclude_system_user)
+    count_player_recommendations(reviews)
   end
   
   # 出版社名を日本語化

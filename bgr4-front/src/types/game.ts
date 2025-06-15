@@ -1,24 +1,25 @@
 export interface Game {
-  id: number;
-  bgg_id: string;
+  id?: string;
+  bgg_id?: string;
   name: string;
   japanese_name?: string;
-  description?: string;
   image_url?: string;
+  japanese_image_url?: string;
+  thumbnail?: string;
+  description?: string;
+  japanese_description?: string;
   min_players?: number;
   max_players?: number;
   play_time?: number;
-  average_score?: number;
-  weight?: number;
-  created_at?: string;
-  updated_at?: string;
-  bgg_url?: string;
-  publisher?: string;
-  designer?: string;
+  min_play_time?: number;
   release_date?: string;
   japanese_release_date?: string;
+  publisher?: string;
   japanese_publisher?: string;
-  popular_categories?: string[];
+  designer?: string;
+  average_score?: number;
+  reviews_count?: number;
+  site_recommended_players?: { count: string; votes: number }[];
 }
 
 export interface GameWithReviews extends Game {
@@ -30,7 +31,7 @@ export interface GameWithReviews extends Game {
   average_downtime?: number;
   popular_categories?: string[];
   popular_mechanics?: string[];
-  site_recommended_players?: string[];
+  site_recommended_players?: { count: string; votes: number }[];
   in_wishlist?: boolean;
 }
 

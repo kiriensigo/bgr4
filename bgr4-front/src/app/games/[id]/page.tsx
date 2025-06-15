@@ -1377,13 +1377,18 @@ export default function GamePage({ params }: GamePageProps) {
                     </Typography>
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                       {game.site_recommended_players.map(
-                        (count: string, index: number) => {
+                        (
+                          playerData: { count: string; votes: number },
+                          index: number
+                        ) => {
                           // 7の場合は「7人以上」と表示
                           const displayText =
-                            count === "7" ? "7人以上" : `${count}人`;
+                            playerData.count === "7"
+                              ? "7人以上"
+                              : `${playerData.count}人`;
                           return (
                             <Chip
-                              key={`player-${count}-${index}`}
+                              key={`player-${playerData.count}-${index}`}
                               label={displayText}
                               color="primary"
                               variant="outlined"
