@@ -189,7 +189,15 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
         if (reviewsResponse.ok) {
           const reviewsData = await reviewsResponse.json();
-          const userReview = reviewsData.find(
+          console.log("Reviews data:", reviewsData);
+
+          // レスポンスが配列か確認し、適切に処理
+          const reviewsArray = Array.isArray(reviewsData)
+            ? reviewsData
+            : reviewsData.reviews || [];
+          console.log("Reviews array:", reviewsArray);
+
+          const userReview = reviewsArray.find(
             (review: any) => review.user.id === user?.id
           );
           if (userReview) {

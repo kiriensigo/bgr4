@@ -1327,6 +1327,11 @@ export async function getGameBasicInfo(
   if (!response.ok) {
     // 基本情報が取得できない場合は通常のAPIにフォールバック
     console.log("Basic info API not available, falling back to full API");
+    console.log("Response status:", response.status);
+    console.log(
+      "Response text:",
+      await response.text().catch(() => "Could not read response")
+    );
     return getGame(id, headers);
   }
 

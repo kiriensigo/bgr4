@@ -51,17 +51,6 @@ export default function ReviewList({
     return review && review.user && review.user.id && review.user.name;
   });
 
-  // レビューが存在しない場合
-  if (!filteredReviews || filteredReviews.length === 0) {
-    return (
-      <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
-        <Typography variant="body1" color="text.secondary">
-          まだレビューがありません。最初のレビューを書いてみませんか？
-        </Typography>
-      </Paper>
-    );
-  }
-
   // 表示するレビューをページネーション
   const totalReviews = filteredReviews.length;
   const totalPages = Math.ceil(totalReviews / pageSize);
@@ -95,6 +84,17 @@ export default function ReviewList({
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages, pageSize]);
+
+  // レビューが存在しない場合
+  if (!filteredReviews || filteredReviews.length === 0) {
+    return (
+      <Paper sx={{ p: 3, textAlign: "center", bgcolor: "grey.50" }}>
+        <Typography variant="body1" color="text.secondary">
+          まだレビューがありません。最初のレビューを書いてみませんか？
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
     <Box>

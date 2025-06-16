@@ -489,6 +489,8 @@ export default function GamePage({ params }: GamePageProps) {
 
         const basicInfo = await getGameBasicInfo(params.id, headers);
         console.log("Basic info received:", basicInfo);
+        console.log("Game ID from params:", params.id);
+        console.log("Headers used:", headers);
         setGame(basicInfo as ExtendedGame);
 
         if (basicInfo.japanese_name) {
@@ -530,8 +532,22 @@ export default function GamePage({ params }: GamePageProps) {
         console.log("Step 3: Fetching game reviews...");
         const reviewsPromise = getGameReviews(params.id, 1, 5, headers)
           .then((reviewData) => {
+            console.log("Reviews received:", reviewData);
             setGameReviews(reviewData.reviews);
             setTotalReviewsPages(reviewData.total_pages);
+            // レビューデータをゲームオブジェクトにもマージ
+            setGame((prevGame) => {
+              if (prevGame) {
+                const mergedGame = {
+                  ...prevGame,
+                  reviews: reviewData.reviews,
+                  reviews_count: reviewData.total_count,
+                };
+                console.log("Game data after merging reviews:", mergedGame);
+                return mergedGame;
+              }
+              return prevGame;
+            });
             setLoadingStates((prev) => ({ ...prev, reviews: false }));
           })
           .catch((error) => {
@@ -1648,12 +1664,12 @@ export default function GamePage({ params }: GamePageProps) {
                     component="pre"
                     sx={{ whiteSpace: "pre-wrap" }}
                   >
-                    {`レビュー数: ${game.reviews ? game.reviews.length : 0}`}
+                    {`レビュー数: ${gameReviews ? gameReviews.length : 0}`}
                   </Typography>
                 </Box>
               )}
 
-              <ReviewList reviews={game.reviews || []} initialPageSize={5} />
+              <ReviewList reviews={gameReviews || []} initialPageSize={5} />
 
               {/* 管理者のみに表示するボタン */}
               {isAdmin && (

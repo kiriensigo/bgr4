@@ -74,14 +74,15 @@ module Auth
     end
 
     def omniauth_failure
-      Rails.logger.error "OAuth Failure: #{failure_message}"
-      error_message = failure_message || "認証に失敗しました"
-      redirect_to "#{ENV['FRONTEND_URL']}/login?error=#{CGI.escape(error_message)}", allow_other_host: true
+      error_msg = params[:message] || env['omniauth.error.type'] || "認証に失敗しました"
+      Rails.logger.error "OAuth Failure: #{error_msg}"
+      Rails.logger.error "OAuth Error params: #{params.inspect}"
+      redirect_to "#{ENV['FRONTEND_URL']}/login?error=#{CGI.escape(error_msg)}", allow_other_host: true
     end
 
     protected
 
-    def resource_class
+    def resource_class(mapping = nil)
       User
     end
 
