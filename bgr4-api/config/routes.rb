@@ -38,6 +38,13 @@ Rails.application.routes.draw do
           get 'search_by_designer'
         end
         member do
+          get 'basic'              # 基本情報のみ取得
+          get 'statistics'         # 統計情報のみ取得
+          get 'reviews'           # レビューのみ取得
+          get 'related'           # 関連ゲーム情報のみ取得
+          get 'image_and_title'   # 画像とタイトルのみ取得（最高速）
+          get 'specs'             # 基本スペック情報のみ取得
+          get 'description'       # 説明文のみ取得
           patch 'update_japanese_name'
           get 'edit_histories'
           put 'update_from_bgg'  # BGGからゲーム情報を更新するルート

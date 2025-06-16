@@ -29,10 +29,7 @@ interface ReviewListProps {
 const formatScore = (score: number | string | null | undefined): string => {
   if (score === null || score === undefined) return "未評価";
   const numScore = typeof score === "string" ? parseFloat(score) : score;
-  // 0の場合は「未評価」と表示する（バックエンドでは評価値が存在しない場合に0を返している）
-  return Number.isNaN(numScore) || numScore === 0
-    ? "未評価"
-    : numScore.toFixed(1);
+  return Number.isNaN(numScore) ? "未評価" : numScore.toFixed(1);
 };
 
 // ページサイズのオプション（最大100件まで）

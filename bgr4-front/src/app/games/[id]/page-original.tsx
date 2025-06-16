@@ -213,15 +213,13 @@ const getPopularMechanics = (reviews: any[]) => {
 };
 
 // スコアを表示するためのヘルパー関数を修正
-const formatScore = (
-  score: number | string | null | undefined,
-  isLoading: boolean = false
-): string => {
-  if (isLoading) return "--";
+const formatScore = (score: number | string | null | undefined): string => {
   if (score === null || score === undefined) return "未評価";
   const numScore = typeof score === "string" ? parseFloat(score) : score;
-  // NaNの場合のみ「未評価」と表示する（0は有効な評価値として扱う）
-  return Number.isNaN(numScore) ? "未評価" : numScore.toFixed(1);
+  // 0の場合は「未評価」と表示する（バックエンドでは評価値が存在しない場合に0を返している）
+  return Number.isNaN(numScore) || numScore === 0
+    ? "未評価"
+    : numScore.toFixed(1);
 };
 
 const getNumericScore = (score: number | string | null | undefined): number => {
@@ -488,7 +486,6 @@ export default function GamePage({ params }: GamePageProps) {
         setLoadingStates((prev) => ({ ...prev, basicInfo: true }));
 
         const basicInfo = await getGameBasicInfo(params.id, headers);
-        console.log("Basic info received:", basicInfo);
         setGame(basicInfo as ExtendedGame);
 
         if (basicInfo.japanese_name) {
@@ -505,20 +502,7 @@ export default function GamePage({ params }: GamePageProps) {
         console.log("Step 2: Fetching game statistics...");
         const statisticsPromise = getGameStatistics(params.id, headers)
           .then((stats) => {
-            console.log("Statistics received:", stats);
             setGameStatistics(stats);
-            // 統計情報をゲームオブジェクトにマージ
-            setGame((prevGame) => {
-              if (prevGame) {
-                const mergedGame = {
-                  ...prevGame,
-                  ...stats,
-                };
-                console.log("Game data after merging statistics:", mergedGame);
-                return mergedGame;
-              }
-              return prevGame;
-            });
             setLoadingStates((prev) => ({ ...prev, statistics: false }));
           })
           .catch((error) => {
@@ -1317,27 +1301,9 @@ export default function GamePage({ params }: GamePageProps) {
                     ユーザー評価
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    {loadingStates.statistics ? (
-                      <Skeleton variant="text" width={60} height={48} />
-                    ) : (
-                      <Typography
-                        variant="h4"
-                        color="primary"
-                        fontWeight="bold"
-                      >
-                        {formatScore(game.average_overall_score)}
-                      </Typography>
-                    )}
-                    {/* デバッグ情報 */}
-                    {process.env.NODE_ENV === "development" && (
-                      <Typography variant="caption" color="text.secondary">
-                        Debug:{" "}
-                        {JSON.stringify({
-                          average_overall_score: game.average_overall_score,
-                          type: typeof game.average_overall_score,
-                        })}
-                      </Typography>
-                    )}
+                    <Typography variant="h4" color="primary" fontWeight="bold">
+                      {formatScore(game.average_overall_score)}
+                    </Typography>
                     <GameRating
                       score={game.average_overall_score}
                       reviewsCount={game.reviews_count}
@@ -1354,77 +1320,49 @@ export default function GamePage({ params }: GamePageProps) {
                     <Typography variant="subtitle2" color="text.secondary">
                       ルールの複雑さ
                     </Typography>
-                    {loadingStates.statistics ? (
-                      <Skeleton variant="text" width={40} height={32} />
-                    ) : (
-                      <Typography
-                        variant="h6"
-                        color="primary.dark"
-                        fontWeight="medium"
-                      >
-                        {formatScore(game.average_rule_complexity)}
-                      </Typography>
-                    )}
-                    {/* デバッグ情報 */}
-                    {process.env.NODE_ENV === "development" && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", fontSize: "0.6rem" }}
-                      >
-                        {JSON.stringify({
-                          complexity: game.average_rule_complexity,
-                        })}
-                      </Typography>
-                    )}
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
+                      {formatScore(game.average_rule_complexity)}
+                    </Typography>
                   </Grid>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
                       運要素
                     </Typography>
-                    {loadingStates.statistics ? (
-                      <Skeleton variant="text" width={40} height={32} />
-                    ) : (
-                      <Typography
-                        variant="h6"
-                        color="primary.dark"
-                        fontWeight="medium"
-                      >
-                        {formatScore(game.average_luck_factor)}
-                      </Typography>
-                    )}
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
+                      {formatScore(game.average_luck_factor)}
+                    </Typography>
                   </Grid>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
                       相互作用
                     </Typography>
-                    {loadingStates.statistics ? (
-                      <Skeleton variant="text" width={40} height={32} />
-                    ) : (
-                      <Typography
-                        variant="h6"
-                        color="primary.dark"
-                        fontWeight="medium"
-                      >
-                        {formatScore(game.average_interaction)}
-                      </Typography>
-                    )}
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
+                      {formatScore(game.average_interaction)}
+                    </Typography>
                   </Grid>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
                       ダウンタイム
                     </Typography>
-                    {loadingStates.statistics ? (
-                      <Skeleton variant="text" width={40} height={32} />
-                    ) : (
-                      <Typography
-                        variant="h6"
-                        color="primary.dark"
-                        fontWeight="medium"
-                      >
-                        {formatScore(game.average_downtime)}
-                      </Typography>
-                    )}
+                    <Typography
+                      variant="h6"
+                      color="primary.dark"
+                      fontWeight="medium"
+                    >
+                      {formatScore(game.average_downtime)}
+                    </Typography>
                   </Grid>
                 </Grid>
               </Box>
@@ -1465,19 +1403,7 @@ export default function GamePage({ params }: GamePageProps) {
                 )}
 
               {/* 人気カテゴリー */}
-              {loadingStates.statistics ? (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    人気カテゴリー
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    <Skeleton variant="rounded" width={80} height={32} />
-                    <Skeleton variant="rounded" width={100} height={32} />
-                    <Skeleton variant="rounded" width={90} height={32} />
-                  </Box>
-                </Box>
-              ) : (
-                game.popular_categories &&
+              {game.popular_categories &&
                 game.popular_categories.length > 0 && (
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>
@@ -1526,72 +1452,57 @@ export default function GamePage({ params }: GamePageProps) {
                       })}
                     </Box>
                   </Box>
-                )
-              )}
+                )}
 
               {/* 人気メカニクス */}
-              {loadingStates.statistics ? (
+              {game.popular_mechanics && game.popular_mechanics.length > 0 && (
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" gutterBottom>
                     人気メカニクス
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    <Skeleton variant="rounded" width={110} height={32} />
-                    <Skeleton variant="rounded" width={90} height={32} />
-                    <Skeleton variant="rounded" width={120} height={32} />
+                    {game.popular_mechanics.map((mechanic, index) => {
+                      // mechanicがオブジェクトの場合の処理
+                      let displayText;
+                      let key = `mechanic-${index}`;
+
+                      if (typeof mechanic === "object" && mechanic !== null) {
+                        // nameプロパティがある場合はそれを使用
+                        if (mechanic.name) {
+                          displayText = mechanic.name;
+                          key = `mechanic-name-${mechanic.name}-${index}`;
+                        }
+                        // countプロパティがある場合はそれを使用
+                        else if (mechanic.count) {
+                          displayText = mechanic.count;
+                          key = `mechanic-count-${mechanic.count}-${index}`;
+                        }
+                        // どちらもない場合はJSONを文字列化
+                        else {
+                          try {
+                            displayText = JSON.stringify(mechanic);
+                          } catch (e) {
+                            displayText = "不明";
+                          }
+                        }
+                      } else {
+                        // プリミティブ値の場合はそのまま使用
+                        displayText = mechanic;
+                        key = `mechanic-${mechanic}-${index}`;
+                      }
+
+                      return (
+                        <Chip
+                          key={key}
+                          label={displayText}
+                          color="info"
+                          variant="outlined"
+                          sx={{ m: 0.5 }}
+                        />
+                      );
+                    })}
                   </Box>
                 </Box>
-              ) : (
-                game.popular_mechanics &&
-                game.popular_mechanics.length > 0 && (
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      人気メカニクス
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                      {game.popular_mechanics.map((mechanic, index) => {
-                        // mechanicがオブジェクトの場合の処理
-                        let displayText;
-                        let key = `mechanic-${index}`;
-
-                        if (typeof mechanic === "object" && mechanic !== null) {
-                          // nameプロパティがある場合はそれを使用
-                          if (mechanic.name) {
-                            displayText = mechanic.name;
-                            key = `mechanic-name-${mechanic.name}-${index}`;
-                          }
-                          // countプロパティがある場合はそれを使用
-                          else if (mechanic.count) {
-                            displayText = mechanic.count;
-                            key = `mechanic-count-${mechanic.count}-${index}`;
-                          }
-                          // どちらもない場合はJSONを文字列化
-                          else {
-                            try {
-                              displayText = JSON.stringify(mechanic);
-                            } catch (e) {
-                              displayText = "不明";
-                            }
-                          }
-                        } else {
-                          // プリミティブ値の場合はそのまま使用
-                          displayText = mechanic;
-                          key = `mechanic-${mechanic}-${index}`;
-                        }
-
-                        return (
-                          <Chip
-                            key={key}
-                            label={displayText}
-                            color="info"
-                            variant="outlined"
-                            sx={{ m: 0.5 }}
-                          />
-                        );
-                      })}
-                    </Box>
-                  </Box>
-                )
               )}
 
               {/* 関連ゲーム情報（拡張情報とベースゲーム情報）*/}

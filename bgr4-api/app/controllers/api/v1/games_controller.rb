@@ -4,8 +4,8 @@ module Api
       # レビュー数の制限値（この値以上のレビュー数が必要）
       REQUIRED_REVIEWS_COUNT = 5
 
-      before_action :authenticate_user!, except: [:index, :show, :search, :hot, :search_by_publisher, :search_by_designer, :version_image]
-      before_action :set_game, only: [:show, :update, :destroy, :update_from_bgg, :update_system_reviews]
+      before_action :authenticate_user!, except: [:index, :show, :basic, :statistics, :reviews, :related, :search, :hot, :search_by_publisher, :search_by_designer, :version_image, :image_and_title, :specs, :description]
+      before_action :set_game, only: [:show, :basic, :statistics, :reviews, :related, :update, :destroy, :update_from_bgg, :update_system_reviews, :image_and_title, :specs, :description]
       before_action :authenticate_admin!, only: [:update_system_reviews]
 
       def index
@@ -200,13 +200,18 @@ module Api
           end
         end
         
+        # 説明文のHTMLエンティティをクリーンアップ
+        description = game_params[:description] || bgg_game_info[:description]
+        cleaned_description = description.present? ? DeeplTranslationService.cleanup_html_entities(description) : nil
+        cleaned_japanese_description = japanese_description.present? ? DeeplTranslationService.cleanup_html_entities(japanese_description) : nil
+        
         # ゲームを作成
         @game = Game.new(
           bgg_id: bgg_id,
           name: game_params[:name] || bgg_game_info[:name],
           japanese_name: game_params[:japanese_name] || bgg_game_info[:japanese_name],
-          description: game_params[:description] || bgg_game_info[:description],
-          japanese_description: game_params[:japanese_description] || japanese_description,
+          description: cleaned_description,
+          japanese_description: cleaned_japanese_description,
           image_url: game_params[:image_url] || bgg_game_info[:image_url],
           japanese_image_url: game_params[:japanese_image_url] || bgg_game_info[:japanese_image_url],
           min_players: game_params[:min_players] || bgg_game_info[:min_players],
@@ -329,12 +334,15 @@ module Api
         name_to_use = game_params[:name].present? ? game_params[:name] : game_params[:japanese_name]
         Rails.logger.info "Using name: #{name_to_use} (original name: #{game_params[:name].inspect}, japanese_name: #{game_params[:japanese_name].inspect})"
         
+        # 説明文のHTMLエンティティをクリーンアップ
+        cleaned_japanese_description = game_params[:japanese_description].present? ? DeeplTranslationService.cleanup_html_entities(game_params[:japanese_description]) : nil
+        
         # ゲームを作成
         @game = Game.new(
           bgg_id: manual_bgg_id,
           name: name_to_use,
           japanese_name: game_params[:japanese_name],
-          japanese_description: game_params[:japanese_description],
+          japanese_description: cleaned_japanese_description,
           japanese_image_url: game_params[:japanese_image_url],
           min_players: game_params[:min_players],
           max_players: game_params[:max_players],
@@ -379,7 +387,16 @@ module Api
           return
         end
 
-        if @game.update(game_params)
+        # 説明文のHTMLエンティティをクリーンアップ
+        cleaned_params = game_params.dup
+        if cleaned_params[:description].present?
+          cleaned_params[:description] = DeeplTranslationService.cleanup_html_entities(cleaned_params[:description])
+        end
+        if cleaned_params[:japanese_description].present?
+          cleaned_params[:japanese_description] = DeeplTranslationService.cleanup_html_entities(cleaned_params[:japanese_description])
+        end
+
+        if @game.update(cleaned_params)
           # 日本語出版社名を正規化
           @game.normalize_japanese_publisher
           
@@ -980,6 +997,201 @@ module Api
         else
           render json: { error: "システムレビューの更新に失敗しました" }, status: :unprocessable_entity
         end
+      end
+
+      # 基本情報のみを取得（高速レスポンス用）
+      def basic
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        # 基本情報のみを返す（レビューや統計情報は含めない）
+        game_json = @game.as_json(only: [
+          :id, :bgg_id, :name, :japanese_name, :description, :japanese_description,
+          :image_url, :japanese_image_url, :thumbnail, :min_players, :max_players,
+          :play_time, :min_play_time, :publisher, :japanese_publisher, :designer,
+          :release_date, :japanese_release_date, :weight, :created_at, :updated_at
+        ])
+
+        # 日本語名が「Japanese edition」などの英語表記のみの場合はnilに設定
+        if game_json['japanese_name'] && !game_json['japanese_name'].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+          game_json['japanese_name'] = nil
+        end
+
+        # ウィッシュリスト情報を追加（ユーザーがログインしている場合）
+        if current_user
+          wishlist_item = current_user.wishlist_items.find_by(game: @game)
+          game_json['in_wishlist'] = wishlist_item.present?
+          game_json['wishlist_item_id'] = wishlist_item&.id
+        end
+
+        render json: game_json
+      end
+
+      # 統計情報のみを取得
+      def statistics
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        stats = {
+          average_rule_complexity: @game.average_rule_complexity,
+          average_luck_factor: @game.average_luck_factor,
+          average_interaction: @game.average_interaction,
+          average_downtime: @game.average_downtime,
+          average_overall_score: @game.average_overall_score,
+          reviews_count: @game.user_review_count,
+          popular_categories: @game.popular_categories,
+          popular_mechanics: @game.popular_mechanics,
+          recommended_players: @game.recommended_players,
+          site_recommended_players: @game.site_recommended_players
+        }
+
+        render json: stats
+      end
+
+      # レビューのみを取得（ページネーション対応）
+      def reviews
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        page = params[:page].present? ? params[:page].to_i : 1
+        per_page = params[:per_page].present? ? params[:per_page].to_i : 5
+        per_page = [per_page, 20].min # 最大20件まで
+
+        # システムユーザーを除外したレビューを取得
+        reviews_query = @game.reviews.exclude_system_user.includes(:user)
+        total_count = reviews_query.count
+        total_pages = (total_count.to_f / per_page).ceil
+
+        reviews = reviews_query
+                    .order(created_at: :desc)
+                    .limit(per_page)
+                    .offset((page - 1) * per_page)
+
+        reviews_with_users = reviews.map do |review|
+          review_json = review.as_json
+          review_json['user'] = {
+            id: review.user.id,
+            name: review.user.name,
+            image: review.user.image
+          }
+          review_json
+        end
+
+        render json: {
+          reviews: reviews_with_users,
+          total_pages: total_pages,
+          total_count: total_count,
+          current_page: page,
+          per_page: per_page
+        }
+      end
+
+      # 関連ゲーム情報を取得
+      def related
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        related_info = {}
+
+        # 拡張版情報（メタデータから取得）
+        if @game.metadata && @game.metadata['expansions']
+          related_info[:expansions] = @game.metadata['expansions']
+        end
+
+        # ベースゲーム情報（メタデータから取得）
+        if @game.metadata && @game.metadata['base_game']
+          related_info[:base_game] = @game.metadata['base_game']
+        end
+
+        # 類似ゲーム（同じカテゴリーやメカニクスを持つゲーム）
+        similar_games = []
+        if @game.metadata && (@game.metadata['categories'] || @game.metadata['mechanics'])
+          categories = (@game.metadata['categories'] || []).compact.reject(&:blank?)
+          mechanics = (@game.metadata['mechanics'] || []).compact.reject(&:blank?)
+          
+          # カテゴリーまたはメカニクスが存在する場合のみクエリを実行
+          if categories.any? || mechanics.any?
+            # より安全なLIKE検索を使用
+            conditions = []
+            
+            (categories + mechanics).each do |term|
+              next if term.blank?
+              conditions << "metadata::text ILIKE '%#{term}%'"
+            end
+            
+            if conditions.any?
+              similar_games = Game.where.not(id: @game.id)
+                                 .where(conditions.join(' OR '))
+                                 .limit(5)
+            end
+          end
+        end
+
+        related_info[:similar_games] = similar_games
+
+        render json: related_info
+      end
+
+      # 段階的読み込み用：画像とタイトルのみを取得（最高速）
+      def image_and_title
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        render json: {
+          id: @game.id,
+          bgg_id: @game.bgg_id,
+          name: @game.name,
+          japanese_name: @game.japanese_name,
+          image_url: @game.image_url,
+          japanese_image_url: @game.japanese_image_url
+        }
+      end
+
+      # 段階的読み込み用：基本スペック情報を取得
+      def specs
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        render json: {
+          min_players: @game.min_players,
+          max_players: @game.max_players,
+          play_time: @game.play_time,
+          min_play_time: @game.min_play_time,
+          weight: @game.weight,
+          publisher: @game.publisher,
+          japanese_publisher: @game.japanese_publisher,
+          designer: @game.designer,
+          release_date: @game.release_date,
+          japanese_release_date: @game.japanese_release_date,
+          categories: @game.categories,
+          mechanics: @game.mechanics,
+          in_wishlist: current_user ? @game.in_wishlist?(current_user) : false
+        }
+      end
+
+      # 段階的読み込み用：説明文を取得
+      def description
+        unless @game
+          render json: { error: "ゲームが見つかりません" }, status: :not_found
+          return
+        end
+
+        render json: {
+          description: @game.description,
+          japanese_description: @game.japanese_description
+        }
       end
 
       private

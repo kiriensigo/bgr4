@@ -1303,3 +1303,256 @@ export const updateGame = async (
     throw error;
   }
 };
+
+// 段階的読み込み用の基本ゲーム情報を取得
+export async function getGameBasicInfo(
+  id: string,
+  headers: Record<string, string> = {}
+): Promise<Game> {
+  const apiUrl = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/v1/games/${id}/basic`;
+
+  console.log("Fetching basic game info from:", apiUrl);
+
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    // 基本情報が取得できない場合は通常のAPIにフォールバック
+    console.log("Basic info API not available, falling back to full API");
+    return getGame(id, headers);
+  }
+
+  const data = await response.json();
+  console.log("Basic game info received:", data);
+  return data;
+}
+
+// ゲームの統計情報のみを取得
+export async function getGameStatistics(
+  id: string,
+  headers: Record<string, string> = {}
+): Promise<{
+  average_rule_complexity?: number;
+  average_luck_factor?: number;
+  average_interaction?: number;
+  average_downtime?: number;
+  average_overall_score?: number;
+  reviews_count?: number;
+}> {
+  const apiUrl = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/v1/games/${id}/statistics`;
+
+  console.log("Fetching game statistics from:", apiUrl);
+
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    console.log("Statistics API not available");
+    return {};
+  }
+
+  const data = await response.json();
+  console.log("Game statistics received:", data);
+  return data;
+}
+
+// ゲームのレビューのみを取得（ページネーション対応）
+export async function getGameReviews(
+  id: string,
+  page: number = 1,
+  per_page: number = 5,
+  headers: Record<string, string> = {}
+): Promise<{
+  reviews: any[];
+  total_pages: number;
+  total_count: number;
+}> {
+  const apiUrl = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/v1/games/${id}/reviews?page=${page}&per_page=${per_page}`;
+
+  console.log("Fetching game reviews from:", apiUrl);
+
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    console.log("Reviews API not available");
+    return { reviews: [], total_pages: 0, total_count: 0 };
+  }
+
+  const data = await response.json();
+  console.log("Game reviews received:", data);
+  return data;
+}
+
+// 関連ゲーム情報を取得
+export async function getRelatedGames(
+  id: string,
+  headers: Record<string, string> = {}
+): Promise<{
+  expansions?: Array<{ id: string; name: string }>;
+  baseGame?: { id: string; name: string };
+  similarGames?: Game[];
+}> {
+  const apiUrl = `${
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+  }/api/v1/games/${id}/related`;
+
+  console.log("Fetching related games from:", apiUrl);
+
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    console.log("Related games API not available");
+    return {};
+  }
+
+  const data = await response.json();
+  console.log("Related games received:", data);
+  return data;
+}
+
+// 段階的読み込み用：画像とタイトルのみを取得（最高速）
+export async function getGameImageAndTitle(
+  id: string,
+  headers: Record<string, string> = {}
+): Promise<{
+  id: string | number;
+  bgg_id: string;
+  name: string;
+  japanese_name?: string;
+  image_url?: string;
+  japanese_image_url?: string;
+}> {
+  const url = `${API_BASE_URL}/games/${id}/image_and_title`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      cache: "force-cache",
+      next: { revalidate: 300 }, // 5分キャッシュ
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `ゲーム画像・タイトル情報の取得に失敗しました: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching game image and title:", error);
+    throw error;
+  }
+}
+
+// 段階的読み込み用：基本スペック情報を取得
+export async function getGameSpecs(
+  id: string,
+  headers: Record<string, string> = {}
+): Promise<{
+  min_players?: number;
+  max_players?: number;
+  play_time?: number;
+  min_play_time?: number;
+  weight?: number;
+  publisher?: string;
+  japanese_publisher?: string;
+  designer?: string;
+  release_date?: string;
+  japanese_release_date?: string;
+  categories?: string[];
+  mechanics?: string[];
+  in_wishlist?: boolean;
+}> {
+  const url = `${API_BASE_URL}/games/${id}/specs`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      cache: "force-cache",
+      next: { revalidate: 300 }, // 5分キャッシュ
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `ゲームスペック情報の取得に失敗しました: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching game specs:", error);
+    throw error;
+  }
+}
+
+// 段階的読み込み用：説明文を取得
+export async function getGameDescription(
+  id: string,
+  headers: Record<string, string> = {}
+): Promise<{
+  description?: string;
+  japanese_description?: string;
+}> {
+  const url = `${API_BASE_URL}/games/${id}/description`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      cache: "force-cache",
+      next: { revalidate: 600 }, // 10分キャッシュ
+    });
+
+    if (!response.ok) {
+      throw new Error(`ゲーム説明の取得に失敗しました: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching game description:", error);
+    throw error;
+  }
+}

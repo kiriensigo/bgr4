@@ -18,8 +18,15 @@ export interface Game {
   japanese_publisher?: string;
   designer?: string;
   average_score?: number;
+  average_overall_score?: number;
   reviews_count?: number;
-  site_recommended_players?: { count: string; votes: number }[];
+  site_recommended_players?: string[];
+  average_rule_complexity?: number;
+  average_luck_factor?: number;
+  average_interaction?: number;
+  average_downtime?: number;
+  popular_categories?: any[];
+  popular_mechanics?: any[];
 }
 
 export interface GameWithReviews extends Game {
@@ -31,7 +38,7 @@ export interface GameWithReviews extends Game {
   average_downtime?: number;
   popular_categories?: string[];
   popular_mechanics?: string[];
-  site_recommended_players?: { count: string; votes: number }[];
+  site_recommended_players?: string[];
   in_wishlist?: boolean;
 }
 

@@ -51,7 +51,10 @@ class Game < ApplicationRecord
     
     # 基本情報を更新
     self.name = bgg_game_info[:name] if name.blank? || force_update
-    self.description = bgg_game_info[:description] if description.blank? || force_update
+    # 説明文のHTMLエンティティをクリーンアップ
+    if bgg_game_info[:description].present? && (description.blank? || force_update)
+      self.description = DeeplTranslationService.cleanup_html_entities(bgg_game_info[:description])
+    end
     self.image_url = bgg_game_info[:image_url] if image_url.blank? || force_update
     self.min_players = bgg_game_info[:min_players] if min_players.blank? || force_update
     self.max_players = bgg_game_info[:max_players] if max_players.blank? || force_update
@@ -233,27 +236,27 @@ class Game < ApplicationRecord
 
   # 平均ルールの複雑さを計算
   def average_rule_complexity
-    reviews.average(:rule_complexity)&.round(1) || 0
+    reviews.average(:rule_complexity)&.round(1)
   end
 
   # 平均運要素を計算
   def average_luck_factor
-    reviews.average(:luck_factor)&.round(1) || 0
+    reviews.average(:luck_factor)&.round(1)
   end
 
   # 平均インタラクションを計算
   def average_interaction
-    reviews.average(:interaction)&.round(1) || 0
+    reviews.average(:interaction)&.round(1)
   end
 
   # 平均ダウンタイムを計算
   def average_downtime
-    reviews.average(:downtime)&.round(1) || 0
+    reviews.average(:downtime)&.round(1)
   end
 
   # 平均総合評価を計算
   def average_overall_score
-    reviews.average(:overall_score)&.round(1) || 0
+    reviews.average(:overall_score)&.round(1)
   end
 
   # 平均値をデータベースに保存
@@ -262,7 +265,7 @@ class Game < ApplicationRecord
     avg_complexity = average_rule_complexity
     avg_interaction = average_interaction
     avg_downtime = average_downtime
-    avg_luck_factor = reviews.average(:luck_factor)&.round(1) || 0
+    avg_luck_factor = reviews.average(:luck_factor)&.round(1)
     avg_score = average_overall_score
     
     # データベースに保存
