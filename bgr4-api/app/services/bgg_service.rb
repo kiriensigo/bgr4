@@ -363,6 +363,9 @@ class BggService
     else
       Rails.logger.error "BGG API error: #{response.code} - #{response.message}"
       nil
+    end.tap do
+      # API呼び出し後の待機
+      sleep 2
     end
   end
   
@@ -1011,6 +1014,244 @@ class BggService
     Rails.logger.error "Error in BggService#get_hot_games: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
     ""
+  end
+
+  # BGGランキングページから上位ゲームのIDを取得するメソッド
+  def self.get_top_games_from_browse(page = 1)
+    Rails.logger.info "BGGブラウズページ#{page}から上位ゲームを取得中..."
+    
+    begin
+      url = "https://boardgamegeek.com/browse/boardgame/page/#{page}"
+      response = HTTParty.get(url, headers: {
+        'User-Agent' => 'BGReviews Bot (contact: system@boardgamereview.com)',
+        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language' => 'en-US,en;q=0.5',
+        'Accept-Encoding' => 'gzip, deflate',
+        'Connection' => 'keep-alive'
+      })
+      
+      return [] unless response.success?
+      
+      doc = Nokogiri::HTML(response.body)
+      game_ids = []
+      
+      # ゲームリンクからIDを抽出
+      doc.css('a[href*="/boardgame/"]').each do |link|
+        href = link['href']
+        if match = href.match(/\/boardgame\/(\d+)\//)
+          game_id = match[1]
+          game_ids << game_id unless game_ids.include?(game_id)
+        end
+      end
+      
+      Rails.logger.info "ページ#{page}から#{game_ids.count}件のゲームIDを取得"
+      
+      # APIリクエスト後の待機
+      sleep 3
+      
+      game_ids.uniq
+      
+    rescue => e
+      Rails.logger.error "BGGブラウズページ#{page}の取得エラー: #{e.message}"
+      []
+    end
+  end
+
+  # バッチでゲーム詳細を取得するメソッド（複数IDを一度に処理）
+  def self.get_games_details_batch(bgg_ids)
+    return [] if bgg_ids.empty?
+    
+    Rails.logger.info "バッチでゲーム詳細を取得中: #{bgg_ids.count}件"
+    
+    # BGG APIは複数IDを一度にリクエストできる
+    ids_string = bgg_ids.join(',')
+    uri = URI("#{BASE_URL}/thing?id=#{ids_string}&stats=1")
+    
+    begin
+      response = Net::HTTP.get_response(uri)
+      
+      unless response.is_a?(Net::HTTPSuccess)
+        Rails.logger.error "BGG APIエラー: #{response.code} #{response.message}"
+        return []
+      end
+      
+      doc = Nokogiri::XML(response.body)
+      games = []
+      
+      doc.xpath('//item').each do |item|
+        begin
+          game_data = parse_game_item(item)
+          games << game_data if game_data
+        rescue => e
+          Rails.logger.error "ゲームデータ解析エラー (ID: #{item['id']}): #{e.message}"
+        end
+      end
+      
+      Rails.logger.info "バッチ処理完了: #{games.count}/#{bgg_ids.count}件成功"
+      
+      # バッチ処理後の待機
+      sleep 5
+      
+      games
+      
+    rescue => e
+      Rails.logger.error "バッチ取得エラー: #{e.message}"
+      []
+    end
+  end
+
+  # 単一のゲームアイテムXMLを解析するメソッド
+  def self.parse_game_item(item)
+    bgg_id = item['id']
+    
+    # 名前の取得
+    primary_name = item.at_xpath('.//name[@type="primary"]')&.attr('value')
+    return nil unless primary_name
+    
+    # 日本語名の取得
+    japanese_name = extract_japanese_name(item)
+    
+    # 説明の取得
+    description = item.at_xpath('.//description')&.text&.strip
+    
+    # 画像URLの取得
+    image_url = item.at_xpath('.//image')&.text&.strip
+    thumbnail_url = item.at_xpath('.//thumbnail')&.text&.strip
+    final_image_url = image_url.present? ? image_url : thumbnail_url
+    
+    # プレイ人数の取得
+    min_players = item.at_xpath('.//minplayers')&.attr('value')&.to_i || 0
+    max_players = item.at_xpath('.//maxplayers')&.attr('value')&.to_i || 0
+    
+    # プレイ時間の取得
+    min_play_time = item.at_xpath('.//minplaytime')&.attr('value')&.to_i || 0
+    play_time = item.at_xpath('.//playingtime')&.attr('value')&.to_i || 0
+    max_play_time = item.at_xpath('.//maxplaytime')&.attr('value')&.to_i || play_time
+    
+    # 発売年の取得
+    year_published = item.at_xpath('.//yearpublished')&.attr('value')&.to_i
+    release_date = year_published ? "#{year_published}-01-01" : nil
+    
+    # 統計情報の取得
+    statistics = item.at_xpath('.//statistics/ratings')
+    average_score = statistics&.at_xpath('.//average')&.attr('value')&.to_f || 0
+    weight = statistics&.at_xpath('.//averageweight')&.attr('value')&.to_f || 0
+    
+    # 出版社とデザイナーの取得
+    publisher = item.at_xpath('.//link[@type="boardgamepublisher"]')&.attr('value')
+    designer = item.at_xpath('.//link[@type="boardgamedesigner"]')&.attr('value')
+    
+    # カテゴリーとメカニクスの取得
+    categories = item.xpath('.//link[@type="boardgamecategory"]').map { |link| link.attr('value') }
+    mechanics = item.xpath('.//link[@type="boardgamemechanic"]').map { |link| link.attr('value') }
+    
+    # ベストプレイ人数とレコメンドプレイ人数の取得
+    best_players, recommended_players = extract_player_recommendations(item)
+    
+    # 日本語版情報の取得
+    japanese_version_info = get_japanese_version_info(bgg_id)
+    
+    {
+      bgg_id: bgg_id,
+      name: primary_name,
+      japanese_name: japanese_name || japanese_version_info[:name],
+      description: description,
+      image_url: final_image_url,
+      min_players: min_players,
+      max_players: max_players,
+      play_time: max_play_time > 0 ? max_play_time : play_time,
+      min_play_time: min_play_time,
+      average_score: average_score,
+      weight: weight,
+      publisher: publisher,
+      designer: designer,
+      release_date: release_date,
+      japanese_publisher: japanese_version_info[:publisher],
+      japanese_release_date: japanese_version_info[:release_date],
+      japanese_image_url: japanese_version_info[:image_url],
+      categories: categories,
+      mechanics: mechanics,
+      best_num_players: best_players,
+      recommended_num_players: recommended_players,
+      expansions: []
+    }
+  end
+
+  # 日本語名を抽出するメソッド
+  def self.extract_japanese_name(item)
+    japanese_name = nil
+    japanese_name_with_kana = nil
+    
+    item.xpath('.//name').each do |name|
+      name_value = name.attr('value')
+      
+      # ひらがなまたはカタカナを含む場合は最優先
+      if name_value.match?(/[\p{Hiragana}\p{Katakana}]/)
+        japanese_name_with_kana = name_value
+        break
+      # 漢字のみの場合は候補として保存
+      elsif name_value.match?(/\p{Han}/) && !japanese_name
+        japanese_name = name_value
+      end
+    end
+    
+    # ひらがな・カタカナを含む名前があればそれを優先
+    final_japanese_name = japanese_name_with_kana || japanese_name
+    
+    # 日本語文字を含むか確認
+    if final_japanese_name
+      contains_japanese_chars = final_japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+      is_only_english_reference = 
+        !contains_japanese_chars && 
+        (final_japanese_name.downcase.include?('japanese') || 
+         final_japanese_name.downcase.include?('japan'))
+      
+      return nil if !contains_japanese_chars || is_only_english_reference
+    end
+    
+    final_japanese_name
+  end
+
+  # プレイ人数の推奨情報を抽出するメソッド
+  def self.extract_player_recommendations(item)
+    best_players = []
+    recommended_players = []
+    
+    # 投票データを解析
+    poll = item.xpath('.//poll[@name="suggested_numplayers"]').first
+    return [best_players, recommended_players] unless poll
+    
+    poll.xpath('.//results').each do |result|
+      num_players = result['numplayers']
+      next if num_players.blank?
+      
+      votes = {}
+      result.xpath('.//result').each do |vote|
+        vote_type = vote['value']
+        vote_count = vote['numvotes'].to_i
+        votes[vote_type] = vote_count
+      end
+      
+      best_votes = votes['Best'] || 0
+      recommended_votes = votes['Recommended'] || 0
+      not_recommended_votes = votes['Not Recommended'] || 0
+      
+      total_votes = best_votes + recommended_votes + not_recommended_votes
+      
+      if total_votes > 0
+        # ベストプレイ人数の判定
+        if best_votes > recommended_votes && best_votes > not_recommended_votes
+          best_players << num_players
+        end
+        
+        # 推奨プレイ人数の判定
+        if best_votes + recommended_votes > not_recommended_votes
+          recommended_players << num_players
+        end
+      end
+    end
+    
+    [best_players, recommended_players]
   end
 
   def self.parse_hot_games(response)

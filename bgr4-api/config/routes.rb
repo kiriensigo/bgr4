@@ -85,6 +85,15 @@ Rails.application.routes.draw do
       
       # BGG関連
       get 'bgg/version_image', to: 'games#version_image'
+      
+      # 管理者専用ルート
+      namespace :admin do
+        post 'register_bgg_top_1000', to: 'admin#register_bgg_top_1000'
+        get 'bgg_registration_status', to: 'admin#bgg_registration_status'
+        get 'system_reviews_stats', to: 'admin#system_reviews_stats'
+        get 'database_stats', to: 'admin#database_stats'
+        post 'bulk_update_games', to: 'admin#bulk_update_games'
+      end
     end
   end
 
