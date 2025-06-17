@@ -445,334 +445,60 @@ module Api
       end
 
       def search
+        # パラメータを取得
         query = params[:query]
-        publisher = params[:publisher]
-        min_players = params[:min_players]
-        max_players = params[:max_players]
-        play_time_min = params[:play_time_min]
-        play_time_max = params[:play_time_max]
-        
-        # 評価関連のパラメータ
-        total_score_min = params[:total_score_min]
-        total_score_max = params[:total_score_max]
-        complexity_min = params[:complexity_min]
-        complexity_max = params[:complexity_max]
-        interaction_min = params[:interaction_min]
-        interaction_max = params[:interaction_max]
-        luck_factor_min = params[:luck_factor_min]
-        luck_factor_max = params[:luck_factor_max]
-        downtime_min = params[:downtime_min]
-        downtime_max = params[:downtime_max]
-        
-        # レビュー関連のパラメータ
-        use_reviews_categories = params[:use_reviews_categories] == 'true'
-        use_reviews_mechanics = params[:use_reviews_mechanics] == 'true'
-        
-        # AND検索フラグ
-        categories_match_all = params[:categories_match_all] == 'true'
-        mechanics_match_all = params[:mechanics_match_all] == 'true'
-        recommended_players_match_all = params[:recommended_players_match_all] == 'true'
-        
-        # カテゴリーとメカニクスとおすすめプレイ人数のパラメータ
-        # 文字列またはカンマ区切りの文字列を配列に変換
-        categories = params[:categories]
-        categories = categories.split(',') if categories.is_a?(String) && categories.include?(',')
-        categories = [categories] if categories.is_a?(String)
-        
-        mechanics = params[:mechanics]
-        mechanics = mechanics.split(',') if mechanics.is_a?(String) && mechanics.include?(',')
-        mechanics = [mechanics] if mechanics.is_a?(String)
-        
-        recommended_players = params[:recommended_players]
-        recommended_players = recommended_players.split(',') if recommended_players.is_a?(String) && recommended_players.include?(',')
-        recommended_players = [recommended_players] if recommended_players.is_a?(String)
-        
-        # デバッグログ
-        Rails.logger.info "検索パラメータ: categories=#{categories.inspect}, mechanics=#{mechanics.inspect}, recommended_players=#{recommended_players.inspect}"
-        Rails.logger.info "AND検索フラグ: categories_match_all=#{categories_match_all}, mechanics_match_all=#{mechanics_match_all}, recommended_players_match_all=#{recommended_players_match_all}"
-        Rails.logger.info "評価パラメータ: total_score_min=#{total_score_min}, total_score_max=#{total_score_max}, complexity_min=#{complexity_min}, complexity_max=#{complexity_max}"
-        Rails.logger.info "評価パラメータ: interaction_min=#{interaction_min}, interaction_max=#{interaction_max}, luck_factor_min=#{luck_factor_min}, luck_factor_max=#{luck_factor_max}, downtime_min=#{downtime_min}, downtime_max=#{downtime_max}"
-        
-        # ページネーションパラメータを取得
-        page = params[:page].present? ? params[:page].to_i : 1
-        per_page = params[:per_page].present? ? params[:per_page].to_i : 24
-        
-        # ソートパラメータを取得（デフォルトはレビュー新着順）
-        sort_by = params[:sort_by].present? ? params[:sort_by] : 'review_date'
-        
-        # 検索条件が何もない場合でもすべてのゲームを返す
-        # 検索条件を構築
-        base_query = Game.all
-        
-        # キーワード検索
-        if query.present?
-          base_query = base_query.where("name ILIKE ? OR japanese_name ILIKE ? OR publisher ILIKE ? OR designer ILIKE ?", 
-                                         "%#{query}%", "%#{query}%", "%#{query}%", "%#{query}%")
+        page = params[:page].presence || 1
+        per_page = params[:per_page].presence || 24
+
+        # クエリが空の場合は、空の結果を返す
+        if query.blank?
+          render json: { games: [], pagination: { total_count: 0, total_pages: 1, current_page: 1 } }
+          return
         end
+
+        # Gameモデルで検索（N+1問題を解消するために関連データを一括読み込み）
+        games_query = Game.includes(reviews: :user).where("name ILIKE ?", "%#{query}%")
         
-        # 出版社検索
-        if publisher.present?
-          publisher_variations = generate_publisher_variations(publisher)
-          
-          # 検索条件を構築
-          publisher_conditions = publisher_variations.map do |pub|
-            "publisher ILIKE ? OR japanese_publisher ILIKE ?"
-          end.join(" OR ")
-          
-          publisher_values = publisher_variations.flat_map do |pub|
-            ["%#{pub}%", "%#{pub}%"]
-          end
-          
-          base_query = base_query.where(publisher_conditions, *publisher_values)
-        end
-        
-        # プレイ人数検索
-        if min_players.present?
-          base_query = base_query.where("min_players <= ?", min_players.to_i)
-        end
-        
-        if max_players.present?
-          base_query = base_query.where("max_players >= ?", max_players.to_i)
-        end
-        
-        # プレイ時間検索
-        if play_time_min.present?
-          play_time_min_value = play_time_min.to_i
-          base_query = base_query.where("play_time >= ?", play_time_min_value)
-        end
-        
-        if play_time_max.present?
-          play_time_max_value = play_time_max.to_i
-          # 180以上（999）の場合は上限なしとして扱う
-          if play_time_max_value >= 180
-            # 上限なし（何もしない）
-          else
-            base_query = base_query.where("play_time <= ?", play_time_max_value)
-          end
-        end
-        
-        # 総合評価検索
-        if total_score_min.present? || total_score_max.present?
-          if total_score_min.present?
-            base_query = base_query.where("average_score >= ?", total_score_min.to_f)
-          end
-          
-          if total_score_max.present?
-            base_query = base_query.where("average_score <= ?", total_score_max.to_f)
-          end
-        end
-        
-        # ルールの複雑さ検索
-        if complexity_min.present? || complexity_max.present?
-          if complexity_min.present?
-            base_query = base_query.where("average_complexity >= ?", complexity_min.to_f)
-          end
-          
-          if complexity_max.present?
-            base_query = base_query.where("average_complexity <= ?", complexity_max.to_f)
-          end
-        end
-        
-        # インタラクション検索
-        if interaction_min.present? || interaction_max.present?
-          if interaction_min.present?
-            base_query = base_query.where("average_interaction >= ?", interaction_min.to_f)
-          end
-          
-          if interaction_max.present?
-            base_query = base_query.where("average_interaction <= ?", interaction_max.to_f)
-          end
-        end
-        
-        # 運要素検索
-        if luck_factor_min.present? || luck_factor_max.present?
-          if luck_factor_min.present?
-            base_query = base_query.where("average_luck_factor >= ?", luck_factor_min.to_f)
-          end
-          
-          if luck_factor_max.present?
-            base_query = base_query.where("average_luck_factor <= ?", luck_factor_max.to_f)
-          end
-        end
-        
-        # ダウンタイム検索
-        if downtime_min.present? || downtime_max.present?
-          if downtime_min.present?
-            base_query = base_query.where("average_downtime >= ?", downtime_min.to_f)
-          end
-          
-          if downtime_max.present?
-            base_query = base_query.where("average_downtime <= ?", downtime_max.to_f)
-          end
-        end
-        
-        # カテゴリー、メカニクス、おすすめプレイ人数の検索
-        # 各条件ごとに検索結果を保持する
-        categories_game_ids = []
-        mechanics_game_ids = []
-        recommended_players_game_ids = []
-        
-        # カテゴリー検索
-        if categories.present?
-          categories_array = categories.is_a?(Array) ? categories : [categories]
-          
-          if use_reviews_categories
-            # レビューのカテゴリーから検索
-            categories_game_ids = search_by_review_attribute(
-              categories_array, 
-              'categories', 
-              categories_match_all
-            )
-          else
-            # 人気カテゴリーから検索
-            categories_game_ids = search_by_popular_attribute(
-              categories_array, 
-              :popular_categories, 
-              categories_match_all
-            )
-          end
-        end
-        
-        # メカニクス検索
-        if mechanics.present?
-          mechanics_array = mechanics.is_a?(Array) ? mechanics : [mechanics]
-          
-          if use_reviews_mechanics
-            # レビューのメカニクスから検索
-            mechanics_game_ids = search_by_review_attribute(
-              mechanics_array, 
-              'mechanics', 
-              mechanics_match_all
-            )
-          else
-            # 人気メカニクスから検索
-            mechanics_game_ids = search_by_popular_attribute(
-              mechanics_array, 
-              :popular_mechanics, 
-              mechanics_match_all
-            )
-          end
-        end
-        
-        # おすすめプレイ人数検索
-        if recommended_players.present?
-          recommended_players_array = recommended_players.is_a?(Array) ? recommended_players : [recommended_players]
-          
-          # おすすめプレイ人数を含むゲームを検索
-          recommended_players_game_ids = search_by_recommended_players(
-            recommended_players_array, 
-            recommended_players_match_all
-          )
-        end
-        
-        # 各条件の検索結果を組み合わせる（AND検索）
-        if categories.present? || mechanics.present? || recommended_players.present?
-          # 各条件の検索結果を配列に追加
-          condition_results = []
-          condition_results << categories_game_ids if categories.present?
-          condition_results << mechanics_game_ids if mechanics.present?
-          condition_results << recommended_players_game_ids if recommended_players.present?
-          
-          # 最初の条件の結果をベースにする
-          matching_game_ids = condition_results.first || []
-          
-          # 残りの条件の結果と組み合わせる（AND検索）
-          condition_results[1..-1].each do |result|
-            matching_game_ids &= result # AND演算（積集合）
-          end
-          
-          # デバッグログ
-          Rails.logger.info "検索結果: categories=#{categories_game_ids.size}件, mechanics=#{mechanics_game_ids.size}件, recommended_players=#{recommended_players_game_ids.size}件"
-          Rails.logger.info "最終検索結果: #{matching_game_ids.size}件"
-          
-          # 検索結果が空でない場合のみクエリを更新
-          if matching_game_ids.present?
-            base_query = base_query.where(bgg_id: matching_game_ids)
-          else
-            # 該当するゲームがない場合は空の結果を返す
-            base_query = base_query.where("1 = 0")
-          end
-        end
-        
-        # レビュー関連のパラメータを処理
-        # システムユーザーのレビューがあるゲームも含める
-        if use_reviews_categories || use_reviews_mechanics
-          # システムユーザーを取得
-          system_user = User.find_by(email: 'system@boardgamereview.com')
-          
-          # システムユーザーのレビューがあるゲームのIDを取得
-          if system_user
-            system_reviewed_game_ids = Review.where(user_id: system_user.id).pluck(:game_id).uniq
-            
-            # システムユーザーのレビューがあるゲームも含める
-            if system_reviewed_game_ids.present?
-              base_query = base_query.or(Game.where(bgg_id: system_reviewed_game_ids))
-            end
-          end
-        end
-        
-        # 総数を取得
-        total_count = base_query.count
-        
-        # ソート順に応じてクエリを構築
-        query = base_query
-        
-        case sort_by
-        when 'reviews_count'
-          # レビュー数でソート（多い順）
-          query = base_query.left_joins(:reviews)
-                      .group('games.id')
-                      .select('games.*, COUNT(reviews.id) as reviews_count_value')
-                      .order('reviews_count_value DESC')
-        when 'average_score'
-          # 平均スコアでソート（高い順）
-          query = base_query.left_joins(:reviews)
-                      .group('games.id')
-                      .select('games.*, AVG(reviews.overall_score) as average_score_value')
-                      .order('average_score_value DESC NULLS LAST')
-        when 'review_date'
-          # 最新レビュー日時でソート（システムユーザーのレビューも含める）
-          query = base_query.left_joins(:reviews)
-                      .group('games.id')
-                      .select('games.*, MAX(reviews.created_at) as latest_review_date')
-                      .order('latest_review_date DESC NULLS LAST')
-        else
-          # デフォルトは登録日時順（新しい順）
-          query = query.order(created_at: :desc)
-        end
-        
+        # 総件数を取得
+        total_count = games_query.count
+
         # ページネーションを適用
-        games = query.limit(per_page).offset((page - 1) * per_page)
-        
-        # レビュー数とレビュー情報を含める
-        games_with_reviews = games.map do |game|
-          game_json = game.as_json
-          game_json['reviews_count'] = game.user_review_count
-          
-          # レビュー情報を含める（すべてのレビューを含む）
-          reviews = game.reviews.order(created_at: :desc).limit(5).map do |review|
-            {
-              created_at: review.created_at,
-              user: {
-                id: review.user.id,
-                name: review.user.name,
-                email: review.user.email
+        games = games_query.offset((page.to_i - 1) * per_page.to_i).limit(per_page.to_i)
+
+        # 必要な情報をJSONとして構築
+        games_json = games.map do |game|
+          {
+            id: game.id,
+            bgg_id: game.bgg_id,
+            name: game.name,
+            japanese_name: game.japanese_name,
+            year_published: game.year_published,
+            min_players: game.min_players,
+            max_players: game.max_players,
+            min_playtime: game.min_playtime,
+            max_playtime: game.max_playtime,
+            image: game.image,
+            average_overall_score: game.average_overall_score,
+            reviews_count: game.user_review_count, # ユーザーレビュー数を取得
+            reviews: game.reviews.where.not(user: User.find_by(email: 'system@boardgamereview.com')).order(created_at: :desc).limit(5).map do |review|
+              {
+                id: review.id,
+                user: {
+                  id: review.user.id,
+                  name: review.user.name
+                }
               }
-            }
-          end
-          
-          game_json['reviews'] = reviews
-          game_json
+            end
+          }
         end
         
-        # ページネーション情報を含めたレスポンスを返す
+        # レスポンスを返す
         render json: {
-          games: games_with_reviews,
+          games: games_json,
           pagination: {
             total_count: total_count,
-            total_pages: (total_count.to_f / per_page).ceil,
-            current_page: page,
-            per_page: per_page
+            total_pages: (total_count.to_f / per_page.to_i).ceil,
+            current_page: page.to_i
           }
         }
       end
@@ -1197,46 +923,14 @@ module Api
       private
 
       def set_game
-        # IDのデバッグログを出力
-        Rails.logger.info "Finding game with ID: #{params[:id]}"
+        # URLのidパラメータはBGG IDとして扱うように統一する
+        @game = Game.find_by(bgg_id: params[:id])
         
-        # IDがjp-で始まる場合はエンコードされた日本語名として扱う
-        if params[:id].to_s.start_with?('jp-')
-          begin
-            require 'base64'
-            encoded_part = params[:id].to_s.sub(/^jp-/, '')
-            
-            # Base64デコードを試みる（エンコードされた日本語名の場合）
-            begin
-              japanese_name = Base64.strict_decode64(encoded_part)
-              Rails.logger.info "Decoded Japanese name from ID: #{japanese_name}"
-              
-              # まずbgg_idで検索し、見つからなければjapanese_nameで検索
-              @game = Game.find_by(bgg_id: params[:id])
-              
-              unless @game
-                # japanese_nameで検索
-                @game = Game.find_by(japanese_name: japanese_name)
-                Rails.logger.info "Found game by Japanese name: #{@game.inspect}"
-              end
-            rescue => e
-              # デコードに失敗した場合は、従来の方法（jp-プレフィックスの直接の日本語名）を試す
-              Rails.logger.info "Failed to decode as Base64, trying direct Japanese name"
-              japanese_name = encoded_part
-              @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(japanese_name: japanese_name)
-              Rails.logger.info "Found game by direct Japanese name: #{@game.inspect}"
-            end
-          rescue => e
-            Rails.logger.error "Error processing ID: #{e.message}"
-            @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
-          end
-        else
-          @game = Game.find_by(bgg_id: params[:id]) || Game.find_by(id: params[:id])
-          Rails.logger.info "Found game by ID: #{@game.inspect}"
-        end
+        # N+1問題を防ぐために、関連するレビューとユーザー情報を事前に読み込む
+        # @game = Game.includes(reviews: :user).find_by(bgg_id: params[:id])
         
-        unless @game
-          render json: { error: 'ゲームが見つかりません' }, status: :not_found
+        if @game.nil?
+            render json: { error: "ゲーム(BGG ID: #{params[:id]})が見つかりません" }, status: :not_found
         end
       end
 
