@@ -1,6 +1,6 @@
 class Review < ApplicationRecord
   belongs_to :user
-  belongs_to :game, primary_key: :bgg_id, foreign_key: :game_id
+  belongs_to :game, primary_key: :bgg_id, foreign_key: :game_id, counter_cache: :user_reviews_count
 
   has_many :likes, dependent: :destroy
   has_many :liked_users, through: :likes, source: :user

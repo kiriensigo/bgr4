@@ -56,7 +56,7 @@ module Api
         # ゲーム一覧にレビュー数とレビュー情報を含める
         games_with_reviews = @games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.user_review_count
+          game_json['reviews_count'] = game.user_reviews_count
           
           # レビュー情報を含める（システムユーザーを除外）
           reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
@@ -120,7 +120,7 @@ module Api
         game_json['popular_mechanics'] = @game.popular_mechanics
         game_json['recommended_players'] = @game.recommended_players
         game_json['site_recommended_players'] = @game.site_recommended_players
-        game_json['review_count'] = @game.user_review_count
+        game_json['review_count'] = @game.user_reviews_count
         
         # 評価値を追加
         game_json['average_rule_complexity'] = @game.average_rule_complexity
@@ -479,7 +479,7 @@ module Api
             max_playtime: game.max_playtime,
             image: game.image,
             average_overall_score: game.average_overall_score,
-            reviews_count: game.user_review_count, # ユーザーレビュー数を取得
+            reviews_count: game.user_reviews_count, # ユーザーレビュー数を取得
             reviews: game.reviews.where.not(user: User.find_by(email: 'system@boardgamereview.com')).order(created_at: :desc).limit(5).map do |review|
               {
                 id: review.id,
@@ -559,7 +559,7 @@ module Api
         # レビュー数とレビュー情報を含める
         games_with_reviews = games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.user_review_count
+          game_json['reviews_count'] = game.user_reviews_count
           
           # レビュー情報を含める（システムユーザーを除外）
           reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
@@ -647,7 +647,7 @@ module Api
         # レビュー数とレビュー情報を含める
         games_with_reviews = games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.user_review_count
+          game_json['reviews_count'] = game.user_reviews_count
           
           # レビュー情報を含める（システムユーザーを除外）
           reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
@@ -691,7 +691,7 @@ module Api
         # レビュー数を含めたレスポンスを返す
         games_with_reviews = @games.map do |game|
           game_json = game.as_json
-          game_json['reviews_count'] = game.user_review_count
+          game_json['reviews_count'] = game.user_reviews_count
           game_json
         end
         
@@ -768,7 +768,7 @@ module Api
           average_interaction: @game.average_interaction,
           average_downtime: @game.average_downtime,
           average_overall_score: @game.average_overall_score,
-          reviews_count: @game.user_review_count,
+          reviews_count: @game.user_reviews_count,
           popular_categories: @game.popular_categories,
           popular_mechanics: @game.popular_mechanics,
           recommended_players: @game.recommended_players,

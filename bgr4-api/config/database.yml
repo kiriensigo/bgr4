@@ -24,37 +24,12 @@ default: &default
   port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
 
 development:
-  adapter: postgresql
-  encoding: unicode
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  url: "postgresql://kiriensigo:m9HOiGXF-bI1KYGgz-oYeA@board-game-11560.j77.aws-ap-southeast-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
-
-  # The specified database role being used to connect to PostgreSQL.
-  # To create additional roles in PostgreSQL see `$ createuser --help`.
-  # When left blank, PostgreSQL will use the default role. This is
-  # the same name as the operating system user running Rails.
-  #username: bgr4_api
-
-  # The password associated with the PostgreSQL role (username).
-  #password:
-
-  # Connect on a TCP socket. Omitted by default since the client uses a
-  # domain socket that doesn't need configuration. Windows does not have
-  # domain sockets, so uncomment these lines.
-  #host: localhost
-
-  # The TCP port the server listens on. Defaults to 5432.
-  # If your server runs on a different port number, change accordingly.
-  #port: 5432
-
-  # Schema search path. The server defaults to $user,public
-  #schema_search_path: myapp,sharedapp,public
-
-  # Minimum log levels, in increasing order:
-  #   debug5, debug4, debug3, debug2, debug1,
-  #   log, notice, warning, error, fatal, and panic
-  # Defaults to warning.
-  #min_messages: notice
+  <<: *default
+  database: bgr4_development
+  host: 127.0.0.1
+  username: postgres
+  # PostgreSQLインストール時に設定したパスワードと一致しているか、再度ご確認ください
+  password: postgres
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
@@ -62,6 +37,9 @@ development:
 test:
   <<: *default
   database: bgr4_api_test
+  # For details on connection pooling, see Rails configuration guide
+  # https://guides.rubyonrails.org/configuring.html#database-pooling
+  pool: 5
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -85,11 +63,7 @@ test:
 #
 production:
   <<: *default
-  database: bgr4_api_production
-  username: <%= ENV.fetch("POSTGRES_USER") { "bgr4_api" } %>
-  password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV["BGR4_API_DATABASE_PASSWORD"] } %>
-  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
-  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+  url: <%= ENV["DATABASE_URL"] %>
 
 cable:
   <<: *default
