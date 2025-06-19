@@ -36,7 +36,7 @@ interface Review {
   luck_factor?: number;
   interaction?: number;
   downtime?: number;
-  short_comment: string;
+  comment: string;
   created_at: string;
   likes_count: number;
   liked_by_current_user?: boolean;
@@ -150,13 +150,13 @@ export default function MyReviewsPage() {
       ) : (
         <Grid container spacing={3}>
           {reviews.map((review) => (
-            <Grid item xs={12} sm={6} md={4} key={review.id}>
+            <Grid item xs={12} sm={6} md={3} key={review.id}>
               <GameCard
                 game={review.game}
                 review={{
                   id: review.id,
                   overall_score: review.overall_score,
-                  short_comment: review.short_comment,
+                  comment: review.comment,
                   created_at: review.created_at,
                   likes_count: review.likes_count,
                   user: review.user,

@@ -192,11 +192,11 @@ module Api
         {
           id: review.id,
           overall_score: review.overall_score,
+          comment: review.short_comment,
           rule_complexity: review.rule_complexity,
           luck_factor: review.luck_factor,
           interaction: review.interaction,
           downtime: review.downtime,
-          short_comment: review.short_comment,
           recommended_players: review.recommended_players,
           mechanics: review.mechanics,
           categories: review.categories,

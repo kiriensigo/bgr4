@@ -2,13 +2,12 @@
 
 import {
   Box,
-  Paper,
   Typography,
   Button,
   Card,
   CardMedia,
-  IconButton,
-  Tooltip,
+  CardContent,
+  CardActions,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,148 +40,149 @@ const ReviewGameCard = ({
   imageUrl,
   displayName,
   enableSharing = true,
-  onReviewUpdated,
 }: ReviewGameCardProps) => {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
-  const handleOpenShareDialog = () => {
-    setShowShareDialog(true);
-  };
-
-  const handleCloseShareDialog = () => {
-    setShowShareDialog(false);
-  };
+  const handleOpenShareDialog = () => setShowShareDialog(true);
+  const handleCloseShareDialog = () => setShowShareDialog(false);
 
   return (
     <>
-      <Paper
-        sx={{
-          p: 2,
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-        }}
-      >
-        <Box sx={{ width: { xs: "100%", sm: 150 }, flexShrink: 0 }}>
-          <Link href={linkHref}>
-            <Box
-              sx={{
-                position: "relative",
-                width: "100%",
-                paddingTop: "100%",
-                overflow: "hidden",
-                borderRadius: 1,
-                backgroundColor: "grey.100",
-              }}
-            >
-              {imageUrl && !imageError ? (
-                <Image
-                  src={imageUrl}
-                  alt={displayName}
-                  fill
-                  sizes="(max-width: 600px) 100vw, 150px"
-                  style={{ objectFit: "cover" }}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageLoading(false);
-                    setImageError(true);
-                  }}
-                  priority
-                />
-              ) : null}
-              {(imageLoading || imageError) && (
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "grey.100",
-                  }}
-                >
-                  {imageLoading && !imageError ? (
-                    <CircularProgress size={30} />
-                  ) : (
-                    <ImageNotSupportedIcon
-                      sx={{ fontSize: 40, color: "text.secondary" }}
-                    />
-                  )}
-                </Box>
-              )}
-            </Box>
-          </Link>
-        </Box>
-        <Box sx={{ flexGrow: 1 }}>
-          <Link href={linkHref}>
-            <Typography variant="h5" component="h2" gutterBottom>
-              {displayName}
-            </Typography>
-          </Link>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-            <Rating
-              name="read-only"
-              value={review.overall_score}
-              readOnly
-              precision={0.5}
-            />
-            <Typography variant="h6" sx={{ ml: 1 }}>
-              {review.overall_score.toFixed(1)}
-            </Typography>
-          </Box>
-          <Typography variant="body1" paragraph sx={{ whiteSpace: "pre-wrap" }}>
-            {review.comment}
+      <Card sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Title */}
+        <CardContent sx={{ pb: 1 }}>
+          <Typography variant="h6" component="h2" noWrap title={displayName}>
+            {displayName}
           </Typography>
-          <Box
+        </CardContent>
+
+        {/* Image */}
+        <Link href={linkHref} style={{ textDecoration: "none" }}>
+          <CardMedia
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mt: "auto",
+              position: "relative",
+              width: "100%",
+              paddingTop: "56.25%",
+              backgroundColor: "grey.100",
             }}
           >
-            <Typography variant="caption" color="text.secondary">
-              レビュー投稿日: {formatDate(review.created_at)}
-            </Typography>
-            <Box>
-              {enableSharing && (
-                <Tooltip title="Share">
-                  <IconButton onClick={handleOpenShareDialog}>
-                    <ShareIcon />
-                  </IconButton>
-                </Tooltip>
-              )}
-              <Button
-                variant="outlined"
-                startIcon={<EditIcon />}
-                href={reviewHref}
-                LinkComponent={Link}
+            {imageUrl && !imageError ? (
+              <Image
+                src={imageUrl}
+                alt={displayName}
+                fill
+                sizes="(max-width: 600px) 100vw, 250px"
+                style={{ objectFit: "cover" }}
+                onLoad={() => setImageLoading(false)}
+                onError={() => setImageError(true)}
+                priority
+              />
+            ) : (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
               >
-                レビューを編集
-              </Button>
-            </Box>
+                {imageLoading ? (
+                  <CircularProgress size={30} />
+                ) : (
+                  <ImageNotSupportedIcon
+                    sx={{ fontSize: 40, color: "text.secondary" }}
+                  />
+                )}
+              </Box>
+            )}
+          </CardMedia>
+        </Link>
+
+        <CardContent
+          sx={{ flexGrow: 1, display: "flex", flexDirection: "column", pt: 2 }}
+        >
+          {/* Score and Rating */}
+          <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+            <Typography
+              variant="h5"
+              sx={{ mr: 1, fontWeight: "bold", color: "primary.main" }}
+            >
+              {Number(review.overall_score).toFixed(1)}
+            </Typography>
+            <Rating
+              name="read-only"
+              value={Number(review.overall_score)}
+              precision={0.5}
+              readOnly
+            />
           </Box>
-        </Box>
-      </Paper>
-      {enableSharing && (
-        <ShareToTwitterButton
-          open={showShareDialog}
-          onClose={handleCloseShareDialog}
-          gameName={displayName}
-          rating={review.overall_score}
-          reviewUrl={
-            typeof window !== "undefined"
-              ? `${window.location.origin}/games/${game.id}`
-              : ""
-          }
-        />
-      )}
+
+          {/* Review Date */}
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            component="p"
+            sx={{ mb: 0 }}
+          >
+            レビュー投稿日: {formatDate(review.created_at)}
+          </Typography>
+
+          {/* Comment */}
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 1,
+              whiteSpace: "pre-wrap",
+              flexGrow: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 3, // Adjust the number of lines shown
+              WebkitBoxOrient: "vertical",
+            }}
+            title={review.comment}
+          >
+            {review.comment}
+          </Typography>
+        </CardContent>
+
+        {/* Actions */}
+        <CardActions sx={{ justifyContent: "flex-end", p: 1 }}>
+          <Button
+            size="small"
+            startIcon={<ShareIcon />}
+            onClick={handleOpenShareDialog}
+          >
+            シェア
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EditIcon />}
+            href={reviewHref}
+          >
+            編集
+          </Button>
+        </CardActions>
+      </Card>
+
+      <ShareToTwitterButton
+        open={showShareDialog}
+        onClose={handleCloseShareDialog}
+        gameName={displayName}
+        rating={Number(review.overall_score)}
+        reviewUrl={
+          typeof window !== "undefined"
+            ? `${window.location.origin}/games/${game.id}`
+            : ""
+        }
+      />
     </>
   );
 };
