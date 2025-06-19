@@ -28,7 +28,7 @@ export default function GameRating({
       <Rating value={numericScore / 2} precision={0.5} readOnly size={size} />
       {reviewsCount !== undefined ? (
         <Typography variant="body2" color="text.secondary">
-          {reviewsCount}件のレビュー
+          {reviewsCount}件
         </Typography>
       ) : null}
     </Box>

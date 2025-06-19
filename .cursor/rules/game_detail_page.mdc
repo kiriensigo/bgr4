@@ -1,0 +1,91 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# ゲーム詳細ページの表示ルール
+
+このドキュメントは、ゲーム詳細ページ (`/games/[id]`) の表示に関するルールを定義します。
+このページは、特定のゲームに関するあらゆる情報を集約して表示する、本アプリケーションの中核的な画面です。
+
+## ページの基本構成
+
+ゲーム詳細ページは、以下の主要なコンポーネント（セクション）から構成されます。
+
+1.  **ゲームヘッダー (`GameHeader`)**: ゲームの最も基本的な情報（タイトル、画像、プレイ人数など）を表示します。
+2.  **ゲーム詳細情報 (`GameDetails`)**: ゲームの出版社やデザイナー、説明文などを表示します。
+3.  **評価セクション (`GameRatings`)**: ユーザー評価と、より詳細なシステム評価（複雑さ、運要素など）を表示します。
+4.  **レビューセクション (`GameReviews`)**: ユーザーによるレビューの一覧を表示します。
+
+## 各セクションの詳細
+
+### 1. ゲームヘッダー (`GameHeader`)
+
+-   **日本語タイトル**: `game.japanese_name` を優先して表示。なければ `game.name` を表示。
+-   **原題 (英語タイトル)**: `game.name` を表示。日本語タイトルと異なる場合に表示。
+-   **ゲーム画像**: `game.japanese_image_url` を優先して表示。なければ `game.image_url` を使用。
+-   **プレイ人数**: `game.min_players` と `game.max_players` を使用。「X～Y人」の形式で表示。
+-   **プレイ時間**: `game.play_time` を使用。「Z分」の形式で表示。
+
+```
+ミドルアース・クエスト
+原題: Middle-Earth Quest
+（ゲーム画像）
+2～4人
+180分
+```
+
+### 2. ゲーム詳細情報 (`GameDetails`)
+
+-   **出版社**: `game.japanese_publisher` を優先。なければ `game.publisher` を表示。
+-   **発売年**: `game.japanese_release_date` を優先。なければ `game.release_date` から年のみを抽出して表示。
+-   **デザイナー**: `game.designer` を表示。
+-   **ゲーム説明**:
+    -   `game.japanese_description` を優先して表示。
+    -   `japanese_description` がない場合は、`game.description` (英語) を表示する。
+    -   **将来的な機能として、`game.description` をDeepL APIで動的に翻訳して表示する機能を実装予定です。**
+
+```
+出版社: Hobby Japan
+発売: 2021年
+デザイナー: Corey Konieczka
+
+（ここにゲーム説明文）
+```
+
+### 3. 評価セクション (`GameRatings`)
+
+-   **ユーザー評価**:
+    -   スコア: `game.average_score` を表示。小数点第一位まで。
+    -   レビュー数: `game.reviews_count` を表示。「X件のレビュー」の形式。
+-   **システム評価（詳細評価）**:
+    -   ルールの複雑さ: `game.average_rule_complexity`
+    -   運要素: `game.average_luck_factor`
+    -   相互作用: `game.average_interaction`
+    -   ダウンタイム: `game.average_downtime`
+-   **おすすめプレイ人数**: `game.site_recommended_players` から上位のものを表示。
+-   **人気カテゴリー**: `game.popular_categories` を表示。
+-   **人気メカニクス**: `game.popular_mechanics` を表示。
+
+```
+ユーザー評価
+7.4
+0件のレビュー
+
+ルールの複雑さ: 3.5
+運要素: 3.0
+相互作用: 3.0
+ダウンタイム: 3.0
+
+おすすめプレイ人数: 3人, 2人, 4人
+人気カテゴリー: ペア向き
+人気メカニクス: プレイヤー別能力
+```
+
+### 4. レビューセクション (`GameReviews`)
+
+-   ユーザーが投稿したレビューを一覧で表示します。
+-   レビューがない場合は、「まだレビューがありません。最初のレビューを書いてみませんか？」などのメッセージを表示します。
+
+## 叫ぶ言葉
+ゲーム詳細！

@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { getGames } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import GameCarousel from "@/components/GameCarousel";
+import GameGrid from "@/components/GameGrid";
 import type { Game } from "@/lib/api";
 import { shuffleArray } from "@/lib/utils";
 
@@ -184,29 +184,29 @@ export default function Home() {
       </Typography>
 
       {/* レビュー新着ゲーム */}
-      <GameCarousel
+      <GameGrid
         title="レビュー新着ゲーム"
         games={recentReviewGames}
         loading={!sectionsLoaded.recent}
       />
 
       {/* 新規登録ゲーム */}
-      <GameCarousel
+      <GameGrid
         title="新規登録ゲーム"
         games={newlyRegisteredGames}
         loading={!sectionsLoaded.new}
       />
 
       {/* レビュー投稿数 */}
-      <GameCarousel
-        title="レビュー投稿数の多いゲーム"
+      <GameGrid
+        title="人気のゲーム"
         games={mostReviewedGames}
         loading={!sectionsLoaded.popular}
       />
 
-      {/* ランダムゲーム */}
-      <GameCarousel
-        title="おすすめランダムゲーム"
+      {/* ランダム */}
+      <GameGrid
+        title="おすすめ"
         games={randomGames}
         loading={!sectionsLoaded.random}
       />
