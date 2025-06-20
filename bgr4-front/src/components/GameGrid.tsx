@@ -1,30 +1,25 @@
 "use client";
 
 import React from "react";
-import {
-  Box,
-  Grid,
-  Typography,
-  Skeleton,
-} from "@mui/material";
+import { Box, Grid, Typography, Skeleton } from "@mui/material";
 import GameCard from "./GameCard";
-import type { Game } from "@/lib/api";
+import { Game } from "@/lib/api";
 
 interface GameGridProps {
   title: string;
-  games: Game[];
-  loading?: boolean;
+  games?: Game[];
+  loading: boolean;
 }
 
-export default function GameGrid({
-  title,
-  games,
-  loading = false,
-}: GameGridProps) {
+export default function GameGrid({ title, games, loading }: GameGridProps) {
   const renderSkeletons = () => {
     return Array.from(new Array(8)).map((_, index) => (
       <Grid item key={index} xs={6} sm={4} md={3} lg={3} xl={2}>
-        <Skeleton variant="rectangular" width="100%" sx={{ paddingTop: "150%" }} />
+        <Skeleton
+          variant="rectangular"
+          width="100%"
+          sx={{ paddingTop: "150%" }}
+        />
       </Grid>
     ));
   };
@@ -37,14 +32,18 @@ export default function GameGrid({
       <Grid container spacing={2}>
         {loading ? (
           renderSkeletons()
-        ) : games.length > 0 ? (
+        ) : games && games.length > 0 ? (
           games.map((game) => (
-            <Grid item key={game.id || game.bgg_id} xs={6} sm={4} md={3} lg={3} xl={2}>
-              <GameCard
-                game={game}
-                type="game"
-                variant="carousel"
-              />
+            <Grid
+              item
+              key={game.id || game.bgg_id}
+              xs={6}
+              sm={4}
+              md={3}
+              lg={3}
+              xl={2}
+            >
+              <GameCard game={game} type="game" variant="carousel" />
             </Grid>
           ))
         ) : (
@@ -57,4 +56,4 @@ export default function GameGrid({
       </Grid>
     </Box>
   );
-} 
+}
