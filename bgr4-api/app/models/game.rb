@@ -10,7 +10,7 @@ class Game < ApplicationRecord
   validates :min_players, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :max_players, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :play_time, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
-  validates :average_score, numericality: {
+  validates :bgg_score, numericality: {
     greater_than_or_equal_to: 0,
     less_than_or_equal_to: 10,
     allow_nil: true
@@ -60,7 +60,7 @@ class Game < ApplicationRecord
     self.max_players = bgg_game_info[:max_players] if max_players.blank? || force_update
     self.play_time = bgg_game_info[:play_time] if play_time.blank? || force_update
     self.min_play_time = bgg_game_info[:min_play_time] if min_play_time.blank? || force_update
-    self.average_score = bgg_game_info[:average_score] if average_score.blank? || force_update
+    self.bgg_score = bgg_game_info[:average_score] if bgg_score.blank? || force_update
     self.weight = bgg_game_info[:weight] if weight.blank? || force_update
     self.publisher = bgg_game_info[:publisher] if publisher.blank? || force_update
     self.designer = bgg_game_info[:designer] if designer.blank? || force_update
@@ -261,20 +261,44 @@ class Game < ApplicationRecord
 
   # 平均値をデータベースに保存
   def update_average_values
-    # 平均値を計算
-    avg_complexity = average_rule_complexity
-    avg_interaction = average_interaction
-    avg_downtime = average_downtime
-    avg_luck_factor = reviews.average(:luck_factor)&.round(1)
-    avg_score = average_overall_score
+    # スコア計算に必要な値を取得
+    user_reviews = reviews.exclude_system_user
+    review_count = user_reviews.count
+
+    # 各項目の合計値を取得
+    sum_overall_score = user_reviews.sum(:overall_score)
+    sum_rule_complexity = user_reviews.sum(:rule_complexity)
+    sum_interaction = user_reviews.sum(:interaction)
+    sum_downtime = user_reviews.sum(:downtime)
+    sum_luck_factor = user_reviews.sum(:luck_factor)
+
+    # 基準点を設定
+    is_bgg_game = bgg_id.present? && !bgg_id.start_with?('manual-')
     
+    # BGGスコアは `bgg_score` カラムに格納されている
+    base_overall_score = is_bgg_game ? (bgg_score.presence || 7.5) : 7.5 
+    base_complexity = is_bgg_game ? (weight.presence || 3.0) : 3.0
+    base_interaction = 3.0
+    base_downtime = 3.0
+    base_luck_factor = 3.0
+    
+    # 新しい計算式を適用
+    # (全レビューの合計点 + 基準点 * 10) / (レビュー数 + 10)
+    new_avg_score = review_count > 0 ? (sum_overall_score + base_overall_score * 10) / (review_count + 10) : base_overall_score
+    new_avg_complexity = review_count > 0 ? (sum_rule_complexity + base_complexity * 10) / (review_count + 10) : base_complexity
+    new_avg_interaction = review_count > 0 ? (sum_interaction + base_interaction * 10) / (review_count + 10) : base_interaction
+    new_avg_downtime = review_count > 0 ? (sum_downtime + base_downtime * 10) / (review_count + 10) : base_downtime
+    new_avg_luck_factor = review_count > 0 ? (sum_luck_factor + base_luck_factor * 10) / (review_count + 10) : base_luck_factor
+
     # データベースに保存
+    # update_columns を使用してバリデーションとコールバックをスキップ
     update_columns(
-      average_complexity: avg_complexity,
-      average_interaction: avg_interaction,
-      average_downtime: avg_downtime,
-      average_luck_factor: avg_luck_factor,
-      average_score: avg_score
+      average_score_value: new_avg_score.round(2),
+      average_rule_complexity_value: new_avg_complexity.round(2),
+      average_interaction_value: new_avg_interaction.round(2),
+      average_downtime_value: new_avg_downtime.round(2),
+      average_luck_factor_value: new_avg_luck_factor.round(2),
+      user_reviews_count: review_count
     )
   end
 

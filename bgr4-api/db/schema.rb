@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_19_131909) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_20_111446) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -44,7 +44,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_19_131909) do
     t.integer "min_players"
     t.integer "max_players"
     t.integer "play_time"
-    t.decimal "average_score", precision: 3, scale: 1
+    t.decimal "bgg_score", precision: 3, scale: 1
     t.string "bgg_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -67,11 +67,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_19_131909) do
     t.json "categories"
     t.json "mechanics"
     t.boolean "registered_on_site", default: false
-    t.float "average_complexity"
-    t.float "average_interaction"
-    t.float "average_downtime"
-    t.float "average_luck_factor"
     t.integer "user_reviews_count", default: 0, null: false
+    t.float "average_score_value"
+    t.float "average_rule_complexity_value"
+    t.float "average_interaction_value"
+    t.float "average_downtime_value"
+    t.float "average_luck_factor_value"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
     t.index ["popular_categories"], name: "index_games_on_popular_categories", using: :gin
     t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin
