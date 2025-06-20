@@ -130,9 +130,9 @@ export default function GameList({
 
   // ゲームデータを取得する関数
   const loadGames = useCallback(async () => {
-    // ページサイズと現在のページを制限して安全に
+    // ページサイズを制限して安全に
     const safePageSize = Math.min(currentPageSize, MAX_PAGE_SIZE);
-    const safePage = Math.min(currentPage, MAX_SAFE_PAGES);
+    const safePage = currentPage; // ページ数の上限を撤廃
 
     // キャッシュキーを作成
     const cacheKey = `${safePage}-${safePageSize}-${currentSort}`;

@@ -119,16 +119,59 @@ module Api
 
           Rails.logger.info "Fetching reviews for user: #{current_user.id}"
           @reviews = current_user.reviews
-                                .includes(:game, :likes)
+                                .includes(:game, :user, :likes)
                                 .order(created_at: :desc)
 
-          if @reviews.nil?
-            Rails.logger.error "Reviews is nil for user: #{current_user.id}"
+          if @reviews.empty?
+            Rails.logger.info "No reviews found for user: #{current_user.id}"
             return render json: { reviews: [] }, status: :ok
           end
+          
+          # ゲームIDをまとめて取得
+          game_ids = @reviews.map(&:game_id).uniq
+          # ゲームごとのレビュー数を一括で取得
+          reviews_count_by_game = Review.where(game_id: game_ids).group(:game_id).count
 
-          # 明示的にルートキーを指定してJSONを返す
-          render json: { reviews: @reviews.map { |review| review_with_details(review) } }
+          # レビューの詳細情報を構築
+          reviews_with_details = @reviews.map do |review|
+            {
+              id: review.id,
+              overall_score: review.overall_score,
+              comment: review.short_comment,
+              rule_complexity: review.rule_complexity,
+              luck_factor: review.luck_factor,
+              interaction: review.interaction,
+              downtime: review.downtime,
+              recommended_players: review.recommended_players,
+              mechanics: review.mechanics,
+              categories: review.categories,
+              custom_tags: review.custom_tags,
+              created_at: review.created_at,
+              # includes(:likes) を利用して、DBクエリを発行せずにカウント
+              likes_count: review.likes.size, 
+              # includes(:likes) を利用して、DBクエリを発行せずに存在確認
+              liked_by_current_user: review.likes.any? { |like| like.user_id == current_user.id },
+              user: {
+                id: review.user.id,
+                name: review.user.name,
+                image: review.user.image
+              },
+              game: {
+                id: review.game.id,
+                bgg_id: review.game.bgg_id,
+                name: review.game.name,
+                japanese_name: review.game.japanese_name,
+                image_url: review.game.image_url,
+                min_players: review.game.min_players,
+                max_players: review.game.max_players,
+                play_time: review.game.play_time,
+                average_score: review.game.average_score,
+                reviews_count: reviews_count_by_game[review.game_id] || 0
+              }
+            }
+          end
+
+          render json: { reviews: reviews_with_details }
         rescue => e
           Rails.logger.error "Error in my action: #{e.message}"
           Rails.logger.error e.backtrace.join("\n")

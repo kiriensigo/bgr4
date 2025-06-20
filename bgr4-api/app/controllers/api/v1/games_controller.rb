@@ -16,62 +16,120 @@ module Api
         # ソートパラメータを取得（デフォルトはレビュー新着順）
         sort_by = params[:sort_by].present? ? params[:sort_by] : 'review_date'
         
-        # 総ゲーム数を取得
-        total_count = Game.count
-        
+        # ベースとなるクエリを構築（必要なJOINとSELECTを含む）
+        base_query = Game.left_joins(:reviews)
+                         .select(
+                           'games.*',
+                           'COUNT(reviews.id) as reviews_count_value',
+                           'AVG(reviews.overall_score) as average_score_value',
+                           'AVG(reviews.rule_complexity) as average_rule_complexity_value',
+                           'AVG(reviews.luck_factor) as average_luck_factor_value',
+                           'AVG(reviews.interaction) as average_interaction_value',
+                           'AVG(reviews.downtime) as average_downtime_value',
+                           'MAX(reviews.created_at) as latest_review_date'
+                         )
+                         .group('games.id')
+
         # ソート順に応じてクエリを構築
-        query = Game.all
+        query = base_query
         
         case sort_by
         when 'reviews_count'
-          # レビュー数でソート（多い順）
-          query = Game.left_joins(:reviews)
-                      .group('games.id')
-                      .select('games.*, COUNT(reviews.id) as reviews_count_value')
-                      .order('reviews_count_value DESC')
+          query = query.order('reviews_count_value DESC, games.id ASC')
         when 'average_score'
-          # 平均スコアでソート（高い順）
-          query = Game.left_joins(:reviews)
-                      .group('games.id')
-                      .select('games.*, AVG(reviews.overall_score) as average_score_value')
-                      .order('average_score_value DESC NULLS LAST')
+          query = query.order('average_score_value DESC NULLS LAST, games.id ASC')
         when 'review_date'
-          # 最新レビュー日時でソート
+          # latest_review_dateはbase_queryで取得済み
           system_user_id = User.find_by(email: 'system@boardgamereview.com')&.id
-          
-          # システムユーザーのレビューを除外するが、レビューがないゲームも含める
-          query = Game.left_joins(:reviews)
-                      .where("reviews.id IS NULL OR reviews.user_id != ?", system_user_id)
-                      .group('games.id')
-                      .select('games.*, MAX(reviews.created_at) as latest_review_date')
-                      .order('latest_review_date DESC NULLS LAST, games.created_at DESC')
+          query = query.where("reviews.user_id != ? OR reviews.id IS NULL", system_user_id)
+                       .order('latest_review_date DESC NULLS LAST, games.created_at DESC, games.id ASC')
+        when 'name_asc'
+          query = query.order(name: :asc, id: :asc)
+        when 'name_desc'
+          query = query.order(name: :desc, id: :asc)
+        when 'release_date_desc'
+          query = query.order(release_date: :desc, id: :asc)
+        when 'release_date_asc'
+          query = query.order(release_date: :asc, id: :asc)
         else
-          # デフォルトは登録日時順（新しい順）
-          query = query.order(created_at: :desc)
+          query = query.order(created_at: :desc, id: :asc)
         end
         
+        # 総件数をクエリから取得（サブクエリを使用して正しくカウント）
+        total_count = Game.count_by_sql("SELECT COUNT(*) FROM (#{query.reorder(nil).to_sql}) AS games")
+
         # ページネーションを適用
         @games = query.limit(per_page).offset((page - 1) * per_page)
         
+        game_bgg_ids = @games.map(&:bgg_id)
+        
+        reviews_by_game_id = {}
+        if game_bgg_ids.present?
+          # ゲームごとの最新5件のレビューを取得（システムユーザーを除く）
+          sql = <<-SQL
+            SELECT * FROM (
+              SELECT
+                r.game_id,
+                r.created_at,
+                u.id as user_id,
+                u.name as user_name,
+                u.email as user_email,
+                ROW_NUMBER() OVER(PARTITION BY r.game_id ORDER BY r.created_at DESC) as rn
+              FROM reviews r
+              JOIN users u ON u.id = r.user_id
+              WHERE r.game_id IN (:game_bgg_ids) AND u.email != 'system@boardgamereview.com'
+            ) as sub
+            WHERE rn <= 5
+          SQL
+          
+          reviews_data = ActiveRecord::Base.connection.exec_query(
+            ActiveRecord::Base.send(:sanitize_sql_array, [sql, { game_bgg_ids: game_bgg_ids }])
+          )
+          
+          reviews_by_game_id = reviews_data.group_by { |r| r['game_id'] }
+        end
+        
         # ゲーム一覧にレビュー数とレビュー情報を含める
         games_with_reviews = @games.map do |game|
-          game_json = game.as_json
-          game_json['reviews_count'] = game.user_reviews_count
+          game_data = {
+            id: game.id,
+            bgg_id: game.bgg_id,
+            name: game.name,
+            japanese_name: game.japanese_name,
+            image_url: game.image_url,
+            japanese_image_url: game.japanese_image_url,
+            min_players: game.min_players,
+            max_players: game.max_players,
+            min_play_time: game.min_play_time,
+            max_play_time: game.play_time,
+            publisher: game.publisher,
+            japanese_publisher: game.japanese_publisher,
+            designer: game.designer,
+            release_date: game.release_date,
+            user_reviews_count: game.user_reviews_count,
+            # 事前計算した平均値を使用
+            average_overall_score: game.try(:average_score_value)&.round(1),
+            average_rule_complexity: game.try(:average_rule_complexity_value)&.round(1),
+            average_luck_factor: game.try(:average_luck_factor_value)&.round(1),
+            average_interaction: game.try(:average_interaction_value)&.round(1),
+            average_downtime: game.try(:average_downtime_value)&.round(1)
+          }
+
+          # プリロードしたレビュー情報を使用
+          reviews_for_game = reviews_by_game_id[game.bgg_id] || []
           
-          # レビュー情報を含める（システムユーザーを除外）
-          reviews = game.reviews.exclude_system_user.order(created_at: :desc).limit(5).map do |review|
+          game_data[:reviews] = reviews_for_game.map do |review|
             {
-              created_at: review.created_at,
+              created_at: review['created_at'],
               user: {
-                id: review.user.id,
-                name: review.user.name,
-                email: review.user.email
+                id: review['user_id'],
+                name: review['user_name'],
+                email: review['user_email']
               }
             }
           end
           
-          game_json['reviews'] = reviews
-          game_json
+          game_data
         end
         
         # ページネーション情報を含めたレスポンスを返す
