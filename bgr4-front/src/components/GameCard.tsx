@@ -61,10 +61,7 @@ export default function GameCard({
 
   const imageUrl = game.japanese_image_url || game.image_url || game.thumbnail;
   const displayName = game.japanese_name || game.name;
-  const rating =
-    type === "review"
-      ? review?.overall_score
-      : game.average_score || game.averageRating;
+  const rating = type === "review" ? review?.overall_score : game.average_score;
   const minPlayers = game.minPlayers || game.min_players || "?";
   const maxPlayers = game.maxPlayers || game.max_players || "?";
   const players = `${minPlayers}〜${maxPlayers}人`;
@@ -122,9 +119,9 @@ export default function GameCard({
         reviewsCount={reviewsCount}
         players={players}
         playTime={playTime}
-        showOverallScoreOverlay={showOverallScoreOverlay}
-        overallScoreVariant={overallScoreVariant}
         useOverallScoreDisplay={useOverallScoreDisplay}
+        overallScoreVariant={overallScoreVariant}
+        showOverallScoreOverlay={showOverallScoreOverlay}
       />
     );
   }

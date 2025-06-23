@@ -30,7 +30,7 @@ module Api
               min_players: game.min_players,
               max_players: game.max_players,
               play_time: game.play_time,
-              average_score: game.average_score
+              average_score: game.average_score_value
             } : nil
           }
         }

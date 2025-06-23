@@ -61,8 +61,6 @@ const DEFAULT_SORT_OPTIONS: SortOption[] = [
 const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 72];
 // 最大取得数
 const MAX_PAGE_SIZE = 72;
-// 最大ページ数（エラーを防ぐために設定）
-const MAX_SAFE_PAGES = 5;
 // キャッシュの有効期限（15分）
 const CACHE_EXPIRY = 15 * 60 * 1000;
 
@@ -80,6 +78,16 @@ const gamesCache: Record<string, GamesCacheItem> = {};
 // 総アイテム数のグローバルキャッシュ
 let globalTotalGames = 0;
 let globalTotalGamesTimestamp = 0;
+
+// キャッシュを強制的にクリアする関数
+const clearGamesCache = () => {
+  Object.keys(gamesCache).forEach((key) => {
+    delete gamesCache[key];
+  });
+  globalTotalGames = 0;
+  globalTotalGamesTimestamp = 0;
+  console.log("Games cache cleared");
+};
 
 export default function GameList({
   title,
@@ -132,16 +140,16 @@ export default function GameList({
   const loadGames = useCallback(async () => {
     // ページサイズを制限して安全に
     const safePageSize = Math.min(currentPageSize, MAX_PAGE_SIZE);
-    const safePage = currentPage; // ページ数の上限を撤廃
+    const safePage = currentPage;
 
     // キャッシュキーを作成
     const cacheKey = `${safePage}-${safePageSize}-${currentSort}`;
     const now = Date.now();
     let useCache = false;
 
-    // キャッシュをチェック（totalItemsが0の場合はキャッシュを使わない）
+    // キャッシュをチェック（初回読み込み完了後のみ）
     if (
-      totalItems > 0 &&
+      initialLoadDone &&
       gamesCache[cacheKey] &&
       now - gamesCache[cacheKey].timestamp < CACHE_EXPIRY
     ) {
@@ -173,7 +181,7 @@ export default function GameList({
         `Fetching games for page ${safePage}, pageSize ${safePageSize}, sort ${currentSort}`
       );
 
-      // APIリクエストにキャッシュを活用
+      // APIリクエストを実行
       const data = await fetchGames(safePage, safePageSize, currentSort);
 
       console.log("Games data from API:", data);
@@ -183,54 +191,21 @@ export default function GameList({
 
       setGames(data.games);
 
-      // APIから返された正確な総数を常に優先して使用
-      let actualTotalItems = data.totalItems;
-      let actualTotalPages = data.totalPages;
-
-      // APIから値が取得できなかった場合のみ、代替値を計算
-      if (!actualTotalItems || actualTotalItems <= 0) {
-        console.log(
-          "API did not return valid totalItems, calculating alternative..."
-        );
-        // APIから総数が返されない場合は推測
-        if (data.games.length < safePageSize) {
-          // 最後のページと思われる場合
-          actualTotalItems = (safePage - 1) * safePageSize + data.games.length;
-          actualTotalPages = safePage;
-          console.log(
-            `Estimated total from partial page: ${actualTotalItems} items`
-          );
-        } else if (totalItems > 0) {
-          // 既存の値を使用
-          actualTotalItems = totalItems;
-          actualTotalPages = Math.min(
-            Math.ceil(actualTotalItems / safePageSize),
-            MAX_SAFE_PAGES
-          );
-          console.log(`Using existing value: ${actualTotalItems} items`);
-        } else {
-          // 最低でも現在のページ×ページサイズの3倍と見積もる
-          actualTotalItems = Math.min(safePageSize * MAX_SAFE_PAGES, 200);
-          actualTotalPages = Math.min(
-            Math.ceil(actualTotalItems / safePageSize),
-            MAX_SAFE_PAGES
-          );
-          console.log(`Using safe default estimate: ${actualTotalItems} items`);
-        }
-      } else {
-        console.log(
-          `Using API reported value: ${actualTotalItems} total items`
-        );
-        // グローバルキャッシュを更新
-        globalTotalGames = actualTotalItems;
-        globalTotalGamesTimestamp = now;
-      }
+      // APIから返された値を使用してフロントエンド側で計算
+      const actualTotalItems = data.totalItems || 0;
+      const actualTotalPages =
+        actualTotalItems > 0 ? Math.ceil(actualTotalItems / safePageSize) : 0;
 
       console.log(
-        `Setting totalItems: ${actualTotalItems}, totalPages: ${actualTotalPages}`
+        `Using API reported values: ${actualTotalItems} total items, calculated ${actualTotalPages} total pages`
       );
+
       setTotalPages(actualTotalPages);
       setTotalItems(actualTotalItems);
+
+      // グローバルキャッシュを更新
+      globalTotalGames = actualTotalItems;
+      globalTotalGamesTimestamp = now;
 
       // キャッシュにデータを保存
       gamesCache[cacheKey] = {
@@ -272,8 +247,7 @@ export default function GameList({
     currentSort,
     fetchGames,
     updateUrl,
-    loading,
-    totalItems,
+    initialLoadDone,
   ]);
 
   // 総レコード数を別途取得する関数 - APIから直接正確な総数を取得
@@ -294,10 +268,7 @@ export default function GameList({
         globalTotalGamesTimestamp = Date.now();
 
         // 現在のページサイズに基づいてページ数を計算
-        const calculatedPages = Math.min(
-          Math.ceil(data.totalItems / currentPageSize),
-          MAX_SAFE_PAGES
-        );
+        const calculatedPages = Math.ceil(data.totalItems / currentPageSize);
 
         console.log(
           `Setting totalItems: ${data.totalItems}, totalPages: ${calculatedPages}`
@@ -338,13 +309,7 @@ export default function GameList({
       setTotalPages(0);
 
       // キャッシュをすべてクリア
-      Object.keys(gamesCache).forEach((key) => {
-        delete gamesCache[key];
-      });
-
-      // グローバルキャッシュもリセット
-      globalTotalGames = 0;
-      globalTotalGamesTimestamp = 0;
+      clearGamesCache();
 
       // ページサイズ変更時は常に1ページ目に戻す
       setCurrentPage(1);
@@ -397,12 +362,14 @@ export default function GameList({
     currentSort,
   ]);
 
-  // データ取得
+  // コンポーネント初期化時にキャッシュをクリア
   useEffect(() => {
-    loadGames();
-  }, [loadGames]);
+    // マウント時に一度だけキャッシュをクリア
+    console.log("Clearing games cache on component initialization");
+    clearGamesCache();
+  }, []); // 空の依存配列で一度だけ実行
 
-  // コンポーネントのマウント時、URLパラメータの変更時、または依存関係の変更時にデータを再ロードする
+  // データ取得
   useEffect(() => {
     loadGames();
   }, [loadGames]);
@@ -420,10 +387,7 @@ export default function GameList({
     } else {
       console.log(`Using cached global total games: ${globalTotalGames}`);
       // キャッシュされた総数を使用してページ数を計算
-      const calculatedPages = Math.min(
-        Math.ceil(globalTotalGames / currentPageSize),
-        MAX_SAFE_PAGES
-      );
+      const calculatedPages = Math.ceil(globalTotalGames / currentPageSize);
       setTotalItems(globalTotalGames);
       setTotalPages(calculatedPages);
     }

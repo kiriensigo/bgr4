@@ -13,36 +13,27 @@ module Api
         page = params[:page].present? ? params[:page].to_i : 1
         per_page = params[:per_page].present? ? params[:per_page].to_i : 24
         
-        # ソートパラメータを取得（デフォルトはレビュー新着順）
-        sort_by = params[:sort_by].present? ? params[:sort_by] : 'review_date'
+        # ソートパラメータを取得（デフォルトは名前昇順）
+        sort_by = params[:sort_by].present? ? params[:sort_by] : 'name_asc'
         
-        # ベースとなるクエリを構築（必要なJOINとSELECTを含む）
-        base_query = Game.left_joins(:reviews)
-                         .select(
-                           'games.*',
-                           'COUNT(reviews.id) as reviews_count_value',
-                           'AVG(reviews.overall_score) as average_score_value',
-                           'AVG(reviews.rule_complexity) as average_rule_complexity_value',
-                           'AVG(reviews.luck_factor) as average_luck_factor_value',
-                           'AVG(reviews.interaction) as average_interaction_value',
-                           'AVG(reviews.downtime) as average_downtime_value',
-                           'MAX(reviews.created_at) as latest_review_date'
-                         )
-                         .group('games.id')
+        # ベースとなるクエリを構築（事前計算値を使用、登録済みゲームのみ）
+        base_query = Game.where(registered_on_site: true)
 
         # ソート順に応じてクエリを構築
         query = base_query
         
         case sort_by
         when 'reviews_count'
-          query = query.order('reviews_count_value DESC, games.id ASC')
+          query = query.order('user_reviews_count DESC, games.id ASC')
         when 'average_score'
           query = query.order('average_score_value DESC NULLS LAST, games.id ASC')
         when 'review_date'
-          # latest_review_dateはbase_queryで取得済み
+          # 最新レビュー日時でソート（システムユーザーを除く）
           system_user_id = User.find_by(email: 'system@boardgamereview.com')&.id
-          query = query.where("reviews.user_id != ? OR reviews.id IS NULL", system_user_id)
-                       .order('latest_review_date DESC NULLS LAST, games.created_at DESC, games.id ASC')
+          query = query.left_joins(:reviews)
+                       .where("reviews.user_id != ? OR reviews.id IS NULL", system_user_id)
+                       .group('games.id')
+                       .order('MAX(reviews.created_at) DESC NULLS LAST, games.created_at DESC, games.id ASC')
         when 'name_asc'
           query = query.order(name: :asc, id: :asc)
         when 'name_desc'
@@ -55,8 +46,8 @@ module Api
           query = query.order(created_at: :desc, id: :asc)
         end
         
-        # 総件数をクエリから取得（サブクエリを使用して正しくカウント）
-        total_count = Game.count_by_sql("SELECT COUNT(*) FROM (#{query.reorder(nil).to_sql}) AS games")
+        # 総件数をクエリから取得（登録済みゲームのみ）
+        total_count = Game.where(registered_on_site: true).count
 
         # ページネーションを適用
         @games = query.limit(per_page).offset((page - 1) * per_page)
@@ -89,31 +80,10 @@ module Api
           reviews_by_game_id = reviews_data.group_by { |r| r['game_id'] }
         end
         
-        # ゲーム一覧にレビュー数とレビュー情報を含める
+        # GameSerializerを使用してレスポンスを構築
         games_with_reviews = @games.map do |game|
-          game_data = {
-            id: game.id,
-            bgg_id: game.bgg_id,
-            name: game.name,
-            japanese_name: game.japanese_name,
-            image_url: game.image_url,
-            japanese_image_url: game.japanese_image_url,
-            min_players: game.min_players,
-            max_players: game.max_players,
-            min_play_time: game.min_play_time,
-            max_play_time: game.play_time,
-            publisher: game.publisher,
-            japanese_publisher: game.japanese_publisher,
-            designer: game.designer,
-            release_date: game.release_date,
-            user_reviews_count: game.user_reviews_count,
-            # 事前計算した平均値を使用
-            average_overall_score: game.try(:average_score_value)&.round(1),
-            average_rule_complexity: game.try(:average_rule_complexity_value)&.round(1),
-            average_luck_factor: game.try(:average_luck_factor_value)&.round(1),
-            average_interaction: game.try(:average_interaction_value)&.round(1),
-            average_downtime: game.try(:average_downtime_value)&.round(1)
-          }
+          serializer = GameSerializer.new(game, scope: current_user)
+          game_data = serializer.as_json
 
           # プリロードしたレビュー情報を使用
           reviews_for_game = reviews_by_game_id[game.bgg_id] || []
@@ -181,11 +151,11 @@ module Api
         game_json['review_count'] = @game.user_reviews_count
         
         # 評価値を追加
-        game_json['average_rule_complexity'] = @game.average_rule_complexity
-        game_json['average_luck_factor'] = @game.average_luck_factor
-        game_json['average_interaction'] = @game.average_interaction
-        game_json['average_downtime'] = @game.average_downtime
-        game_json['average_overall_score'] = @game.average_overall_score
+        game_json['average_rule_complexity'] = @game.average_rule_complexity_value
+        game_json['average_luck_factor'] = @game.average_luck_factor_value
+        game_json['average_interaction'] = @game.average_interaction_value
+        game_json['average_downtime'] = @game.average_downtime_value
+        game_json['average_overall_score'] = @game.average_score_value
         
         render json: game_json
       end
@@ -514,8 +484,8 @@ module Api
           return
         end
 
-        # Gameモデルで検索（N+1問題を解消するために関連データを一括読み込み）
-        games_query = Game.includes(reviews: :user).where("name ILIKE ?", "%#{query}%")
+        # Gameモデルで検索（登録済みゲームのみ、N+1問題を解消するために関連データを一括読み込み）
+        games_query = Game.where(registered_on_site: true).includes(reviews: :user).where("name ILIKE ?", "%#{query}%")
         
         # 総件数を取得
         total_count = games_query.count
@@ -536,7 +506,7 @@ module Api
             min_playtime: game.min_playtime,
             max_playtime: game.max_playtime,
             image: game.image,
-            average_overall_score: game.average_overall_score,
+            average_overall_score: game.average_score_value,
             reviews_count: game.user_reviews_count, # ユーザーレビュー数を取得
             reviews: game.reviews.where.not(user: User.find_by(email: 'system@boardgamereview.com')).order(created_at: :desc).limit(5).map do |review|
               {
@@ -576,9 +546,10 @@ module Api
         # ソートパラメータを取得（デフォルトはレビュー新着順）
         sort_by = params[:sort_by].present? ? params[:sort_by] : 'review_date'
         
-        # 出版社名で検索
-        base_query = Game.where("publisher ILIKE ? OR japanese_publisher ILIKE ?", 
-                          "%#{publisher}%", "%#{publisher}%")
+        # 出版社名で検索（登録済みゲームのみ）
+        base_query = Game.where(registered_on_site: true)
+                         .where("publisher ILIKE ? OR japanese_publisher ILIKE ?", 
+                                "%#{publisher}%", "%#{publisher}%")
         
         # ソート順に応じてクエリを構築
         query = base_query
@@ -665,8 +636,9 @@ module Api
         # デザイナー名のバリエーションを生成
         designer_variations = generate_designer_variations(designer)
         
-        # デザイナー名のバリエーションに基づいてゲームを検索
-        base_query = Game.where("designer ILIKE ANY (ARRAY[?])", designer_variations)
+        # デザイナー名のバリエーションに基づいてゲームを検索（登録済みゲームのみ）
+        base_query = Game.where(registered_on_site: true)
+                         .where("designer ILIKE ANY (ARRAY[?])", designer_variations)
         
         # ソート順に応じてクエリを構築
         query = base_query
@@ -743,7 +715,7 @@ module Api
         @games = Game.left_joins(:reviews)
                      .where.not(reviews: { user_id: system_user&.id })
                      .group(:id)
-                     .order('COUNT(reviews.id) DESC, games.average_score DESC')
+                     .order('COUNT(reviews.id) DESC, games.average_score_value DESC')
                      .limit(10)
         
         # レビュー数を含めたレスポンスを返す
@@ -821,11 +793,11 @@ module Api
         end
 
         stats = {
-          average_rule_complexity: @game.average_rule_complexity,
-          average_luck_factor: @game.average_luck_factor,
-          average_interaction: @game.average_interaction,
-          average_downtime: @game.average_downtime,
-          average_overall_score: @game.average_overall_score,
+          average_rule_complexity: @game.average_rule_complexity_value,
+          average_luck_factor: @game.average_luck_factor_value,
+          average_interaction: @game.average_interaction_value,
+          average_downtime: @game.average_downtime_value,
+          average_overall_score: @game.average_score_value,
           reviews_count: @game.user_reviews_count,
           popular_categories: @game.popular_categories,
           popular_mechanics: @game.popular_mechanics,

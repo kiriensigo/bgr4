@@ -41,6 +41,51 @@ namespace :games do
     puts "日本語名の更新が完了しました"
   end
 
+  desc "中国語の日本語名をクリアする"
+  task clear_chinese_names: :environment do
+    puts "中国語の日本語名をクリアします..."
+    
+    # 日本語名が設定されているゲームを取得
+    games_with_japanese_names = Game.where.not(japanese_name: [nil, ""])
+    total = games_with_japanese_names.count
+    cleared_count = 0
+    
+    puts "チェック対象のゲーム数: #{total}"
+    
+    games_with_japanese_names.find_each.with_index do |game, index|
+      begin
+        puts "[#{index + 1}/#{total}] #{game.name} (BGG ID: #{game.bgg_id}) の日本語名をチェック中: #{game.japanese_name}"
+        
+        # 中国語かどうかを判定
+        if LanguageDetectionService.chinese?(game.japanese_name)
+          old_name = game.japanese_name
+          game.update(japanese_name: nil)
+          cleared_count += 1
+          
+          puts "  ✓ 中国語名をクリアしました: #{old_name}"
+        else
+          puts "  - 日本語名として保持: #{game.japanese_name}"
+        end
+      rescue => e
+        puts "  ! エラーが発生しました: #{e.message}"
+      end
+    end
+    
+    puts "中国語名のクリアが完了しました。クリアしたゲーム数: #{cleared_count}"
+  end
+
+  desc "日本語名を再取得する（中国語除外機能付き）"
+  task refresh_japanese_names: :environment do
+    puts "日本語名を再取得します（中国語除外機能付き）..."
+    
+    # 全てのゲームの日本語名をクリアしてから再取得
+    Game.update_all(japanese_name: nil)
+    puts "全ての日本語名をクリアしました"
+    
+    # 日本語名を再取得
+    Rake::Task["games:update_japanese_names"].invoke
+  end
+
   desc "既存のゲームデータに対して日本語の説明文を追加"
   task add_japanese_descriptions: :environment do
     puts "日本語の説明文を追加中..."

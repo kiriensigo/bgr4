@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:13
+    container_name: bgr4-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bgr4_development
+      TZ: "Asia/Tokyo"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+
+  api:
+    build:
+      context: ./bgr4-api
+      dockerfile: Dockerfile
+    container_name: bgr4-api
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - ./bgr4-api:/usr/src/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db/bgr4_development
+      RAILS_ENV: development
+      REDIS_URL: redis://redis:6379/0
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID}
+      TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET}
+    restart: always
+    stdin_open: true
+    tty: true
+
+  front:
+    build:
+      context: ./bgr4-front
+      dockerfile: Dockerfile
+    container_name: bgr4-front
+    command: npm run dev
+    volumes:
+      - ./bgr4-front:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
+    restart: always
+    stdin_open: true
+    tty: true
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - CHOKIDAR_USEPOLLING=true
+
+  redis:
+    image: redis:latest
+    container_name: bgr4-redis
+    ports:
+      - "6379:6379"
+    restart: always

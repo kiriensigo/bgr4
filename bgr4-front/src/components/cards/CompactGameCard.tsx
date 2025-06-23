@@ -16,6 +16,7 @@ import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 import GroupIcon from "@mui/icons-material/Group";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GameRating from "../GameRating";
+import OverallScoreDisplay from "../OverallScoreDisplay";
 import type { Game } from "@/types/api";
 
 interface CompactGameCardProps {
@@ -28,6 +29,9 @@ interface CompactGameCardProps {
   reviewsCount: number;
   players: string;
   playTime: string;
+  useOverallScoreDisplay?: boolean;
+  overallScoreVariant?: "default" | "compact" | "large";
+  showOverallScoreOverlay?: boolean;
 }
 
 const CompactGameCard = ({
@@ -40,6 +44,9 @@ const CompactGameCard = ({
   reviewsCount,
   players,
   playTime,
+  useOverallScoreDisplay = false,
+  overallScoreVariant = "compact",
+  showOverallScoreOverlay = false,
 }: CompactGameCardProps) => {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -137,19 +144,29 @@ const CompactGameCard = ({
                 mb: 1,
               }}
             >
-              <Typography
-                variant="h6"
-                component="span"
-                fontWeight="bold"
-                sx={{ mr: 1, lineHeight: 1, color: "primary.main" }}
-              >
-                {Number(rating).toFixed(1)}
-              </Typography>
-              <GameRating
-                score={rating}
-                reviewsCount={reviewsCount}
-                size="small"
-              />
+              {useOverallScoreDisplay ? (
+                <OverallScoreDisplay
+                  score={rating as number}
+                  reviewsCount={reviewsCount}
+                  variant={overallScoreVariant}
+                />
+              ) : (
+                <>
+                  <Typography
+                    variant="h6"
+                    component="span"
+                    fontWeight="bold"
+                    sx={{ mr: 1, lineHeight: 1, color: "primary.main" }}
+                  >
+                    {Number(rating).toFixed(1)}
+                  </Typography>
+                  <GameRating
+                    score={rating}
+                    reviewsCount={reviewsCount}
+                    size="small"
+                  />
+                </>
+              )}
             </Box>
           )}
           {!hasRating && <Box sx={{ height: "32px", mb: 1 }} />}

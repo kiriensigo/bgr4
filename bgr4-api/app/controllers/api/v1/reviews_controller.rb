@@ -31,7 +31,7 @@ module Api
             
             if @review.save
               # ゲームの平均スコアを更新
-              @game.update(average_score: @game.reviews.average(:overall_score))
+              @game.update_average_values
               render json: review_with_details(@review), status: :created
             else
               Rails.logger.error "Review creation failed: #{@review.errors.full_messages}"
@@ -103,7 +103,7 @@ module Api
             min_players: review.game.min_players,
             max_players: review.game.max_players,
             play_time: review.game.play_time,
-            average_score: review.game.average_score,
+            average_score: review.game.average_score_value,
             reviews_count: reviews_count_by_game[review.game_id] || 0
           }
           review_json
@@ -165,7 +165,7 @@ module Api
                 min_players: review.game.min_players,
                 max_players: review.game.max_players,
                 play_time: review.game.play_time,
-                average_score: review.game.average_score,
+                average_score: review.game.average_score_value,
                 reviews_count: reviews_count_by_game[review.game_id] || 0
               }
             }
@@ -261,7 +261,7 @@ module Api
             min_players: review.game.min_players,
             max_players: review.game.max_players,
             play_time: review.game.play_time,
-            average_score: review.game.average_score,
+            average_score: review.game.average_score_value,
             reviews_count: reviews_count
           }
         }

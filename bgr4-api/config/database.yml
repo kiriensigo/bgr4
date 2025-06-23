@@ -20,16 +20,11 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: postgres
   password: postgres
-  host: <%= ENV.fetch("DATABASE_HOST") { "db" } %>
-  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+  host: 127.0.0.1
 
 development:
   <<: *default
   database: bgr4_development
-  host: 127.0.0.1
-  username: postgres
-  # PostgreSQLインストール時に設定したパスワードと一致しているか、再度ご確認ください
-  password: postgres
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".

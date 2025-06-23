@@ -347,7 +347,13 @@ class Game < ApplicationRecord
 
   # サイトのおすすめプレイ人数を取得（システムユーザーのレビューも含む）
   def site_recommended_players
-    count_player_recommendations(reviews)
+    # データベースの値があればそれを使用
+    if read_attribute(:site_recommended_players).present?
+      read_attribute(:site_recommended_players)
+    else
+      # データベースの値がない場合はレビューから計算（後方互換性のため）
+      count_player_recommendations(reviews)
+    end
   end
   
   # 出版社名を日本語化

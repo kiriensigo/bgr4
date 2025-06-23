@@ -60,312 +60,92 @@ class BggService
       }
     end
     
-    uri = URI("#{BASE_URL}/thing?id=#{bgg_id}&stats=1")
-    response = Net::HTTP.get_response(uri)
+    max_retries = 3
+    retry_count = 0
+    base_wait_time = 2
     
-    if response.is_a?(Net::HTTPSuccess)
-      doc = Nokogiri::XML(response.body)
-      item = doc.at_xpath('//item')
+    begin
+      url = "#{BASE_URL}/thing?id=#{bgg_id}&stats=1"
+      Rails.logger.info "Requesting URL: #{url}"
       
-      # 名前の取得
-      primary_name = item.at_xpath('.//name[@type="primary"]')&.attr('value')
-      
-      # 日本語名の取得
-      japanese_name = nil
-      japanese_name_with_kana = nil
-      
-      # デバッグ用に全ての名前を記録
-      all_names = []
-      item.xpath('.//name').each do |name|
-        name_value = name.attr('value')
-        name_type = name.attr('type')
-        all_names << { value: name_value, type: name_type }
-        
-        # ひらがなまたはカタカナを含む場合は最優先
-        if name_value.match?(/[\p{Hiragana}\p{Katakana}]/)
-          japanese_name_with_kana = name_value
-          Rails.logger.info "Found Japanese name with kana: #{name_value}"
-          break
-        # 漢字のみの場合は候補として保存
-        elsif name_value.match?(/\p{Han}/) && !japanese_name
-          japanese_name = name_value
-          Rails.logger.info "Found Japanese name with kanji only: #{name_value}"
-        end
-      end
-      
-      Rails.logger.info "All names: #{all_names.inspect}"
-      Rails.logger.info "Japanese name with kana: #{japanese_name_with_kana}"
-      Rails.logger.info "Japanese name with kanji only: #{japanese_name}"
-      
-      # ひらがな・カタカナを含む名前があればそれを優先、なければ漢字のみの名前を使用
-      japanese_name = japanese_name_with_kana || japanese_name
-      
-      # 「Japanese edition」などの英語表記のみの場合は、日本語名として扱わない
-      if japanese_name
-        # 実際に日本語文字（ひらがな、カタカナ、漢字）を含むか確認
-        contains_japanese_chars = japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-        
-        # 「Japanese」「Japan」などの英語表記のみの場合は除外
-        is_only_english_japanese_reference = 
-          !contains_japanese_chars && 
-          (japanese_name.downcase.include?('japanese') || 
-           japanese_name.downcase.include?('japan edition') || 
-           japanese_name.downcase.include?('japan version'))
-        
-        # 日本語文字を含まない、または英語表記のみの場合はnilに設定
-        if !contains_japanese_chars || is_only_english_japanese_reference
-          Rails.logger.info "Ignoring non-Japanese name: #{japanese_name}"
-          japanese_name = nil
-        end
-      end
-      
-      # 出版社の取得
-      publisher = nil
-      item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
-        publisher_name = pub.attr('value')
-        publisher = publisher_name
-        break
-      end
-      
-      # 日本語版出版社の取得
-      japanese_publisher = nil
-      
-      # 日本の出版社リストと正規化マッピング
-      japanese_publisher_mapping = {
-        # ホビージャパン系
-        'hobby japan' => 'ホビージャパン',
-        'hobbyjapan' => 'ホビージャパン',
-        'hobyjapan' => 'ホビージャパン',
-        'ホビージャパン' => 'ホビージャパン',
-        
-        # アークライト系
-        'arclight' => 'アークライト',
-        'arc light' => 'アークライト',
-        'arclight games' => 'アークライト',
-        'arclightgames' => 'アークライト',
-        'アークライト' => 'アークライト',
-        
-        # すごろくや系
-        'sugorokuya' => 'すごろくや',
-        'すごろくや' => 'すごろくや',
-        
-        # オインクゲームズ系
-        'oink games' => 'オインクゲームズ',
-        'oinkgames' => 'オインクゲームズ',
-        'オインクゲームズ' => 'オインクゲームズ',
-        
-        # グラウンディング系
-        'grounding inc.' => 'グラウンディング',
-        'grounding' => 'グラウンディング',
-        'grounding games' => 'グラウンディング',
-        'groundinggames' => 'グラウンディング',
-        'グラウンディング' => 'グラウンディング',
-        
-        # アズモデージャパン系
-        'asmodee japan' => 'アズモデージャパン',
-        'asmodee' => 'アズモデージャパン',
-        'asmodeejapan' => 'アズモデージャパン',
-        'アズモデージャパン' => 'アズモデージャパン',
-        
-        # テンデイズゲームズ系
-        'ten days games' => 'テンデイズゲームズ',
-        'tendays games' => 'テンデイズゲームズ',
-        'tendaysgames' => 'テンデイズゲームズ',
-        'テンデイズゲームズ' => 'テンデイズゲームズ',
-        
-        # ニューゲームズオーダー系
-        'new games order' => 'ニューゲームズオーダー',
-        'newgamesorder' => 'ニューゲームズオーダー',
-        'ニューゲームズオーダー' => 'ニューゲームズオーダー',
-        
-        # コロンアーク系
-        'colon arc' => 'コロンアーク',
-        'colonarc' => 'コロンアーク',
-        'コロンアーク' => 'コロンアーク',
-        
-        # 数寄ゲームズ系
-        'suki games' => '数寄ゲームズ',
-        'sukigames' => '数寄ゲームズ',
-        '数寄ゲームズ' => '数寄ゲームズ',
-        
-        # ダイスタワー系
-        'dice tower' => 'ダイスタワー',
-        'dicetower' => 'ダイスタワー',
-        'ダイスタワー' => 'ダイスタワー',
-        
-        # ボードゲームジャパン系
-        'board game japan' => 'ボードゲームジャパン',
-        'boardgame japan' => 'ボードゲームジャパン',
-        'boardgamejapan' => 'ボードゲームジャパン',
-        'ボードゲームジャパン' => 'ボードゲームジャパン',
-        
-        # ゲームマーケット系
-        'game market' => 'ゲームマーケット',
-        'gamemarket' => 'ゲームマーケット',
-        'ゲームマーケット' => 'ゲームマーケット',
-        
-        # ジーピー系
-        'gp' => 'ジーピー',
-        'ジーピー' => 'ジーピー',
-        
-        # ハコニワ系
-        'hakoniwagames' => 'ハコニワ',
-        'hakoniwa games' => 'ハコニワ',
-        'hakoniwa' => 'ハコニワ',
-        'ハコニワ' => 'ハコニワ',
-        
-        # その他の主要な出版社
-        'z-man games' => 'Z-Man Games',
-        'zman games' => 'Z-Man Games',
-        'zmangames' => 'Z-Man Games',
-        'days of wonder' => 'Days of Wonder',
-        'daysofwonder' => 'Days of Wonder',
-        'fantasy flight games' => 'Fantasy Flight Games',
-        'fantasyflightgames' => 'Fantasy Flight Games',
-        'ffg' => 'Fantasy Flight Games',
-        'rio grande games' => 'Rio Grande Games',
-        'riograndegames' => 'Rio Grande Games',
-        'matagot' => 'Matagot',
-        'iello' => 'IELLO',
-        'cmon' => 'CMON',
-        'cmon limited' => 'CMON',
-        'cool mini or not' => 'CMON',
-        'coolminiornot' => 'CMON'
+      # HTTPartyの設定
+      options = {
+        headers: {
+          'Accept' => 'application/xml',
+          'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+        },
+        timeout: 60,
+        verify: true
       }
       
-      item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
-        publisher_name = pub.attr('value')
+      Rails.logger.info "Fetching game details for BGG ID: #{bgg_id} (Attempt #{retry_count + 1}/#{max_retries})"
+      Rails.logger.debug "Request options: #{options}"
+      
+      # 最初のリクエストの前に少し待機
+      sleep(base_wait_time)
+      
+      response = HTTParty.get(url, options)
+      Rails.logger.info "Response status: #{response.code} for BGG ID: #{bgg_id}"
+      Rails.logger.debug "Response headers: #{response.headers}"
+      
+      case response.code
+      when 200
+        doc = Nokogiri::XML(response.body)
+        Rails.logger.debug "Response body: #{response.body}"
         
-        # 日本語文字を含むか、または既知の日本の出版社かをチェック
-        if publisher_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) || 
-           japanese_publisher_mapping.keys.any? { |key| publisher_name.downcase.include?(key.downcase) }
-          
-          # 表記揺れを修正して正規化
-          normalized_name = nil
-          japanese_publisher_mapping.each do |key, value|
-            if publisher_name.downcase.include?(key.downcase)
-              normalized_name = value
-              break
-            end
-          end
-          
-          japanese_publisher = normalized_name || publisher_name
-          break
+        item = doc.at_xpath('//item')
+        if item
+          game_data = parse_game_item(item)
+          Rails.logger.info "Successfully parsed game data for BGG ID: #{bgg_id}"
+          Rails.logger.debug "Parsed game data: #{game_data}"
+          return game_data
+        else
+          Rails.logger.error "No item found in BGG response for ID: #{bgg_id}"
+          Rails.logger.debug "XML document: #{doc.to_xml}"
+          return nil
         end
-      end
-      
-      # デザイナーの取得
-      designer = nil
-      item.xpath('.//link[@type="boardgamedesigner"]').each do |des|
-        designer_name = des.attr('value')
-        designer = designer_name
-        break
-      end
-      
-      # 発売年の取得
-      year_published = item.at_xpath('.//yearpublished')&.attr('value')
-      
-      # 発売日の設定（年のみの場合は1月1日を追加）
-      release_date = nil
-      if year_published.present?
-        release_date = "#{year_published}-01-01"
-      end
-      
-      # 日本語版発売日は現状取得できないのでnilにしておく
-      japanese_release_date = nil
-      
-      # 拡張情報の取得
-      expansions = []
-      item.xpath('.//link[@type="boardgameexpansion"]').each do |exp|
-        if exp.attr('inbound') != "true"  # 拡張→ベースゲームの関係ではなく、ベースゲーム→拡張の関係のみ取得
-          expansions << { id: exp.attr('id'), name: exp.attr('value') }
-        end
-      end
-      
-      # プレイ人数の投票データを解析
-      best_num_players = []
-      recommended_num_players = []
-      
-      # suggested_numplayers投票を取得
-      poll_elements = item.xpath('.//poll[@name="suggested_numplayers"]/results')
-      
-      poll_elements.each do |poll|
-        num_players = poll['numplayers']
         
-        # 投票結果を取得
-        best_votes = poll.at_xpath('./result[@value="Best"]')&.attr('numvotes')&.to_i || 0
-        recommended_votes = poll.at_xpath('./result[@value="Recommended"]')&.attr('numvotes')&.to_i || 0
-        not_recommended_votes = poll.at_xpath('./result[@value="Not Recommended"]')&.attr('numvotes')&.to_i || 0
+      when 202
+        # BGGがデータを準備中の場合
+        wait_time = base_wait_time * (2 ** retry_count)
+        Rails.logger.info "BGG is processing the request for ID: #{bgg_id}. Waiting #{wait_time} seconds..."
+        sleep(wait_time)
+        raise "BGG data not ready"
         
-        total_votes = best_votes + recommended_votes + not_recommended_votes
+      when 429
+        # レート制限に達した場合
+        wait_time = (response.headers['Retry-After']&.to_i || 30)
+        Rails.logger.warn "Rate limit reached. Waiting #{wait_time} seconds..."
+        Rails.logger.debug "Rate limit headers: #{response.headers['Retry-After']}"
+        sleep(wait_time)
+        raise "Rate limit reached"
         
-        if total_votes > 0
-          # ベストプレイ人数の判定（最も多い投票を獲得）
-          if best_votes > recommended_votes && best_votes > not_recommended_votes && best_votes > 0
-            best_num_players << num_players
-          end
-          
-          # 推奨プレイ人数の判定（Best + Recommendedの投票がNotRecommendedより多い）
-          if best_votes + recommended_votes > not_recommended_votes && (best_votes + recommended_votes) > 0
-            recommended_num_players << num_players
-          end
-        end
+      when 500..599
+        # サーバーエラーの場合
+        wait_time = base_wait_time * (2 ** retry_count)
+        Rails.logger.error "BGG server error #{response.code} for ID: #{bgg_id}. Waiting #{wait_time} seconds..."
+        Rails.logger.debug "Error response body: #{response.body}"
+        sleep(wait_time)
+        raise "BGG server error"
+        
+      else
+        Rails.logger.error "BGG API error: #{response.code} #{response.message} for ID: #{bgg_id}"
+        Rails.logger.debug "Error response body: #{response.body}"
+        return nil
       end
       
-      # カテゴリの取得
-      categories = []
-      item.xpath('.//link[@type="boardgamecategory"]').each do |category|
-        categories << category.attr('value')
+    rescue => e
+      retry_count += 1
+      if retry_count < max_retries
+        wait_time = base_wait_time * (2 ** retry_count)
+        Rails.logger.warn "Retry #{retry_count}/#{max_retries} for BGG ID #{bgg_id}. Waiting #{wait_time} seconds... Error: #{e.message}"
+        Rails.logger.debug "Error details: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
+        sleep(wait_time)
+        retry
       end
-      
-      # メカニクスの取得
-      mechanics = []
-      item.xpath('.//link[@type="boardgamemechanic"]').each do |mechanic|
-        mechanics << mechanic.attr('value')
-      end
-      
-      # 日本語版画像URLは現状取得できないのでnilにしておく
-      japanese_image_url = nil
-      
-      # 正規化された出版社名
-      normalized_publisher = publisher
-      
-      # 正規化された日本語版出版社名
-      normalized_japanese_publisher = japanese_publisher
-      
-      # 正規化されたデザイナー名
-      normalized_designer = designer
-      
-      {
-        bgg_id: bgg_id,
-        name: primary_name,
-        japanese_name: japanese_name,
-        description: item.at_xpath('.//description')&.text,
-        image_url: item.at_xpath('.//image')&.text,
-        japanese_image_url: japanese_image_url,
-        min_players: item.at_xpath('.//minplayers')&.attr('value')&.to_i,
-        max_players: item.at_xpath('.//maxplayers')&.attr('value')&.to_i,
-        play_time: item.at_xpath('.//maxplaytime')&.attr('value')&.to_i || item.at_xpath('.//playingtime')&.attr('value')&.to_i,
-        min_play_time: item.at_xpath('.//minplaytime')&.attr('value')&.to_i,
-        average_score: item.at_xpath('.//statistics/ratings/average')&.attr('value')&.to_f,
-        weight: item.at_xpath('.//statistics/ratings/averageweight')&.attr('value')&.to_f,
-        publisher: normalized_publisher,
-        designer: normalized_designer,
-        release_date: release_date,
-        japanese_publisher: normalized_japanese_publisher,
-        japanese_release_date: japanese_release_date,
-        expansions: expansions.presence,
-        best_num_players: best_num_players.presence,
-        recommended_num_players: recommended_num_players.presence,
-        categories: categories.presence,
-        mechanics: mechanics.presence
-      }
-    else
-      Rails.logger.error "BGG API error: #{response.code} - #{response.message}"
-      nil
-    end.tap do
-      # API呼び出し後の待機
-      sleep 2
+      Rails.logger.error "Error fetching game details for BGG ID #{bgg_id} after #{max_retries} retries: #{e.message}"
+      Rails.logger.debug "Final error details: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
+      return nil
     end
   end
   
@@ -430,6 +210,12 @@ class BggService
           # 日本語版かどうかを判定
           is_japanese_version = false
           
+          # 中国語かどうかを先にチェック
+          if LanguageDetectionService.chinese?(version_name)
+            Rails.logger.info "Skipping Chinese version: #{version_name}"
+            next
+          end
+          
           # ひらがなまたはカタカナを含むか確認（最優先）
           has_kana = version_name.match?(/[\p{Hiragana}\p{Katakana}]/)
           
@@ -441,6 +227,8 @@ class BggService
             version_name.downcase.include?('japanese') || 
             version_name.downcase.include?('japan') || 
             version_name.downcase.include?('日本語')
+          
+          Rails.logger.info "Name analysis: has_kana=#{has_kana}, has_kanji_only=#{has_kanji_only}, contains_japan_keyword=#{contains_japan_keyword}"
           
           # 出版社情報を取得
           publishers = []
@@ -563,14 +351,19 @@ class BggService
               
               # 「primary」タイプのnameidが実際の日本語名の可能性が高い
               if nameid_type == 'primary' && nameid_value.present? && nameid_value.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-                version_name = nameid_value
-                Rails.logger.info "Found actual Japanese name from nameid: #{version_name}"
-                break
+                # 中国語でないことを確認
+                unless LanguageDetectionService.chinese?(nameid_value)
+                  version_name = nameid_value
+                  Rails.logger.info "Found actual Japanese name from nameid: #{version_name}"
+                  break
+                else
+                  Rails.logger.info "Skipping Chinese nameid: #{nameid_value}"
+                end
               end
             end
           end
           
-          # 「Japanese edition」などの英語表記のみの場合は、日本語名として扱わない
+          # 「Japanese edition」などの英語表記のみの場合は、バージョン詳細ページから実際の日本語名を取得
           if version_name
             # 実際に日本語文字（ひらがな、カタカナ、漢字）を含むか確認
             contains_japanese_chars = version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
@@ -582,28 +375,37 @@ class BggService
                version_name.downcase.include?('japan edition') || 
                version_name.downcase.include?('japan version'))
             
-            # 日本語文字を含まない、または英語表記のみの場合はnilに設定
+            # 日本語文字を含まない、または英語表記のみの場合
             if !contains_japanese_chars || is_only_english_japanese_reference
-              Rails.logger.info "Ignoring non-Japanese version name: #{version_name}"
+              Rails.logger.info "Found English Japanese version name: #{version_name}. Getting actual Japanese name from version page..."
               
-              # バージョン情報の他のフィールドから日本語名を探す
-              description = version.at_xpath('./description')&.text
-              if description.present?
-                # 説明文から日本語名を抽出する（「Name: マイシティ」などのパターンを探す）
-                name_match = description.match(/Name:\s*([^\s]+[\p{Hiragana}\p{Katakana}\p{Han}][^\n]*)/)
-                if name_match && name_match[1]
-                  potential_name = name_match[1].strip
-                  if potential_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-                    version_name = potential_name
-                    Rails.logger.info "Found Japanese name from description: #{version_name}"
+              # バージョン詳細ページから実際の日本語名を取得
+              version_details = get_version_details(version_id)
+              if version_details && version_details[:name] && version_details[:name].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                version_name = version_details[:name]
+                Rails.logger.info "Found actual Japanese name from version page: #{version_name}"
+              else
+                # バージョン情報の他のフィールドから日本語名を探す
+                description = version.at_xpath('./description')&.text
+                if description.present?
+                  # 説明文から日本語名を抽出する（「Name: マイシティ」などのパターンを探す）
+                  name_match = description.match(/Name:\s*([^\s]+[\p{Hiragana}\p{Katakana}\p{Han}][^\n]*)/)
+                  if name_match && name_match[1]
+                    potential_name = name_match[1].strip
+                    if potential_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) && !LanguageDetectionService.chinese?(potential_name)
+                      version_name = potential_name
+                      Rails.logger.info "Found Japanese name from description: #{version_name}"
+                    else
+                      Rails.logger.info "Skipping Chinese name from description: #{potential_name}"
+                    end
                   end
                 end
-              end
-              
-              # それでも見つからない場合は、特定のゲームに対して日本語名を設定
-              if !version_name || !version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-                # 英語名のままnilにする
-                version_name = nil
+                
+                # それでも見つからない場合は、特定のゲームに対して日本語名を設定
+                if !version_name || !version_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+                  # 英語名のままnilにする
+                  version_name = nil
+                end
               end
             end
           end
@@ -900,6 +702,15 @@ class BggService
         end
       end
       
+      # 日本語名から「(Japanese edition)」などの不要な部分を除去
+      if japanese_name
+        # 括弧内の英語表記を除去
+        japanese_name = japanese_name.gsub(/\s*\([^)]*edition[^)]*\)/i, '')
+        # 前後の空白を除去
+        japanese_name = japanese_name.strip
+        Rails.logger.info "Cleaned Japanese name: #{japanese_name}"
+      end
+      
       # 画像URLを取得
       image_url = search_version_image_by_id(version_id)
       
@@ -1102,156 +913,238 @@ class BggService
 
   # 単一のゲームアイテムXMLを解析するメソッド
   def self.parse_game_item(item)
+    # IDの取得
     bgg_id = item['id']
     
-    # 名前の取得
-    primary_name = item.at_xpath('.//name[@type="primary"]')&.attr('value')
-    return nil unless primary_name
+    # 名前の取得（プライマリ名と日本語名）
+    names = item.xpath('.//name')
+    primary_name = nil
+    japanese_name = nil
     
-    # 日本語名の取得
-    japanese_name = extract_japanese_name(item)
+    names.each do |name|
+      Rails.logger.info "Found name: #{name['value']} (type: #{name['type']})"
+      if name['type'] == 'primary'
+        primary_name = name['value']
+        Rails.logger.info "Found primary name: #{primary_name}"
+      elsif name['value'].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+        # 中国語かどうかをチェック
+        if LanguageDetectionService.chinese?(name['value'])
+          Rails.logger.info "Skipping Chinese name: #{name['value']}"
+          next
+        end
+        # ひらがな・カタカナを含む場合は日本語として優先
+        if name['value'].match?(/[\p{Hiragana}\p{Katakana}]/)
+          japanese_name = name['value']
+          Rails.logger.info "Found Japanese name with kana: #{japanese_name}"
+          break # ひらがな・カタカナがある場合は最優先で確定
+        elsif japanese_name.nil? && name['value'].match?(/\p{Han}/)
+          # 漢字のみで、まだ日本語名が見つかっていない場合のみ候補として保存
+          japanese_name = name['value']
+          Rails.logger.info "Found potential Japanese name (kanji only): #{japanese_name}"
+        end
+      end
+    end
     
     # 説明の取得
     description = item.at_xpath('.//description')&.text&.strip
     
     # 画像URLの取得
-    image_url = item.at_xpath('.//image')&.text&.strip
-    thumbnail_url = item.at_xpath('.//thumbnail')&.text&.strip
-    final_image_url = image_url.present? ? image_url : thumbnail_url
+    image_url = item.at_xpath('.//image')&.text
     
-    # プレイ人数の取得
-    min_players = item.at_xpath('.//minplayers')&.attr('value')&.to_i || 0
-    max_players = item.at_xpath('.//maxplayers')&.attr('value')&.to_i || 0
+    # プレイヤー数の取得
+    min_players = item.at_xpath('.//minplayers')&.[]('value')&.to_i
+    max_players = item.at_xpath('.//maxplayers')&.[]('value')&.to_i
     
     # プレイ時間の取得
-    min_play_time = item.at_xpath('.//minplaytime')&.attr('value')&.to_i || 0
-    play_time = item.at_xpath('.//playingtime')&.attr('value')&.to_i || 0
-    max_play_time = item.at_xpath('.//maxplaytime')&.attr('value')&.to_i || play_time
+    min_play_time = item.at_xpath('.//minplaytime')&.[]('value')&.to_i
+    max_play_time = item.at_xpath('.//maxplaytime')&.[]('value')&.to_i
+    play_time = max_play_time > 0 ? max_play_time : min_play_time
     
-    # 発売年の取得
-    year_published = item.at_xpath('.//yearpublished')&.attr('value')&.to_i
-    release_date = year_published ? "#{year_published}-01-01" : nil
+    # 評価の取得
+    stats = item.at_xpath('.//statistics/ratings')
+    average_score = stats&.at_xpath('.//average')&.[]('value')&.to_f
+    weight = stats&.at_xpath('.//averageweight')&.[]('value')&.to_f
     
-    # 統計情報の取得
-    statistics = item.at_xpath('.//statistics/ratings')
-    average_score = statistics&.at_xpath('.//average')&.attr('value')&.to_f || 0
-    weight = statistics&.at_xpath('.//averageweight')&.attr('value')&.to_f || 0
+    # パブリッシャーの取得
+    publishers = item.xpath('.//link[@type="boardgamepublisher"]').map { |pub| pub['value'] }
+    publisher = publishers.first
+    japanese_publisher = publishers.find { |pub| pub.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) }
     
-    # 出版社とデザイナーの取得
-    publisher = item.at_xpath('.//link[@type="boardgamepublisher"]')&.attr('value')
-    designer = item.at_xpath('.//link[@type="boardgamedesigner"]')&.attr('value')
+    # デザイナーの取得
+    designer = item.at_xpath('.//link[@type="boardgamedesigner"]')&.[]('value')
     
-    # カテゴリーとメカニクスの取得
-    categories = item.xpath('.//link[@type="boardgamecategory"]').map { |link| link.attr('value') }
-    mechanics = item.xpath('.//link[@type="boardgamemechanic"]').map { |link| link.attr('value') }
+    # リリース日の取得（BGGにはない場合が多いので、とりあえず空にしておく）
+    release_date = nil
+    japanese_release_date = nil
     
-    # ベストプレイ人数とレコメンドプレイ人数の取得
-    best_players, recommended_players = extract_player_recommendations(item)
+    # 拡張の取得
+    expansions = item.xpath('.//link[@type="boardgameexpansion"]').map do |exp|
+      {
+        id: exp['id'],
+        name: exp['value'],
+        type: 'expansion'
+      }
+    end
     
-    # 日本語版情報の取得
-    japanese_version_info = get_japanese_version_info(bgg_id)
+    # カテゴリとメカニクスの取得
+    categories = item.xpath('.//link[@type="boardgamecategory"]').map { |cat| cat['value'] }
+    mechanics = item.xpath('.//link[@type="boardgamemechanic"]').map { |mech| mech['value'] }
     
-    {
+    # ゲームデータの構築
+    game_data = {
       bgg_id: bgg_id,
       name: primary_name,
-      japanese_name: japanese_name || japanese_version_info[:name],
       description: description,
-      image_url: final_image_url,
+      image_url: image_url,
       min_players: min_players,
       max_players: max_players,
-      play_time: max_play_time > 0 ? max_play_time : play_time,
+      play_time: play_time,
       min_play_time: min_play_time,
       average_score: average_score,
       weight: weight,
       publisher: publisher,
       designer: designer,
       release_date: release_date,
-      japanese_publisher: japanese_version_info[:publisher],
-      japanese_release_date: japanese_version_info[:release_date],
-      japanese_image_url: japanese_version_info[:image_url],
+      japanese_name: japanese_name,
+      japanese_publisher: japanese_publisher,
+      japanese_release_date: japanese_release_date,
+      expansions: expansions,
       categories: categories,
-      mechanics: mechanics,
-      best_num_players: best_players,
-      recommended_num_players: recommended_players,
-      expansions: []
+      mechanics: mechanics
     }
+    
+    Rails.logger.debug "Parsed game data: #{game_data.inspect}"
+    game_data
   end
 
-  # 日本語名を抽出するメソッド
-  def self.extract_japanese_name(item)
-    japanese_name = nil
-    japanese_name_with_kana = nil
-    
-    item.xpath('.//name').each do |name|
-      name_value = name.attr('value')
+  def self.extract_japanese_publisher(item)
+    # 日本の出版社リストと正規化マッピング
+    japanese_publisher_mapping = {
+      # ホビージャパン系
+      'hobby japan' => 'ホビージャパン',
+      'hobbyjapan' => 'ホビージャパン',
+      'hobyjapan' => 'ホビージャパン',
+      'ホビージャパン' => 'ホビージャパン',
       
-      # ひらがなまたはカタカナを含む場合は最優先
-      if name_value.match?(/[\p{Hiragana}\p{Katakana}]/)
-        japanese_name_with_kana = name_value
-        break
-      # 漢字のみの場合は候補として保存
-      elsif name_value.match?(/\p{Han}/) && !japanese_name
-        japanese_name = name_value
-      end
-    end
-    
-    # ひらがな・カタカナを含む名前があればそれを優先
-    final_japanese_name = japanese_name_with_kana || japanese_name
-    
-    # 日本語文字を含むか確認
-    if final_japanese_name
-      contains_japanese_chars = final_japanese_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-      is_only_english_reference = 
-        !contains_japanese_chars && 
-        (final_japanese_name.downcase.include?('japanese') || 
-         final_japanese_name.downcase.include?('japan'))
+      # アークライト系
+      'arclight' => 'アークライト',
+      'arc light' => 'アークライト',
+      'arclight games' => 'アークライト',
+      'arclightgames' => 'アークライト',
+      'アークライト' => 'アークライト',
       
-      return nil if !contains_japanese_chars || is_only_english_reference
-    end
+      # すごろくや系
+      'sugorokuya' => 'すごろくや',
+      'すごろくや' => 'すごろくや',
+      
+      # オインクゲームズ系
+      'oink games' => 'オインクゲームズ',
+      'oinkgames' => 'オインクゲームズ',
+      'オインクゲームズ' => 'オインクゲームズ',
+      
+      # グラウンディング系
+      'grounding inc.' => 'グラウンディング',
+      'grounding' => 'グラウンディング',
+      'grounding games' => 'グラウンディング',
+      'groundinggames' => 'グラウンディング',
+      'グラウンディング' => 'グラウンディング',
+      
+      # アズモデージャパン系
+      'asmodee japan' => 'アズモデージャパン',
+      'asmodee' => 'アズモデージャパン',
+      'asmodeejapan' => 'アズモデージャパン',
+      'アズモデージャパン' => 'アズモデージャパン',
+      
+      # テンデイズゲームズ系
+      'ten days games' => 'テンデイズゲームズ',
+      'tendays games' => 'テンデイズゲームズ',
+      'tendaysgames' => 'テンデイズゲームズ',
+      'テンデイズゲームズ' => 'テンデイズゲームズ',
+      
+      # ニューゲームズオーダー系
+      'new games order' => 'ニューゲームズオーダー',
+      'newgamesorder' => 'ニューゲームズオーダー',
+      'ニューゲームズオーダー' => 'ニューゲームズオーダー',
+      
+      # コロンアーク系
+      'colon arc' => 'コロンアーク',
+      'colonarc' => 'コロンアーク',
+      'コロンアーク' => 'コロンアーク',
+      
+      # 数寄ゲームズ系
+      'suki games' => '数寄ゲームズ',
+      'sukigames' => '数寄ゲームズ',
+      '数寄ゲームズ' => '数寄ゲームズ',
+      
+      # ダイスタワー系
+      'dice tower' => 'ダイスタワー',
+      'dicetower' => 'ダイスタワー',
+      'ダイスタワー' => 'ダイスタワー',
+      
+      # ボードゲームジャパン系
+      'board game japan' => 'ボードゲームジャパン',
+      'boardgame japan' => 'ボードゲームジャパン',
+      'boardgamejapan' => 'ボードゲームジャパン',
+      'ボードゲームジャパン' => 'ボードゲームジャパン',
+      
+      # ゲームマーケット系
+      'game market' => 'ゲームマーケット',
+      'gamemarket' => 'ゲームマーケット',
+      'ゲームマーケット' => 'ゲームマーケット',
+      
+      # ジーピー系
+      'gp' => 'ジーピー',
+      'ジーピー' => 'ジーピー',
+      
+      # ハコニワ系
+      'hakoniwagames' => 'ハコニワ',
+      'hakoniwa games' => 'ハコニワ',
+      'hakoniwa' => 'ハコニワ',
+      'ハコニワ' => 'ハコニワ',
+      
+      # その他の主要な出版社
+      'z-man games' => 'Z-Man Games',
+      'zman games' => 'Z-Man Games',
+      'zmangames' => 'Z-Man Games',
+      'days of wonder' => 'Days of Wonder',
+      'daysofwonder' => 'Days of Wonder',
+      'fantasy flight games' => 'Fantasy Flight Games',
+      'fantasyflightgames' => 'Fantasy Flight Games',
+      'ffg' => 'Fantasy Flight Games',
+      'rio grande games' => 'Rio Grande Games',
+      'riograndegames' => 'Rio Grande Games',
+      'matagot' => 'Matagot',
+      'iello' => 'IELLO',
+      'cmon' => 'CMON',
+      'cmon limited' => 'CMON',
+      'cool mini or not' => 'CMON',
+      'coolminiornot' => 'CMON'
+    }
     
-    final_japanese_name
-  end
-
-  # プレイ人数の推奨情報を抽出するメソッド
-  def self.extract_player_recommendations(item)
-    best_players = []
-    recommended_players = []
+    japanese_publisher = nil
     
-    # 投票データを解析
-    poll = item.xpath('.//poll[@name="suggested_numplayers"]').first
-    return [best_players, recommended_players] unless poll
-    
-    poll.xpath('.//results').each do |result|
-      num_players = result['numplayers']
-      next if num_players.blank?
+    item.xpath('.//link[@type="boardgamepublisher"]').each do |pub|
+      publisher_name = pub.attr('value')
       
-      votes = {}
-      result.xpath('.//result').each do |vote|
-        vote_type = vote['value']
-        vote_count = vote['numvotes'].to_i
-        votes[vote_type] = vote_count
-      end
-      
-      best_votes = votes['Best'] || 0
-      recommended_votes = votes['Recommended'] || 0
-      not_recommended_votes = votes['Not Recommended'] || 0
-      
-      total_votes = best_votes + recommended_votes + not_recommended_votes
-      
-      if total_votes > 0
-        # ベストプレイ人数の判定
-        if best_votes > recommended_votes && best_votes > not_recommended_votes
-          best_players << num_players
+      # 日本語文字を含むか、または既知の日本の出版社かをチェック
+      if publisher_name.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) || 
+         japanese_publisher_mapping.keys.any? { |key| publisher_name.downcase.include?(key.downcase) }
+        
+        # 表記揺れを修正して正規化
+        normalized_name = nil
+        japanese_publisher_mapping.each do |key, value|
+          if publisher_name.downcase.include?(key.downcase)
+            normalized_name = value
+            break
+          end
         end
         
-        # 推奨プレイ人数の判定
-        if best_votes + recommended_votes > not_recommended_votes
-          recommended_players << num_players
-        end
+        japanese_publisher = normalized_name || publisher_name
+        break
       end
     end
     
-    [best_players, recommended_players]
+    japanese_publisher
   end
 
   def self.parse_hot_games(response)

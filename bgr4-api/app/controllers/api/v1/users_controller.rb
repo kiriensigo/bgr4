@@ -37,7 +37,7 @@ module Api
               min_players: review.game.min_players,
               max_players: review.game.max_players,
               play_time: review.game.play_time,
-              average_score: review.game.average_score
+              average_score: review.game.average_score_value
             }
           }
         }

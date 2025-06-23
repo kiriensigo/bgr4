@@ -7,7 +7,7 @@ class GameSerializer < ActiveModel::Serializer
              # Calculated values
              :average_score, :reviews_count,
              :average_rule_complexity, :average_luck_factor, :average_interaction,
-             :average_downtime, :popular_categories, :popular_mechanics, :site_recommended_players
+             :average_downtime, :site_recommended_players
   
   # BGGの元スコアはbgg_scoreとして返す
   attribute :bgg_score do
@@ -46,6 +46,32 @@ class GameSerializer < ActiveModel::Serializer
 
   def baseGame
     object.base_game
+  end
+  
+  # 人気カテゴリー（名前のみを返す）
+  def popular_categories
+    return [] unless object.popular_categories.present?
+    
+    if object.popular_categories.is_a?(Array) && object.popular_categories.first.is_a?(Hash)
+      # ハッシュの配列の場合、nameプロパティを抽出
+      object.popular_categories.map { |cat| cat[:name] || cat['name'] }.compact
+    else
+      # 文字列の配列の場合、そのまま返す
+      object.popular_categories
+    end
+  end
+  
+  # 人気メカニクス（名前のみを返す）
+  def popular_mechanics
+    return [] unless object.popular_mechanics.present?
+    
+    if object.popular_mechanics.is_a?(Array) && object.popular_mechanics.first.is_a?(Hash)
+      # ハッシュの配列の場合、nameプロパティを抽出
+      object.popular_mechanics.map { |mech| mech[:name] || mech['name'] }.compact
+    else
+      # 文字列の配列の場合、そのまま返す
+      object.popular_mechanics
+    end
   end
   
   def in_wishlist
