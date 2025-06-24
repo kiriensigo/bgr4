@@ -141,18 +141,11 @@ export const UnifiedGameCard: React.FC<UnifiedGameCardProps> = ({
               </Typography>
             </Link>
 
-            {/* レーティング */}
-            {hasRating && (
-              <GameRating
-                score={displayScore}
-                reviewsCount={reviewsCount}
-                size="small"
-                variant="compact"
-              />
-            )}
-
-            {/* メタ情報 */}
-            <GameMeta game={game} size="small" />
+            {/* メタ情報（評価、プレイ人数、時間を含む） */}
+            <GameMeta
+              game={{ ...game, average_score: displayScore }}
+              size="small"
+            />
 
             {/* アクション */}
             <Box sx={{ mt: "auto", display: "flex", gap: 1 }}>
@@ -228,25 +221,20 @@ export const UnifiedGameCard: React.FC<UnifiedGameCardProps> = ({
 
           {/* フッター */}
           <CardContent sx={{ p: 1, pt: 0.5 }}>
-            {/* レーティング */}
-            {hasRating && (
-              <Box sx={{ display: "flex", justifyContent: "center", mb: 0.5 }}>
-                <GameRating
-                  score={displayScore}
-                  reviewsCount={reviewsCount}
-                  size="small"
-                  variant="compact"
-                />
-              </Box>
-            )}
-
-            {/* メタ情報 */}
-            <GameMeta
-              game={game}
-              size="small"
-              direction="row"
-              sx={{ justifyContent: "space-around" }}
-            />
+            {/* メタ情報（評価、プレイ人数、時間を含む） */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 0.5,
+              }}
+            >
+              <GameMeta
+                game={{ ...game, average_score: displayScore }}
+                size="small"
+              />
+            </Box>
           </CardContent>
         </CardActionArea>
       </Card>
