@@ -67,11 +67,15 @@ export interface PaginationInfo {
 export interface GamesResponse {
   games: Game[];
   pagination: PaginationInfo;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface ReviewsResponse {
   reviews: Review[];
   pagination: PaginationInfo;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface WishlistItem {

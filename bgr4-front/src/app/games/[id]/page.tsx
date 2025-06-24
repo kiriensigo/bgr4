@@ -109,8 +109,8 @@ interface ExtendedGame extends Game {
   release_date?: string;
   japanese_release_date?: string;
   japanese_publisher?: string;
-  expansions?: Array<{ id: string; name: string }>;
-  baseGame?: { id: string; name: string };
+  expansions?: Array<{ id: string; name: string; bgg_id?: string }>;
+  baseGame?: { id: string; name: string; bgg_id?: string };
   popular_categories?: any[];
   popular_mechanics?: any[];
   site_recommended_players?: string[];
@@ -1620,7 +1620,9 @@ export default function GamePage({ params }: GamePageProps) {
                     </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap" }}>
                       <Link
-                        href={`/games/${game.baseGame.id}`}
+                        href={`/games/${
+                          game.baseGame.bgg_id || game.baseGame.id
+                        }`}
                         style={{ textDecoration: "none" }}
                       >
                         <Chip

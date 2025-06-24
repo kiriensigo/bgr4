@@ -13,8 +13,8 @@ module Api
         page = params[:page].present? ? params[:page].to_i : 1
         per_page = params[:per_page].present? ? params[:per_page].to_i : 24
         
-        # ソートパラメータを取得（デフォルトは名前昇順）
-        sort_by = params[:sort_by].present? ? params[:sort_by] : 'name_asc'
+        # ソートパラメータを取得
+        sort_by = params[:sort_by].present? ? params[:sort_by] : 'created_at'
         
         # ベースとなるクエリを構築（事前計算値を使用、登録済みゲームのみ）
         base_query = Game.where(registered_on_site: true)
@@ -28,12 +28,8 @@ module Api
         when 'average_score'
           query = query.order('average_score_value DESC NULLS LAST, games.id ASC')
         when 'review_date'
-          # 最新レビュー日時でソート（システムユーザーを除く）
-          system_user_id = User.find_by(email: 'system@boardgamereview.com')&.id
-          query = query.left_joins(:reviews)
-                       .where("reviews.user_id != ? OR reviews.id IS NULL", system_user_id)
-                       .group('games.id')
-                       .order('MAX(reviews.created_at) DESC NULLS LAST, games.created_at DESC, games.id ASC')
+          # 登録日時でソート（シンプルなソート）
+          base_query = base_query.order(created_at: :desc, id: :asc)
         when 'name_asc'
           query = query.order(name: :asc, id: :asc)
         when 'name_desc'
@@ -110,7 +106,9 @@ module Api
             total_pages: (total_count.to_f / per_page).ceil,
             current_page: page,
             per_page: per_page
-          }
+          },
+          totalItems: total_count,
+          totalPages: (total_count.to_f / per_page).ceil
         }
       end
 
@@ -340,23 +338,18 @@ module Api
           return
         end
         
-        # 常に日本語名をIDとして使用する
-        use_japanese_name_as_id = true
+        # J形式の連番IDを生成
+        # 既存のJ形式の最大番号を取得
+        max_j_number = Game.where("bgg_id LIKE 'J%'")
+                          .pluck(:bgg_id)
+                          .map { |id| id.match(/^J(\d+)$/)&.[](1)&.to_i }
+                          .compact
+                          .max || 0
         
-        if use_japanese_name_as_id && game_params[:japanese_name].present?
-          # 日本語名をIDとして使用する場合は、ASCII文字列に変換する
-          # 日本語名をBase64エンコードしてASCII文字列に変換
-          require 'base64'
-          encoded_name = Base64.strict_encode64(game_params[:japanese_name])
-          manual_bgg_id = "jp-#{encoded_name}"
-          Rails.logger.info "Using encoded Japanese name as ID: #{manual_bgg_id}"
-        else
-          # 従来の方法でIDを生成
-          timestamp = Time.now.to_i
-          random_suffix = SecureRandom.hex(4)
-          manual_bgg_id = "manual-#{timestamp}-#{random_suffix}"
-          Rails.logger.info "Using generated ID: #{manual_bgg_id}"
-        end
+        # 次の連番を生成
+        next_number = max_j_number + 1
+        manual_bgg_id = "J#{next_number.to_s.rjust(5, '0')}"
+        Rails.logger.info "Using J-format ID: #{manual_bgg_id}"
         
         # 英語名の処理（空の場合は日本語名を使用）
         name_to_use = game_params[:name].present? ? game_params[:name] : game_params[:japanese_name]
@@ -473,61 +466,246 @@ module Api
       end
 
       def search
-        # パラメータを取得
-        query = params[:query]
-        page = params[:page].presence || 1
-        per_page = params[:per_page].presence || 24
-
-        # クエリが空の場合は、空の結果を返す
-        if query.blank?
-          render json: { games: [], pagination: { total_count: 0, total_pages: 1, current_page: 1 } }
-          return
+        Rails.logger.info "Search params: #{params.inspect}"
+        
+        # ページネーションパラメータを取得
+        page = params[:page].present? ? params[:page].to_i : 1
+        per_page = params[:per_page].present? ? params[:per_page].to_i : 24
+        
+        # ソートパラメータを取得
+        sort_by = params[:sort_by].present? ? params[:sort_by] : 'created_at'
+        
+        # ベースクエリ（登録済みゲームのみ）
+        base_query = Game.where(registered_on_site: true)
+        
+        # キーワード検索
+        if params[:keyword].present?
+          keyword = params[:keyword]
+          base_query = base_query.where(
+            "name ILIKE ? OR japanese_name ILIKE ? OR publisher ILIKE ? OR japanese_publisher ILIKE ? OR designer ILIKE ?",
+            "%#{keyword}%", "%#{keyword}%", "%#{keyword}%", "%#{keyword}%", "%#{keyword}%"
+          )
         end
-
-        # Gameモデルで検索（登録済みゲームのみ、N+1問題を解消するために関連データを一括読み込み）
-        games_query = Game.where(registered_on_site: true).includes(reviews: :user).where("name ILIKE ?", "%#{query}%")
+        
+        # プレイ人数での絞り込み
+        if params[:min_players].present?
+          base_query = base_query.where("max_players >= ?", params[:min_players].to_i)
+        end
+        
+        if params[:max_players].present?
+          base_query = base_query.where("min_players <= ?", params[:max_players].to_i)
+        end
+        
+        # プレイ時間での絞り込み（分数を時間に変換）
+        if params[:play_time_min].present?
+          # フロントエンドの値を分数に変換
+          play_time_mapping = {
+            1 => 0,     # 指定なし
+            2 => 15,    # 15分
+            3 => 30,    # 30分
+            4 => 45,    # 45分
+            5 => 60,    # 1時間
+            6 => 90,    # 1.5時間
+            7 => 120,   # 2時間
+            8 => 150,   # 2.5時間
+            9 => 180,   # 3時間
+            10 => 240,  # 4時間
+            11 => 300,  # 5時間
+            12 => 360,  # 6時間
+            13 => 999   # 6時間以上
+          }
+          
+          min_minutes = play_time_mapping[params[:play_time_min].to_i] || 0
+          if min_minutes > 0 && min_minutes < 999
+            base_query = base_query.where("play_time >= ?", min_minutes)
+          end
+        end
+        
+        if params[:play_time_max].present?
+          play_time_mapping = {
+            1 => 0,     # 指定なし
+            2 => 15,    # 15分
+            3 => 30,    # 30分
+            4 => 45,    # 45分
+            5 => 60,    # 1時間
+            6 => 90,    # 1.5時間
+            7 => 120,   # 2時間
+            8 => 150,   # 2.5時間
+            9 => 180,   # 3時間
+            10 => 240,  # 4時間
+            11 => 300,  # 5時間
+            12 => 360,  # 6時間
+            13 => 999   # 6時間以上
+          }
+          
+          max_minutes = play_time_mapping[params[:play_time_max].to_i] || 999
+          if max_minutes < 999
+            base_query = base_query.where("play_time <= ?", max_minutes)
+          end
+        end
+        
+        # 複雑さでの絞り込み
+        if params[:complexity_min].present?
+          base_query = base_query.where("weight >= ?", params[:complexity_min].to_f)
+        end
+        
+        if params[:complexity_max].present?
+          base_query = base_query.where("weight <= ?", params[:complexity_max].to_f)
+        end
+        
+        # 総合評価での絞り込み
+        if params[:total_score_min].present?
+          base_query = base_query.where("average_score_value >= ?", params[:total_score_min].to_f)
+        end
+        
+        if params[:total_score_max].present?
+          base_query = base_query.where("average_score_value <= ?", params[:total_score_max].to_f)
+        end
+        
+        # 評価項目での絞り込み（ルールの複雑さ、運要素、相互作用、ダウンタイム）
+        if params[:interaction_min].present?
+          base_query = base_query.where("average_interaction_value >= ?", params[:interaction_min].to_f)
+        end
+        
+        if params[:interaction_max].present?
+          base_query = base_query.where("average_interaction_value <= ?", params[:interaction_max].to_f)
+        end
+        
+        if params[:luck_factor_min].present?
+          base_query = base_query.where("average_luck_factor_value >= ?", params[:luck_factor_min].to_f)
+        end
+        
+        if params[:luck_factor_max].present?
+          base_query = base_query.where("average_luck_factor_value <= ?", params[:luck_factor_max].to_f)
+        end
+        
+        if params[:downtime_min].present?
+          base_query = base_query.where("average_downtime_value >= ?", params[:downtime_min].to_f)
+        end
+        
+        if params[:downtime_max].present?
+          base_query = base_query.where("average_downtime_value <= ?", params[:downtime_max].to_f)
+        end
+        
+        # 出版社での絞り込み
+        if params[:publisher].present?
+          publisher = params[:publisher]
+          base_query = base_query.where(
+            "publisher ILIKE ? OR japanese_publisher ILIKE ?",
+            "%#{publisher}%", "%#{publisher}%"
+          )
+        end
+        
+        # メカニクス・カテゴリー・おすすめプレイ人数での絞り込み
+        if params[:mechanics].present? && params[:mechanics].is_a?(Array)
+          mechanics = params[:mechanics].reject(&:blank?)
+          if mechanics.any?
+            match_all = params[:mechanics_match_all] == 'true'
+            
+            if params[:use_reviews_mechanics] == 'true'
+              # レビューベースの検索
+              game_ids = search_by_review_attribute(mechanics, 'mechanics', match_all)
+              base_query = base_query.where(bgg_id: game_ids) if game_ids.any?
+            else
+              # 人気ベースの検索
+              game_ids = search_by_popular_attribute(mechanics, 'popular_mechanics', match_all)
+              base_query = base_query.where(bgg_id: game_ids) if game_ids.any?
+            end
+          end
+        end
+        
+        if params[:categories].present? && params[:categories].is_a?(Array)
+          categories = params[:categories].reject(&:blank?)
+          if categories.any?
+            match_all = params[:categories_match_all] == 'true'
+            
+            if params[:use_reviews_categories] == 'true'
+              # レビューベースの検索
+              game_ids = search_by_review_attribute(categories, 'categories', match_all)
+              base_query = base_query.where(bgg_id: game_ids) if game_ids.any?
+            else
+              # 人気ベースの検索
+              game_ids = search_by_popular_attribute(categories, 'popular_categories', match_all)
+              base_query = base_query.where(bgg_id: game_ids) if game_ids.any?
+            end
+          end
+        end
+        
+        if params[:recommended_players].present? && params[:recommended_players].is_a?(Array)
+          recommended_players = params[:recommended_players].reject(&:blank?)
+          if recommended_players.any?
+            match_all = params[:recommended_players_match_all] == 'true'
+            
+            if params[:use_reviews_recommended_players] == 'true'
+              # レビューベースの検索
+              game_ids = search_by_recommended_players(recommended_players, match_all)
+              base_query = base_query.where(bgg_id: game_ids) if game_ids.any?
+            else
+              # サイト推奨ベースの検索
+              game_ids = search_by_popular_attribute(recommended_players, 'site_recommended_players', match_all)
+              base_query = base_query.where(bgg_id: game_ids) if game_ids.any?
+            end
+          end
+        end
         
         # 総件数を取得
-        total_count = games_query.count
-
+        total_count = base_query.count
+        
+        # ソート順を適用
+        case sort_by
+        when 'reviews_count'
+          base_query = base_query.order('user_reviews_count DESC, games.id ASC')
+        when 'average_score'
+          base_query = base_query.order('average_score_value DESC NULLS LAST, games.id ASC')
+        when 'review_date'
+          # 最新レビュー日時でソート
+          base_query = base_query.order(created_at: :desc, id: :asc)
+        when 'name_asc'
+          base_query = base_query.order(name: :asc, id: :asc)
+        when 'name_desc'
+          base_query = base_query.order(name: :desc, id: :asc)
+        when 'created_at'
+          base_query = base_query.order(created_at: :desc, id: :asc)
+        else
+          base_query = base_query.order(created_at: :desc, id: :asc)
+        end
+        
         # ページネーションを適用
-        games = games_query.offset((page.to_i - 1) * per_page.to_i).limit(per_page.to_i)
+        games = base_query.limit(per_page).offset((page - 1) * per_page)
+        
+        # GameSerializerを使用してレスポンスを構築
+        games_with_reviews = games.map do |game|
+          serializer = GameSerializer.new(game, scope: current_user)
+          game_data = serializer.as_json
 
-        # 必要な情報をJSONとして構築
-        games_json = games.map do |game|
-          {
-            id: game.id,
-            bgg_id: game.bgg_id,
-            name: game.name,
-            japanese_name: game.japanese_name,
-            year_published: game.year_published,
-            min_players: game.min_players,
-            max_players: game.max_players,
-            min_playtime: game.min_playtime,
-            max_playtime: game.max_playtime,
-            image: game.image,
-            average_overall_score: game.average_score_value,
-            reviews_count: game.user_reviews_count, # ユーザーレビュー数を取得
-            reviews: game.reviews.where.not(user: User.find_by(email: 'system@boardgamereview.com')).order(created_at: :desc).limit(5).map do |review|
-              {
-                id: review.id,
-                user: {
-                  id: review.user.id,
-                  name: review.user.name
-                }
+          # 最新レビュー情報を取得（システムユーザーを除く）
+          reviews_for_game = game.reviews.exclude_system_user.order(created_at: :desc).limit(5)
+          
+          game_data[:reviews] = reviews_for_game.map do |review|
+            {
+              created_at: review.created_at,
+              user: {
+                id: review.user.id,
+                name: review.user.name,
+                email: review.user.email
               }
-            end
-          }
+            }
+          end
+          
+          game_data
         end
         
         # レスポンスを返す
         render json: {
-          games: games_json,
+          games: games_with_reviews,
           pagination: {
             total_count: total_count,
-            total_pages: (total_count.to_f / per_page.to_i).ceil,
-            current_page: page.to_i
-          }
+            total_pages: (total_count.to_f / per_page).ceil,
+            current_page: page,
+            per_page: per_page
+          },
+          totalItems: total_count,
+          totalPages: (total_count.to_f / per_page).ceil
         }
       end
 
@@ -614,7 +792,9 @@ module Api
             total_pages: (total_count.to_f / per_page).ceil,
             current_page: page,
             per_page: per_page
-          }
+          },
+          totalItems: total_count,
+          totalPages: (total_count.to_f / per_page).ceil
         }
       end
       
@@ -703,7 +883,9 @@ module Api
             total_pages: (total_count.to_f / per_page).ceil,
             current_page: page,
             per_page: per_page
-          }
+          },
+          totalItems: total_count,
+          totalPages: (total_count.to_f / per_page).ceil
         }
       end
 

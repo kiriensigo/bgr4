@@ -31,33 +31,18 @@ export default function GameCard({
   variant = "list",
   enableSharing = true,
 }: GameCardProps) {
-  // バリアントに応じた設定
-  const getCardSettings = () => {
+  // バリアントのマッピング
+  const getCardVariant = () => {
     switch (variant) {
       case "grid":
       case "search":
       case "carousel":
-        return {
-          showRating: true,
-          showPlayerCount: true,
-          showPlayTime: true,
-          imageHeight: 200,
-        };
+        return "compact";
       case "review":
-        return {
-          showRating: useOverallScoreDisplay,
-          showPlayerCount: true,
-          showPlayTime: true,
-          imageHeight: 150,
-        };
+        return "review";
       case "list":
       default:
-        return {
-          showRating: true,
-          showPlayerCount: true,
-          showPlayTime: true,
-          imageHeight: 180,
-        };
+        return "list";
     }
   };
 
@@ -70,18 +55,15 @@ export default function GameCard({
         }
       : game;
 
-  const cardSettings = getCardSettings();
-
   return (
     <UnifiedGameCard
       game={processedGame}
-      showRating={cardSettings.showRating}
-      showPlayerCount={cardSettings.showPlayerCount}
-      showPlayTime={cardSettings.showPlayTime}
-      imageHeight={cardSettings.imageHeight}
+      variant={getCardVariant()}
+      useOverallScoreDisplay={useOverallScoreDisplay}
+      overallScoreVariant={overallScoreVariant}
+      showOverallScoreOverlay={showOverallScoreOverlay}
+      enableSharing={enableSharing}
+      onReviewUpdated={onReviewUpdated}
     />
   );
 }
-
-// 名前付きエクスポートも追加
-export { GameCard };

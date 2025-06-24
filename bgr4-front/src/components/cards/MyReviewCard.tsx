@@ -28,6 +28,7 @@ interface Review {
   };
   game: {
     id: string;
+    bgg_id?: string;
     name: string;
     japanese_name?: string;
     image_url?: string;
@@ -49,6 +50,9 @@ const MyReviewCard: React.FC<MyReviewCardProps> = ({ review }) => {
   }
 
   const { user, game, overall_score, short_comment, created_at } = review;
+  const gameDisplayName = game.japanese_name || game.name;
+  // BGG IDが優先、なければ内部IDを使用
+  const gameId = game.bgg_id || game.id;
 
   return (
     <Card sx={{ display: "flex", mb: 2, width: "100%" }}>
@@ -62,7 +66,7 @@ const MyReviewCard: React.FC<MyReviewCardProps> = ({ review }) => {
           width: 120,
         }}
       >
-        <Link href={`/games/${game.id}`} passHref>
+        <Link href={`/games/${gameId}`} passHref>
           <Box
             component="img"
             sx={{
@@ -73,7 +77,11 @@ const MyReviewCard: React.FC<MyReviewCardProps> = ({ review }) => {
               cursor: "pointer",
             }}
             src={game.image_url || "/images/no-image.png"}
-            alt={game.japanese_name || game.name}
+            alt={gameDisplayName}
+            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/images/no-image.png";
+            }}
           />
         </Link>
       </Box>
@@ -85,14 +93,23 @@ const MyReviewCard: React.FC<MyReviewCardProps> = ({ review }) => {
             alignItems: "center",
           }}
         >
-          <Link href={`/games/${game.id}`} passHref>
-            <Typography variant="h6" component="div" sx={{ cursor: "pointer" }}>
-              {game.japanese_name || game.name}
+          <Link href={`/games/${gameId}`} passHref>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  color: "primary.main",
+                },
+              }}
+            >
+              {gameDisplayName}
             </Typography>
           </Link>
           {currentUser?.id === user.id && (
             <Tooltip title="レビューを編集">
-              <Link href={`/games/${game.id}/review`} passHref>
+              <Link href={`/games/${gameId}/review`} passHref>
                 <IconButton size="small">
                   <EditIcon />
                 </IconButton>
@@ -129,7 +146,13 @@ const MyReviewCard: React.FC<MyReviewCardProps> = ({ review }) => {
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ ml: 1, cursor: "pointer" }}
+                sx={{
+                  ml: 1,
+                  cursor: "pointer",
+                  "&:hover": {
+                    color: "primary.main",
+                  },
+                }}
               >
                 {user.name}
               </Typography>

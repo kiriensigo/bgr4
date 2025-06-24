@@ -16,8 +16,34 @@ class LanguageDetectionService
   # 漢字の文字範囲
   CHINESE_CHARS = /[\u4E00-\u9FFF]/
   
+  # 明確に中国語と判定すべき単語・フレーズ
+  CHINESE_PHRASES = [
+    '大领主',    # El Grande の中国語名
+    '翼展',      # Wingspan の中国語名  
+    '石器时代',  # Stone Age の中国語名
+    '藍色夏威夷', # Blue Hawaii の中国語名（繁体字）
+    '蓝色夏威夷', # Blue Hawaii の中国語名（簡体字）
+  ].freeze
+  
+  # 明確に日本語と判定すべき単語・フレーズ
+  JAPANESE_PHRASES = [
+    '戦国時代',  # 日本の歴史用語
+    '石器時代',  # 日本語表記
+    '王国',      # 短い漢字は日本語として扱う
+    '帝国',
+    '共和国',
+    '時代',
+    '世界',
+    '大戦',
+    '革命'
+  ].freeze
+  
   def self.detect_language(text)
     return nil if text.blank?
+    
+    # フレーズベースの判定（最優先）
+    return :simplified_chinese if CHINESE_PHRASES.include?(text)
+    return :japanese if JAPANESE_PHRASES.include?(text)
     
     # ひらがな・カタカナが含まれていれば日本語
     if text.match?(HIRAGANA_RANGE) || text.match?(KATAKANA_RANGE)
