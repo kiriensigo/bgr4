@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Container, Typography, Box } from "@mui/material";
 import { searchGamesByPublisher } from "@/lib/api";
-import GameList from "@/components/GameList";
+import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
 import { useParams } from "next/navigation";
 
 export default function PublisherPage() {
@@ -17,7 +17,7 @@ export default function PublisherPage() {
       </Typography>
 
       <Box sx={{ mt: 4 }}>
-        <GameList
+        <UnifiedGameList
           title=""
           fetchGames={(page, pageSize, sortBy) =>
             searchGamesByPublisher(publisherName, page, pageSize, sortBy)

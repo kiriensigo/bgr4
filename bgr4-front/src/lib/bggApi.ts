@@ -71,103 +71,78 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<string> {
 }
 
 // 日本語版の画像を検索する関数
-async function searchJapaneseVersionImage(
-  id: string,
-  japaneseName: string
+export async function searchJapaneseVersionImage(
+  gameId: string
 ): Promise<string | null> {
   try {
-    console.log(
-      `Searching Japanese version image for game ${id} with name ${japaneseName}`
-    );
-
-    // BGGの画像ギャラリーを検索
-    try {
-      const galleryXml = await fetchWithRetry(
-        `${BGG_API_BASE}/images?thing=${id}`
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `Searching for Japanese version image for game ID: ${gameId}`
       );
-      const galleryResult = parser.parse(galleryXml);
+    }
 
-      if (!galleryResult.items?.item) {
-        console.log("No images found in gallery");
-        return null;
+    // BGG APIからゲーム詳細を取得
+    const { data: xml } = await axios.get(
+      `${BGG_API_BASE}/thing?id=${gameId}&versions=1`
+    );
+    const result = parser.parse(xml);
+
+    if (!result.items?.item) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("No items found for game");
       }
+      return null;
+    }
 
-      const imageItems = Array.isArray(galleryResult.items.item)
-        ? galleryResult.items.item
-        : [galleryResult.items.item];
+    const game = Array.isArray(result.items.item)
+      ? result.items.item[0]
+      : result.items.item;
 
-      console.log(`Found ${imageItems.length} images in gallery`);
+    // バージョン情報を取得
+    const versions = game.versions?.version;
+    if (!versions) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("No versions found for game");
+      }
+      return null;
+    }
 
-      // 日本語版の画像を探す（キャプションに日本語が含まれているか、「Japanese」「Japan」などのキーワードが含まれている画像）
-      // 優先順位をつけて検索
-      const japaneseKeywords = [
-        japaneseName, // 日本語名と完全一致
-        "日本語版",
-        "日本語",
-        "Japanese version",
-        "Japanese edition",
-        "Japan version",
-        "Japan edition",
-        "Japanese",
-        "Japan",
-      ];
+    const versionList = Array.isArray(versions) ? versions : [versions];
 
-      // 最も優先度の高いキーワードから順に検索
-      for (const keyword of japaneseKeywords) {
-        for (const image of imageItems) {
-          const caption = image.caption || "";
-
-          if (caption.includes(keyword)) {
-            const imageUrl = image.large || image.medium || image.small;
-            console.log(
-              `Found Japanese version image with caption "${caption}" matching keyword "${keyword}"`
-            );
-            return imageUrl;
-          }
+    // 日本語版を検索
+    for (const version of versionList) {
+      if (
+        version.link &&
+        version.link.some(
+          (link: any) =>
+            link.value?.toLowerCase().includes("japan") ||
+            link.value?.toLowerCase().includes("japanese") ||
+            link.value?.includes("日本")
+        )
+      ) {
+        const versionId = version.id;
+        if (process.env.NODE_ENV === "development") {
+          console.log(`Found Japanese version with ID: ${versionId}`);
         }
-      }
 
-      // キーワード検索で見つからなかった場合は、日本語文字が含まれている画像を探す
-      for (const image of imageItems) {
-        const caption = image.caption || "";
-
-        // 日本語文字が含まれているか確認
-        if (caption.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/)) {
-          const imageUrl = image.large || image.medium || image.small;
-          console.log(
-            `Found Japanese version image with Japanese characters in caption: "${caption}"`
-          );
+        // 日本語版の詳細情報を取得
+        const imageUrl = await getVersionImageUrl(versionId);
+        if (imageUrl) {
           return imageUrl;
         }
       }
-
-      // 日本語版の画像が見つからなかった場合は、最新の画像を返す（多くの場合、最新の画像が最も品質が良い）
-      if (imageItems.length > 0) {
-        // 画像IDで降順ソート（最新の画像が先頭に来るように）
-        const sortedImages = [...imageItems].sort((a, b) => {
-          const idA = parseInt(a["@_id"] || "0");
-          const idB = parseInt(b["@_id"] || "0");
-          return idB - idA;
-        });
-
-        // 最新の画像を返す
-        const latestImage = sortedImages[0];
-        const imageUrl =
-          latestImage.large || latestImage.medium || latestImage.small;
-        console.log(
-          `No Japanese version image found, using latest image with ID ${latestImage["@_id"]}`
-        );
-        return imageUrl;
-      }
-    } catch (galleryError) {
-      console.error("Error fetching gallery images:", galleryError);
-      console.log("Continuing without gallery images");
     }
 
-    console.log("No suitable image found");
-    return null;
+    // 日本語版が見つからない場合はメイン画像を返す
+    const mainImageUrl = game.image;
+    if (process.env.NODE_ENV === "development") {
+      console.log("No Japanese version found, using main image");
+    }
+    return mainImageUrl || null;
   } catch (error) {
-    console.error("Error searching Japanese version image:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error searching Japanese version image:", error);
+    }
     return null;
   }
 }
@@ -917,10 +892,7 @@ export async function getBGGGameDetails(id: string): Promise<BGGGameDetails> {
           "Japanese image not found from version info, searching with alternate name:",
           japaneseName
         );
-        const japaneseImageUrl = await searchJapaneseVersionImage(
-          id,
-          japaneseName
-        );
+        const japaneseImageUrl = await searchJapaneseVersionImage(japaneseName);
         if (japaneseImageUrl) {
           console.log(
             "Found Japanese version image using alternate name:",
@@ -1134,16 +1106,24 @@ export async function getGameDetails(id: string): Promise<BGGGameDetails> {
 
 async function getGamesDetails(ids: string): Promise<BGGGameDetails[]> {
   try {
-    console.log("Fetching game details for IDs:", ids);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Fetching game details for IDs:", ids);
+    }
     const { data: xml } = await axios.get(
       `${BGG_API_BASE}/thing?id=${ids}&stats=1`
     );
-    console.log("Game details XML:", xml);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Game details XML:", xml);
+    }
     const result = parser.parse(xml);
-    console.log("Parsed game details:", result);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Parsed game details:", result);
+    }
 
     if (!result.items?.item) {
-      console.log("No items found in game details");
+      if (process.env.NODE_ENV === "development") {
+        console.log("No items found in game details");
+      }
       return [];
     }
 
@@ -1189,7 +1169,9 @@ export function parseXMLResponse(xmlText: string): Document {
  */
 export async function getTopRankedGames(limit: number = 100): Promise<any[]> {
   try {
-    console.log(`Fetching top ${limit} ranked games from BGG`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Fetching top ${limit} ranked games from BGG`);
+    }
 
     // 提供されたJSONデータを解析 (BGG Top 100)
     const topGamesList = [
@@ -1300,7 +1282,9 @@ export async function getTopRankedGames(limit: number = 100): Promise<any[]> {
 
     // limit数までに制限
     const gameIds = Array.from(uniqueIds).slice(0, limit);
-    console.log(`Using ${gameIds.length} unique game IDs from the list`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Using ${gameIds.length} unique game IDs from the list`);
+    }
 
     // ゲームを分割して25個ずつ詳細情報を取得
     const batchSize = 25;
@@ -1308,16 +1292,20 @@ export async function getTopRankedGames(limit: number = 100): Promise<any[]> {
 
     for (let i = 0; i < gameIds.length; i += batchSize) {
       const batchIds = gameIds.slice(i, i + batchSize);
-      console.log(
-        `Fetching details for games ${i + 1} to ${i + batchIds.length}`
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `Fetching details for games ${i + 1} to ${i + batchIds.length}`
+        );
+      }
 
       const batchGames = await getGamesDetails(batchIds.join(","));
       games.push(...batchGames);
 
       // BGG APIの負荷を減らすために少し待機
       if (i + batchSize < gameIds.length) {
-        console.log("Waiting 1 second before next batch...");
+        if (process.env.NODE_ENV === "development") {
+          console.log("Waiting 1 second before next batch...");
+        }
         await sleep(1000);
       }
     }

@@ -13,7 +13,7 @@ import {
 } from "@/lib/api";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import NoResults from "@/components/NoResults";
-import GameList from "@/components/GameList";
+import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -82,7 +82,7 @@ export default function SearchPage() {
       <SearchForm initialQuery={query} />
 
       <Box sx={{ mt: 4 }}>
-        <GameList
+        <UnifiedGameList
           title=""
           fetchGames={fetchGames}
           showTitle={false}

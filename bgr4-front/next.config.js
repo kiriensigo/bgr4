@@ -4,14 +4,6 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "example.com",
-      },
-      {
-        protocol: "http",
-        hostname: "localhost",
-      },
-      {
-        protocol: "https",
         hostname: "cf.geekdo-images.com",
       },
       {
@@ -20,11 +12,11 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "*.boardgamegeek.com",
+        hostname: "*.geekdo-images.com",
       },
       {
         protocol: "https",
-        hostname: "*.geekdo-images.com",
+        hostname: "*.boardgamegeek.com",
       },
       {
         protocol: "https",
@@ -36,31 +28,22 @@ const nextConfig = {
       },
       {
         protocol: "http",
-        hostname: "*.jp",
-      },
-      {
-        protocol: "https",
-        hostname: "*.jp",
-      },
-      {
-        protocol: "http",
-        hostname: "*.com",
-      },
-      {
-        protocol: "https",
-        hostname: "*.com",
-      },
-      {
-        protocol: "http",
-        hostname: "*.net",
-      },
-      {
-        protocol: "https",
-        hostname: "*.net",
+        hostname: "localhost",
       },
     ],
-    domains: ["*"],
-    unoptimized: true,
+    formats: ["image/webp", "image/avif"],
+    minimumCacheTTL: 31536000, // 1年間キャッシュ
+    dangerouslyAllowSVG: false,
+    contentDispositionType: "attachment",
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: true,
+  httpAgentOptions: {
+    keepAlive: true,
   },
 };
 module.exports = nextConfig;

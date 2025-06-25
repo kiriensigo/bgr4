@@ -22,7 +22,7 @@ import ShareIcon from "@mui/icons-material/Share";
 import SortIcon from "@mui/icons-material/Sort";
 
 // 新しい統一システムのインポート
-import { useGames } from "@/hooks/api/useGames";
+import { useGames } from "@/hooks/useGames";
 import { usePagination } from "@/hooks/state/usePagination";
 import { UnifiedGameList } from "@/components/ui/GameList/UnifiedGameList";
 import SearchPagination from "@/components/ui/SearchPagination";

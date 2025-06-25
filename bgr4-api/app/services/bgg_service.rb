@@ -990,6 +990,59 @@ class BggService
     categories = item.xpath('.//link[@type="boardgamecategory"]').map { |cat| cat['value'] }
     mechanics = item.xpath('.//link[@type="boardgamemechanic"]').map { |mech| mech['value'] }
     
+    # プレイ人数投票の解析
+    Rails.logger.info "プレイ人数投票解析開始 for BGG ID: #{bgg_id}..."
+    best_num_players = []
+    recommended_num_players = []
+    
+    poll_results = item.xpath('.//poll[@name="suggested_numplayers"]/results')
+    Rails.logger.info "投票結果数: #{poll_results.size}"
+    
+    poll_results.each do |result|
+      num_players = result['numplayers']
+      next if num_players.include?('+') # "4+"のような場合はスキップ
+      
+      Rails.logger.info "処理中: #{num_players}人"
+      
+      best_votes = 0
+      recommended_votes = 0
+      not_recommended_votes = 0
+      
+      result.xpath('.//result').each do |vote|
+        vote_value = vote['value']
+        vote_count = vote['numvotes'].to_i
+        
+        case vote_value
+        when 'Best'
+          best_votes = vote_count
+        when 'Recommended'
+          recommended_votes = vote_count
+        when 'Not Recommended'
+          not_recommended_votes = vote_count
+        end
+      end
+      
+      total_votes = best_votes + recommended_votes + not_recommended_votes
+      
+      if total_votes > 0
+        # Bestの割合が30%以上の場合
+        best_percentage = (best_votes.to_f / total_votes * 100)
+        if best_percentage >= 30.0
+          best_num_players << num_players
+          Rails.logger.info "  → Best判定: #{num_players}人 (#{best_percentage.round(1)}%)"
+        end
+        
+        # Best + Recommendedの合計がNot Recommendedより多い場合は推奨とする
+        if (best_votes + recommended_votes) > not_recommended_votes
+          recommended_num_players << num_players
+          Rails.logger.info "  → Recommended判定: #{num_players}人"
+        end
+      end
+    end
+    
+    Rails.logger.info "最終Best Players: #{best_num_players}"
+    Rails.logger.info "最終Recommended Players: #{recommended_num_players}"
+    
     # ゲームデータの構築
     game_data = {
       bgg_id: bgg_id,
@@ -1010,7 +1063,9 @@ class BggService
       japanese_release_date: japanese_release_date,
       expansions: expansions,
       categories: categories,
-      mechanics: mechanics
+      mechanics: mechanics,
+      best_num_players: best_num_players,
+      recommended_num_players: recommended_num_players
     }
     
     Rails.logger.debug "Parsed game data: #{game_data.inspect}"

@@ -27,7 +27,7 @@ class Game < ApplicationRecord
   end
 
   # ゲーム作成後に初期レビューを作成するコールバック
-  after_create :create_initial_reviews
+  # after_create :create_initial_reviews  # システムレビューの自動作成を無効化
 
   # サイトに登録されているゲームのスコープ
   scope :registered, -> { where(registered_on_site: true) }
@@ -860,5 +860,17 @@ class Game < ApplicationRecord
     
     # 出現回数でソート
     mechanics.sort_by { |_, count| -count }.map { |mechanic, count| { name: mechanic, count: count } }
+  end
+
+  # 日本語名の自動クリーンアップ（中国語を除外）
+  before_save :cleanup_chinese_japanese_name
+
+  private
+
+  def cleanup_chinese_japanese_name
+    if japanese_name.present? && LanguageDetectionService.chinese?(japanese_name)
+      Rails.logger.info "中国語の日本語名を検出、nilに変更: #{japanese_name} (#{name})"
+      self.japanese_name = nil
+    end
   end
 end 

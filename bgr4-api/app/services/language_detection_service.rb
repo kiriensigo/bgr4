@@ -23,6 +23,7 @@ class LanguageDetectionService
     '石器时代',  # Stone Age の中国語名
     '藍色夏威夷', # Blue Hawaii の中国語名（繁体字）
     '蓝色夏威夷', # Blue Hawaii の中国語名（簡体字）
+    '棕櫚島',    # Palm Island の中国語名（繁体字）
   ].freeze
   
   # 明確に日本語と判定すべき単語・フレーズ

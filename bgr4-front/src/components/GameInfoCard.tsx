@@ -72,20 +72,30 @@ export default function GameInfoCard({
         href={linkHref}
         style={{ textDecoration: "none", color: "inherit" }}
       >
-        <Typography
-          gutterBottom
-          variant="h6"
-          component="h2"
+        <Box
           sx={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            display: "-webkit-box",
-            WebkitLineClamp: 1,
-            WebkitBoxOrient: "vertical",
+            height: "3.6em", // 2行分の高さを固定（h6サイズ用）
+            display: "flex",
+            alignItems: "flex-start",
+            mb: 1,
           }}
         >
-          {displayName}
-        </Typography>
+          <Typography
+            variant="h6"
+            component="h2"
+            sx={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2, // 2行まで表示
+              WebkitBoxOrient: "vertical",
+              lineHeight: 1.2,
+              width: "100%",
+            }}
+          >
+            {displayName}
+          </Typography>
+        </Box>
       </Link>
 
       {showRating && hasAverageScore && (

@@ -9,6 +9,7 @@ interface GameMetaProps {
   showRating?: boolean;
   showPlayerCount?: boolean;
   showPlayTime?: boolean;
+  showGameName?: boolean;
 }
 
 export function GameMeta({
@@ -17,6 +18,7 @@ export function GameMeta({
   showRating = true,
   showPlayerCount = true,
   showPlayTime = true,
+  showGameName = true,
 }: GameMetaProps) {
   // プレイ人数の表示フォーマット
   const formatPlayerCount = () => {
@@ -61,8 +63,42 @@ export function GameMeta({
   const chipSize = size === "small" ? "small" : "medium";
   const iconSize = size === "small" ? "small" : "medium";
 
+  // ゲーム名の表示（日本語名優先）
+  const displayName = game.japanese_name || game.name;
+
   return (
     <Box>
+      {/* ゲーム名 - 常に2行固定の高さ */}
+      {showGameName && (
+        <Box
+          sx={{
+            height:
+              size === "small" ? "2.4em" : size === "large" ? "3.6em" : "2.8em", // 2行分の高さを固定
+            display: "flex",
+            alignItems: "flex-start",
+            mb: 0.5,
+          }}
+        >
+          <Typography
+            variant={textSize}
+            component="h3"
+            sx={{
+              fontWeight: size === "large" ? "bold" : "medium",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2, // 常に2行まで表示
+              WebkitBoxOrient: "vertical",
+              lineHeight: 1.2,
+              width: "100%",
+            }}
+          >
+            {displayName || "　"}{" "}
+            {/* 名前がない場合は全角スペースで高さを確保 */}
+          </Typography>
+        </Box>
+      )}
+
       {/* 評価: 7.8 ★★★★☆ */}
       {showRating && hasAverageScore && (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>

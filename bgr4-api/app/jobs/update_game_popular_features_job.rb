@@ -5,33 +5,26 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     game = Game.find_by(bgg_id: game_id)
     return unless game
 
-    # システムユーザーを取得
-    system_user = User.find_by(email: 'system@boardgamereview.com')
-    
-    # 人気タグとメカニクスの計算用にシステムユーザー以外のレビューを取得
-    user_reviews = game.reviews.where.not(user: system_user)
-    user_reviews_count = user_reviews.count
-    
-    # システムユーザーのレビューを含む全レビュー数を取得
+    # システムレビューは廃止されたため、全レビューがユーザーレビュー
     all_reviews = game.reviews
     total_reviews_count = all_reviews.count
     
-    # レビューが全くない場合は更新しない
-    return if total_reviews_count == 0
+    # BGG重み付けを考慮した仮想総レビュー数（+10）
+    virtual_total_count = total_reviews_count + 10
 
-    Rails.logger.info "Updating popular features for game #{game.name} (#{game_id}) with #{user_reviews_count} user reviews and #{total_reviews_count - user_reviews_count} system reviews"
+    Rails.logger.info "Updating popular features for game #{game.name} (#{game_id}) with #{total_reviews_count} user reviews (virtual total: #{virtual_total_count})"
 
-    # 1. 平均スコアの計算 - すべてのレビューから（システムユーザー含む）
+    # 1. 平均スコアの計算 - BGG重み付け込み
     update_average_score(game)
     
-    # 2. 人気カテゴリーの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
+    # 2. 人気カテゴリーの計算（上位6つ）- BGG重み付け込み
     update_popular_categories(game, all_reviews)
     
-    # 3. 人気メカニクスの計算（上位6つ）- すべてのレビューから（システムユーザー含む）
+    # 3. 人気メカニクスの計算（上位6つ）- BGG重み付け込み
     update_popular_mechanics(game, all_reviews)
     
-    # 4. おすすめプレイ人数の計算（50%以上の支持があるもの）- すべてのレビューから（システムユーザー含む）
-    update_recommended_players(game, all_reviews, total_reviews_count)
+    # 4. おすすめプレイ人数の計算（50%以上の支持があるもの）- BGG重み付け込み
+    update_recommended_players(game, all_reviews, virtual_total_count)
     
     # 変更を保存
     game.save!
@@ -51,36 +44,60 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
 
   # 人気カテゴリーの計算（上位6つ）
   def update_popular_categories(game, reviews)
-    # 全レビューからカテゴリーを集計
-    all_categories = reviews.flat_map(&:categories) + reviews.flat_map(&:custom_tags)
-    category_counts = all_categories.reject(&:blank?).group_by(&:itself).transform_values(&:count)
+    # ユーザーレビューからカテゴリーを集計
+    user_categories = reviews.flat_map(&:categories) + reviews.flat_map(&:custom_tags)
+    user_category_counts = user_categories.reject(&:blank?).group_by(&:itself).transform_values(&:count)
+    
+    # BGGカテゴリー情報を×10として追加
+    bgg_categories = []
+    if game.categories.present?
+      bgg_categories = game.categories
+    end
+    
+    # BGGカテゴリーを×10重み付けで追加
+    final_category_counts = user_category_counts.dup
+    bgg_categories.each do |bgg_category|
+      final_category_counts[bgg_category] = (final_category_counts[bgg_category] || 0) + 10
+    end
     
     # 登録数の多い順に上位6つのカテゴリーを抽出
-    popular_categories = category_counts.sort_by { |_, count| -count }.first(6).map(&:first)
+    popular_categories = final_category_counts.sort_by { |_, count| -count }.first(6).map(&:first)
     
     # ゲームの人気カテゴリーを更新
     game.popular_categories = popular_categories
     
-    Rails.logger.info "Updated popular categories for game #{game.name}: #{popular_categories.join(', ')}"
+    Rails.logger.info "Updated popular categories for game #{game.name}: #{popular_categories.join(', ')} (BGG: #{bgg_categories.join(', ')})"
   end
 
   # 人気メカニクスの計算（上位6つ）
   def update_popular_mechanics(game, reviews)
-    # 全レビューからメカニクスを集計
-    all_mechanics = reviews.flat_map(&:mechanics)
-    mechanics_counts = all_mechanics.reject(&:blank?).group_by(&:itself).transform_values(&:count)
+    # ユーザーレビューからメカニクスを集計
+    user_mechanics = reviews.flat_map(&:mechanics)
+    user_mechanics_counts = user_mechanics.reject(&:blank?).group_by(&:itself).transform_values(&:count)
+    
+    # BGGメカニクス情報を×10として追加
+    bgg_mechanics = []
+    if game.mechanics.present?
+      bgg_mechanics = game.mechanics
+    end
+    
+    # BGGメカニクスを×10重み付けで追加
+    final_mechanics_counts = user_mechanics_counts.dup
+    bgg_mechanics.each do |bgg_mechanic|
+      final_mechanics_counts[bgg_mechanic] = (final_mechanics_counts[bgg_mechanic] || 0) + 10
+    end
     
     # 登録数の多い順に上位6つのメカニクスを抽出
-    popular_mechanics = mechanics_counts.sort_by { |_, count| -count }.first(6).map(&:first)
+    popular_mechanics = final_mechanics_counts.sort_by { |_, count| -count }.first(6).map(&:first)
     
     # ゲームの人気メカニクスを更新
     game.popular_mechanics = popular_mechanics
     
-    Rails.logger.info "Updated popular mechanics for game #{game.name}: #{popular_mechanics.join(', ')}"
+    Rails.logger.info "Updated popular mechanics for game #{game.name}: #{popular_mechanics.join(', ')} (BGG: #{bgg_mechanics.join(', ')})"
   end
 
   # おすすめプレイ人数の計算（BGG情報を考慮した重み付け計算）
-  def update_recommended_players(game, reviews, total_reviews_count)
+  def update_recommended_players(game, reviews, virtual_total_count)
     # おすすめプレイ人数が設定されているレビューを取得
     reviews_with_players = reviews.where.not(recommended_players: nil)
     
@@ -112,7 +129,7 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
     end.uniq
     
     # 各プレイ人数の推奨度を計算
-    # 推奨度 = (ユーザー投票数 + BGG推奨フラグ×10) / (総レビュー数 + 10)
+    # 推奨度 = (ユーザー投票数 + BGG推奨フラグ×10) / (仮想総レビュー数)
     player_scores = {}
     
     # 1〜7人の各人数について計算
@@ -125,8 +142,8 @@ class UpdateGamePopularFeaturesJob < ApplicationJob
       # BGG推奨フラグ（BestまたはRecommendedに含まれている場合は1、そうでなければ0）
       bgg_flag = bgg_normalized_players.include?(player_key) ? 1 : 0
       
-      # 推奨度を計算
-      score = (user_votes + bgg_flag * 10) / (total_reviews_count + 10).to_f
+      # 推奨度を計算（仮想総レビュー数を使用）
+      score = (user_votes + bgg_flag * 10) / virtual_total_count.to_f
       
       player_scores[player_key] = score
       
