@@ -387,6 +387,11 @@ export default function GamePage({ params }: GamePageProps) {
   const [imageLoading, setImageLoading] = useState(true); // 画像読み込み状態を管理
   const [imageError, setImageError] = useState(false); // 画像読み込みエラー状態を管理
 
+  // 重複実行防止用のref
+  const isInitializedRef = useRef(false);
+  const fetchInProgressRef = useRef(false);
+  const reviewCountFetchedRef = useRef(false);
+
   // 段階的読み込みの状態管理
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
     basicInfo: true,
@@ -401,6 +406,9 @@ export default function GamePage({ params }: GamePageProps) {
   const [relatedGames, setRelatedGames] = useState<any>(null);
   const [reviewsPage, setReviewsPage] = useState(1);
   const [totalReviewsPages, setTotalReviewsPages] = useState(0);
+
+  // データ読み込み済みフラグを追加
+  const [hasLoadedData, setHasLoadedData] = useState(false);
 
   // ローディングの進捗状態を更新するタイマー
   useEffect(() => {
@@ -429,7 +437,9 @@ export default function GamePage({ params }: GamePageProps) {
 
   // ユーザーのレビュー数を取得
   useEffect(() => {
-    if (user) {
+    if (user && !reviewCountFetchedRef.current) {
+      reviewCountFetchedRef.current = true;
+      
       const fetchReviewCount = async () => {
         try {
           const response = await fetch(
@@ -461,7 +471,13 @@ export default function GamePage({ params }: GamePageProps) {
 
       fetchReviewCount();
     }
-  }, [user, getAuthHeaders]);
+    
+    // ユーザーがログアウトした場合はフラグをリセット
+    if (!user) {
+      reviewCountFetchedRef.current = false;
+      setReviewCount(0);
+    }
+  }, [user]); // getAuthHeadersを依存配列から除去
 
   // レビュー数が5件以上あるか、または管理者かどうかを判定
   const canEditGame = reviewCount >= 5 || isAdmin;
@@ -469,6 +485,12 @@ export default function GamePage({ params }: GamePageProps) {
   // 段階的読み込みの実装
   const fetchGameData = useCallback(
     async (forceRefresh = false) => {
+      // 重複実行防止
+      if (fetchInProgressRef.current && !forceRefresh) {
+        console.log("Fetch already in progress, skipping...");
+        return;
+      }
+
       // IDがundefinedの場合は処理を中止
       if (params.id === "undefined" || !params.id) {
         console.log("Invalid game ID, skipping data fetch");
@@ -477,6 +499,13 @@ export default function GamePage({ params }: GamePageProps) {
         return;
       }
 
+      // 強制更新でない場合、既に初期化済みならスキップ
+      if (isInitializedRef.current && !forceRefresh) {
+        console.log("Already initialized, skipping fetch");
+        return;
+      }
+
+      fetchInProgressRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -489,8 +518,6 @@ export default function GamePage({ params }: GamePageProps) {
 
         const basicInfo = await getGameBasicInfo(params.id, headers);
         console.log("Basic info received:", basicInfo);
-        console.log("Game ID from params:", params.id);
-        console.log("Headers used:", headers);
         setGame(basicInfo as ExtendedGame);
 
         if (basicInfo.japanese_name) {
@@ -503,73 +530,63 @@ export default function GamePage({ params }: GamePageProps) {
         setLoadingStates((prev) => ({ ...prev, basicInfo: false }));
         setLoading(false); // 基本情報が読み込まれたらメインのローディングを終了
 
-        // ステップ2: 統計情報を並行して取得
-        console.log("Step 2: Fetching game statistics...");
-        const statisticsPromise = getGameStatistics(params.id, headers)
-          .then((stats) => {
-            console.log("Statistics received:", stats);
-            setGameStatistics(stats);
-            // 統計情報をゲームオブジェクトにマージ
-            setGame((prevGame) => {
-              if (prevGame) {
-                const mergedGame = {
-                  ...prevGame,
-                  ...stats,
-                };
-                console.log("Game data after merging statistics:", mergedGame);
-                return mergedGame;
-              }
-              return prevGame;
-            });
-            setLoadingStates((prev) => ({ ...prev, statistics: false }));
-          })
-          .catch((error) => {
-            console.error("Failed to fetch statistics:", error);
-            setLoadingStates((prev) => ({ ...prev, statistics: false }));
+        // ステップ2-4を並行実行（重複回避のため一度だけ実行）
+        const [stats, reviewData, related] = await Promise.allSettled([
+          // ステップ2: 統計情報を取得
+          getGameStatistics(params.id, headers),
+          // ステップ3: レビューを取得（引数順序修正）
+          getGameReviews(params.id, 1, headers),
+          // ステップ4: 関連ゲームを取得
+          getRelatedGames(params.id, headers),
+        ]);
+
+        // 統計情報の処理
+        if (stats.status === "fulfilled") {
+          console.log("Statistics received:", stats.value);
+          setGameStatistics(stats.value);
+          setGame((prevGame) => {
+            if (prevGame) {
+              return { ...prevGame, ...stats.value };
+            }
+            return prevGame;
           });
+        } else {
+          console.error("Failed to fetch statistics:", stats.reason);
+        }
+        setLoadingStates((prev) => ({ ...prev, statistics: false }));
 
-        // ステップ3: レビューを並行して取得
-        console.log("Step 3: Fetching game reviews...");
-        const reviewsPromise = getGameReviews(params.id, 1, 5, headers)
-          .then((reviewData) => {
-            console.log("Reviews received:", reviewData);
-            setGameReviews(reviewData.reviews);
-            setTotalReviewsPages(reviewData.total_pages);
-            // レビューデータをゲームオブジェクトにもマージ
-            setGame((prevGame) => {
-              if (prevGame) {
-                const mergedGame = {
-                  ...prevGame,
-                  reviews: reviewData.reviews,
-                  reviews_count: reviewData.total_count,
-                };
-                console.log("Game data after merging reviews:", mergedGame);
-                return mergedGame;
-              }
-              return prevGame;
-            });
-            setLoadingStates((prev) => ({ ...prev, reviews: false }));
-          })
-          .catch((error) => {
-            console.error("Failed to fetch reviews:", error);
-            setLoadingStates((prev) => ({ ...prev, reviews: false }));
+        // レビューの処理
+        if (reviewData.status === "fulfilled") {
+          console.log("Reviews received:", reviewData.value);
+          setGameReviews(reviewData.value.reviews);
+          setTotalReviewsPages(reviewData.value.totalPages);
+          setGame((prevGame) => {
+            if (prevGame) {
+              return {
+                ...prevGame,
+                reviews: reviewData.value.reviews,
+                reviews_count: reviewData.value.totalItems,
+              };
+            }
+            return prevGame;
           });
+        } else {
+          console.error("Failed to fetch reviews:", reviewData.reason);
+        }
+        setLoadingStates((prev) => ({ ...prev, reviews: false }));
 
-        // ステップ4: 関連ゲームを並行して取得
-        console.log("Step 4: Fetching related games...");
-        const relatedPromise = getRelatedGames(params.id, headers)
-          .then((related) => {
-            setRelatedGames(related);
-            setLoadingStates((prev) => ({ ...prev, relatedGames: false }));
-          })
-          .catch((error) => {
-            console.error("Failed to fetch related games:", error);
-            setLoadingStates((prev) => ({ ...prev, relatedGames: false }));
-          });
+        // 関連ゲームの処理
+        if (related.status === "fulfilled") {
+          console.log("Related games received:", related.value);
+          setRelatedGames(related.value);
+        } else {
+          console.error("Failed to fetch related games:", related.reason);
+        }
+        setLoadingStates((prev) => ({ ...prev, relatedGames: false }));
 
-        // すべての並行処理を待機
-        await Promise.all([statisticsPromise, reviewsPromise, relatedPromise]);
-
+        // 読み込み完了をマーク
+        setHasLoadedData(true);
+        isInitializedRef.current = true; // 初期化完了をマーク
         console.log("All progressive loading completed");
       } catch (error) {
         console.error("Error fetching game data:", error);
@@ -585,22 +602,35 @@ export default function GamePage({ params }: GamePageProps) {
           statistics: false,
           relatedGames: false,
         });
+      } finally {
+        fetchInProgressRef.current = false;
       }
     },
-    [params.id, user, getAuthHeaders, refresh]
+    [params.id, user] // hasLoadedDataとgetAuthHeadersを依存配列から除去
   );
 
+  // ゲームデータの初期読み込み（idが変わった時のみ）
   useEffect(() => {
     // IDがundefinedの場合は処理を中止
     if (params.id === "undefined" || !params.id) {
       return;
     }
 
-    // ゲームデータを取得
-    fetchGameData(refresh);
+    // 新しいIDに変わった場合、初期化フラグをリセット
+    if (isInitializedRef.current) {
+      isInitializedRef.current = false;
+    }
 
-    // refreshパラメータがtrueの場合、URLからrefreshパラメータを削除し、スナックバーを表示
+    // ゲームデータを取得
+    fetchGameData();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]); // intentionally excluding fetchGameData to prevent infinite loop
+
+  // refreshパラメータの処理を分離
+  useEffect(() => {
     if (refresh) {
+      // URLからrefreshパラメータを削除
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
 
@@ -608,8 +638,13 @@ export default function GamePage({ params }: GamePageProps) {
       setSnackbarMessage("ゲーム情報が更新されました");
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
+
+      // 初期化フラグをリセットして強制再読み込み
+      isInitializedRef.current = false;
+      fetchGameData(true);
     }
-  }, [fetchGameData, params.id, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]); // intentionally excluding fetchGameData to prevent infinite loop
 
   const handleOpenDialog = () => {
     setOpenDialog(true);

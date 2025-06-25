@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false, // 重複リクエスト問題のためStrictModeを一時的に無効化
   images: {
     remotePatterns: [
       {

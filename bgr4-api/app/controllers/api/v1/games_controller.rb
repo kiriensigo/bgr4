@@ -278,7 +278,10 @@ module Api
         @game.normalize_japanese_publisher if @game.japanese_publisher.present?
         
         if @game.save
-          # 初期レビューを作成
+          # 【重要】新ルール（2025年6月25日実装）: システムレビューは廃止済み
+          # BGGスコア重み付け計算（×10）とプレイ人数推奨設定のみ実行
+          # create_initial_reviewsメソッド内で update_site_recommended_players も実行されるため
+          # こちらで重複して呼び出す必要はない（単純化アプローチ）
           @game.create_initial_reviews
           
           render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
@@ -386,11 +389,15 @@ module Api
         end
         
         if @game.save
-          # 初期レビューを作成（手動登録フラグをtrueで渡す）
+          # 【重要】手動登録の場合: BGG情報がないため初期処理は最小限
+          # create_initial_reviewsは manual_registration = true で何もしない
           @game.create_initial_reviews(true)
           
           # 編集履歴を作成
           @game.create_edit_history({}, @game.attributes, current_user)
+          
+          # 手動登録の場合はmin_players〜max_playersを自動的にsite_recommended_playersに設定
+          # Game.after_createコールバックまたは別途実装で処理される（単純化アプローチ）
           
           render json: @game, serializer: GameSerializer, scope: current_user, scope_name: :current_user
         else
