@@ -1393,18 +1393,7 @@ export default function GamePage({ params }: GamePageProps) {
                       >
                         {formatScore(game.average_overall_score)}
                       </Typography>
-                    )}
-                    {/* デバッグ情報 */}
-                    {process.env.NODE_ENV === "development" && (
-                      <Typography variant="caption" color="text.secondary">
-                        Debug:{" "}
-                        {JSON.stringify({
-                          average_overall_score: game.average_overall_score,
-                          type: typeof game.average_overall_score,
-                        })}
-                      </Typography>
-                    )}
-                    <GameRating
+                    )}<GameRating
                       score={game.average_overall_score}
                       reviewsCount={game.reviews_count}
                       size="large"
@@ -1430,20 +1419,7 @@ export default function GamePage({ params }: GamePageProps) {
                       >
                         {formatScore(game.average_rule_complexity)}
                       </Typography>
-                    )}
-                    {/* デバッグ情報 */}
-                    {process.env.NODE_ENV === "development" && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", fontSize: "0.6rem" }}
-                      >
-                        {JSON.stringify({
-                          complexity: game.average_rule_complexity,
-                        })}
-                      </Typography>
-                    )}
-                  </Grid>
+                    )}</Grid>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
                       運要素

@@ -387,3 +387,27 @@ export async function registerGame(
 
   return response.json();
 }
+
+export async function postReview(
+  gameId: string,
+  reviewData: any,
+  authHeaders?: Record<string, string>
+): Promise<Review> {
+  const response = await fetch(`${API_BASE_URL}/games/${gameId}/reviews`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    body: JSON.stringify(reviewData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const errorMessage =
+      errorData?.error || `レビュー投稿に失敗しました: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
