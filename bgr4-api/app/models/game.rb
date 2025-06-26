@@ -607,8 +607,6 @@ class Game < ApplicationRecord
   end
 
   # BGGカテゴリー・メカニクスをサイト形式に変換して取得
-  private
-
   def get_bgg_converted_categories
     return [] unless metadata.present?
     
@@ -631,7 +629,12 @@ class Game < ApplicationRecord
     
     bgg_mechanic_to_site_category_map = {
       'Acting' => '演技',
+      'Deduction' => '推理',
       'Legacy Game' => 'レガシー・キャンペーン',
+      'Memory' => '記憶',
+      'Negotiation' => '交渉',
+      'Paper-and-Pencil' => '紙ペン',
+      'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
       'Solo / Solitaire Game' => 'ソロ向き',
       'Pattern Building' => 'パズル',
       'Trick-taking' => 'トリテ'
@@ -684,23 +687,33 @@ class Game < ApplicationRecord
     bgg_mechanic_to_site_mechanic_map = {
       'Area Majority / Influence' => 'エリア支配',
       'Auction / Bidding' => 'オークション',
+      'Auction Compensation' => 'オークション',
+      'Auction: Dexterity' => 'オークション',
+      'Auction: Dutch' => 'オークション',
+      'Auction: Dutch Priority' => 'オークション',
+      'Auction: English' => 'オークション',
+      'Auction: Fixed Placement' => 'オークション',
+      'Auction: Multiple Lot' => 'オークション',
+      'Auction: Once Around' => 'オークション',
+      'Auction: Sealed Bid' => 'オークション',
+      'Auction: Turn Order Until Pass' => 'オークション',
+      'Betting and Bluffing' => '賭け',
+      'Closed Drafting' => 'ドラフト',
       'Cooperative Game' => '協力',
+      'Deck Construction' => 'デッキ/バッグビルド',
       'Deck, Bag, and Pool Building' => 'デッキ/バッグビルド',
       'Dice Rolling' => 'ダイスロール',
       'Hidden Roles' => '正体隠匿',
-      'Worker Placement' => 'ワカプレ',
-      'Set Collection' => 'セット収集',
-      'Tile Placement' => 'タイル配置',
-      'Variable Player Powers' => 'プレイヤー別能力',
+      'Modular Board' => 'モジュラーボード',
       'Network and Route Building' => 'ルート構築',
       'Open Drafting' => 'ドラフト',
-      'Closed Drafting' => 'ドラフト',
       'Push Your Luck' => 'バースト',
+      'Set Collection' => 'セット収集',
       'Simultaneous Action Selection' => '同時手番',
-      'Modular Board' => 'モジュラーボード',
-      'Betting and Bluffing' => '賭け',
-      'Deck Construction' => 'デッキ/バッグビルド',
+      'Tile Placement' => 'タイル配置',
+      'Variable Player Powers' => 'プレイヤー別能力',
       'Variable Set-up' => 'プレイヤー別能力',
+      'Worker Placement' => 'ワカプレ',
       'Worker Placement with Dice Workers' => 'ワカプレ',
       'Worker Placement, Different Worker Types' => 'ワカプレ'
     }

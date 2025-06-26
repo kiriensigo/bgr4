@@ -1271,4 +1271,60 @@ class BggService
     
     expansions
   end
+
+  # ゲームのBGGランキングを取得
+  def self.get_game_rank(bgg_id)
+    Rails.logger.info "Fetching BGG rank for ID: #{bgg_id}"
+    
+    begin
+      url = "#{BASE_URL}/thing?id=#{bgg_id}&stats=1"
+      response = HTTParty.get(url, {
+        headers: {
+          'Accept' => 'application/xml',
+          'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 30
+      })
+      
+      if response.code == 200
+        doc = Nokogiri::XML(response.body)
+        
+        # ボードゲーム全体のランキングを取得
+        rank_element = doc.at_xpath('//statistics/ratings/ranks/rank[@name="boardgame"]')
+        if rank_element
+          rank_value = rank_element['value']
+          
+          # "Not Ranked"の場合は非常に大きな値を返す
+          if rank_value == "Not Ranked"
+            Rails.logger.info "Game #{bgg_id} is not ranked"
+            return 999999
+          else
+            rank = rank_value.to_i
+            Rails.logger.info "Game #{bgg_id} rank: #{rank}"
+            return rank
+          end
+        else
+          Rails.logger.warn "No rank found for game #{bgg_id}"
+          return 999999
+        end
+      else
+        Rails.logger.error "BGG API error: #{response.code} for ID: #{bgg_id}"
+        return 999999
+      end
+      
+    rescue => e
+      Rails.logger.error "Error fetching rank for BGG ID #{bgg_id}: #{e.message}"
+      return 999999
+    end
+  end
+
+  # ゲームがランキング制限を満たしているかチェック
+  def self.game_meets_rank_requirement?(bgg_id, max_rank = 10000)
+    rank = get_game_rank(bgg_id)
+    meets_requirement = rank <= max_rank
+    
+    Rails.logger.info "Game #{bgg_id} rank check: #{rank} (limit: #{max_rank}) - #{meets_requirement ? 'ALLOWED' : 'BLOCKED'}"
+    
+    return meets_requirement
+  end
 end 

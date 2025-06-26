@@ -350,3 +350,40 @@ export async function searchGames(
     totalPages: data.pagination?.total_pages || 0,
   };
 }
+
+export async function registerGame(
+  gameDetails: any,
+  authHeaders?: Record<string, string>,
+  autoRegister: boolean = false,
+  manualRegistration: boolean = false
+): Promise<Game> {
+  const response = await fetch(`${API_BASE_URL}/games`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeaders || {}),
+    },
+    body: JSON.stringify({
+      game: manualRegistration
+        ? gameDetails // 手動登録の場合はそのまま送信
+        : { bgg_id: gameDetails.bggId }, // BGG登録の場合はBGG IDのみ
+      auto_register: autoRegister,
+      manual_registration: manualRegistration,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const errorMessage =
+      errorData?.error || `ゲーム登録に失敗しました: ${response.status}`;
+
+    // BGGランキング制限エラーの場合は詳細情報を含める
+    if (response.status === 403 && errorData?.bgg_rank) {
+      throw new Error(errorMessage);
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}

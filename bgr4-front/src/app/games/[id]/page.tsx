@@ -391,6 +391,7 @@ export default function GamePage({ params }: GamePageProps) {
   const isInitializedRef = useRef(false);
   const fetchInProgressRef = useRef(false);
   const reviewCountFetchedRef = useRef(false);
+  const gameIdRef = useRef<string | null>(null); // 前回のIDを記録
 
   // 段階的読み込みの状態管理
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -439,7 +440,7 @@ export default function GamePage({ params }: GamePageProps) {
   useEffect(() => {
     if (user && !reviewCountFetchedRef.current) {
       reviewCountFetchedRef.current = true;
-      
+
       const fetchReviewCount = async () => {
         try {
           const response = await fetch(
@@ -471,7 +472,7 @@ export default function GamePage({ params }: GamePageProps) {
 
       fetchReviewCount();
     }
-    
+
     // ユーザーがログアウトした場合はフラグをリセット
     if (!user) {
       reviewCountFetchedRef.current = false;
@@ -611,8 +612,21 @@ export default function GamePage({ params }: GamePageProps) {
 
   // ゲームデータの初期読み込み（idが変わった時のみ）
   useEffect(() => {
+    console.log("[DEBUG] Initial load useEffect triggered:", {
+      gameId: params.id,
+      isInitialized: isInitializedRef.current,
+      fetchInProgress: fetchInProgressRef.current,
+    });
+
     // IDがundefinedの場合は処理を中止
     if (params.id === "undefined" || !params.id) {
+      console.log("[DEBUG] Invalid game ID, skipping");
+      return;
+    }
+
+    // 既に初期化済みの場合はスキップ
+    if (isInitializedRef.current) {
+      console.log("[DEBUG] Already initialized, skipping");
       return;
     }
 
@@ -621,6 +635,7 @@ export default function GamePage({ params }: GamePageProps) {
       isInitializedRef.current = false;
     }
 
+    console.log("[DEBUG] Calling fetchGameData from initial load");
     // ゲームデータを取得
     fetchGameData();
 

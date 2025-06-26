@@ -203,6 +203,24 @@ module Api
           return
         end
         
+        # BGGランキング制限チェック（10000位以下は登録拒否）
+        unless BggService.game_meets_rank_requirement?(bgg_id, 10000)
+          rank = BggService.get_game_rank(bgg_id)
+          error_message = if rank == 999999
+            "申し訳ございませんが、BGGでランク付けされていないゲームは、サーバー容量の関係上登録できません。"
+          else
+            "申し訳ございませんが、BGGランキング#{rank}位のゲームは、サーバー容量の関係上登録できません。BGGランキング10,000位以内のゲームのみ登録可能です。"
+          end
+          
+          Rails.logger.info "Game registration blocked - BGG ID: #{bgg_id}, Rank: #{rank}"
+          render json: { 
+            error: error_message,
+            bgg_rank: rank,
+            max_allowed_rank: 10000
+          }, status: :forbidden
+          return
+        end
+        
         # BGGからゲーム情報を取得
         bgg_game_info = BggService.get_game_details(bgg_id)
         

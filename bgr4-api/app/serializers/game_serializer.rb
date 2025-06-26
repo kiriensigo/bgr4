@@ -48,29 +48,39 @@ class GameSerializer < ActiveModel::Serializer
     object.base_game
   end
   
-  # 人気カテゴリー（名前のみを返す）
+  # 人気カテゴリー（BGG変換済み + レビューベース）
   def popular_categories
-    return [] unless object.popular_categories.present?
+    categories = object.popular_categories
     
-    if object.popular_categories.is_a?(Array) && object.popular_categories.first.is_a?(Hash)
+    if categories.present?
       # ハッシュの配列の場合、nameプロパティを抽出
-      object.popular_categories.map { |cat| cat[:name] || cat['name'] }.compact
+      if categories.is_a?(Array) && categories.first.is_a?(Hash)
+        categories.map { |cat| cat[:name] || cat['name'] }.compact
+      else
+        # 文字列の配列の場合、そのまま返す
+        categories
+      end
     else
-      # 文字列の配列の場合、そのまま返す
-      object.popular_categories
+      # popular_categoriesが空の場合、BGGから直接取得
+      object.get_bgg_converted_categories
     end
   end
   
-  # 人気メカニクス（名前のみを返す）
+  # 人気メカニクス（BGG変換済み + レビューベース）
   def popular_mechanics
-    return [] unless object.popular_mechanics.present?
+    mechanics = object.popular_mechanics
     
-    if object.popular_mechanics.is_a?(Array) && object.popular_mechanics.first.is_a?(Hash)
+    if mechanics.present?
       # ハッシュの配列の場合、nameプロパティを抽出
-      object.popular_mechanics.map { |mech| mech[:name] || mech['name'] }.compact
+      if mechanics.is_a?(Array) && mechanics.first.is_a?(Hash)
+        mechanics.map { |mech| mech[:name] || mech['name'] }.compact
+      else
+        # 文字列の配列の場合、そのまま返す
+        mechanics
+      end
     else
-      # 文字列の配列の場合、そのまま返す
-      object.popular_mechanics
+      # popular_mechanicsが空の場合、BGGから直接取得
+      object.get_bgg_converted_mechanics
     end
   end
   
