@@ -3,13 +3,11 @@
 import React from "react";
 import {
   Card,
-  CardContent,
   Typography,
   Avatar,
   Box,
   Rating,
   Divider,
-  Chip,
   IconButton,
   Tooltip,
 } from "@mui/material";

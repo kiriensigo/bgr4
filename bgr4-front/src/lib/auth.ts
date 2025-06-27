@@ -1,5 +1,3 @@
-import { useAuth } from "@/contexts/AuthContext";
-
 export function getAuthHeaders(): Record<string, string> {
   // ローカルストレージから認証情報を取得
   const accessToken = localStorage.getItem("access-token");

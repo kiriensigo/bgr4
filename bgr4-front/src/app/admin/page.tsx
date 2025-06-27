@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Button,
   Container,
   Typography,
   Box,
@@ -16,7 +15,6 @@ import {
   ListItem,
   ListItemText,
   Paper,
-  Divider,
 } from "@mui/material";
 
 export default function AdminPage() {

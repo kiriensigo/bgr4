@@ -1,10 +1,4 @@
-import {
-  Game,
-  Review,
-  PaginationInfo,
-  GamesResponse,
-  ReviewsResponse,
-} from "@/types/api";
+import { Game, Review, GamesResponse, ReviewsResponse } from "@/types/api";
 
 // API URL設定
 const API_URL =
@@ -16,8 +10,6 @@ const API_BASE_URL = `${API_URL}/api/v1`;
 // ゲーム情報のキャッシュ
 export const gameCache: Record<string, { data: Game; timestamp: number }> = {};
 export const CACHE_EXPIRY = 15 * 60 * 1000;
-
-const pendingRequests: Record<string, Promise<any>> = {};
 
 interface GamesResponseOptions {
   cache?: RequestCache;

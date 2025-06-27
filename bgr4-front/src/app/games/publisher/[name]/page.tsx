@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { Container, Typography, Box } from "@mui/material";
 import { searchGamesByPublisher } from "@/lib/api";
 import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
