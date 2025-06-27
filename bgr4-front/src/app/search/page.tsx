@@ -345,9 +345,41 @@ export default function SearchPage() {
             maxValue === 13 ? 999 : playTimeMapping[maxValue]; // 13（180以上）の場合は999分として扱う
         }
 
-        // 値がundefinedのパラメータを除外
+        // デフォルト値判定関数
+        const isDefaultValue = (key: string, value: any): boolean => {
+          const defaults: Record<string, any> = {
+            publisher: ["", "all"],
+            use_reviews_mechanics: ["false", false],
+            use_reviews_categories: ["false", false],
+            categories_match_all: ["false", false],
+            mechanics_match_all: ["false", false],
+            recommended_players_match_all: ["false", false],
+            play_time_min: [0, 1],
+            play_time_max: [999, 180], // 999 or 180以上
+            complexity_min: [1],
+            complexity_max: [5],
+            total_score_min: [0],
+            total_score_max: [10],
+            interaction_min: [1],
+            interaction_max: [5],
+            luck_factor_min: [1],
+            luck_factor_max: [5],
+            downtime_min: [1],
+            downtime_max: [5],
+          };
+
+          return defaults[key]?.includes(value) || false;
+        };
+
+        // undefinedまたはデフォルト値のパラメータを除外（「all」として扱う）
         const filteredParams = Object.fromEntries(
-          Object.entries(apiParams).filter(([_, value]) => value !== undefined)
+          Object.entries(apiParams).filter(
+            ([key, value]) =>
+              value !== undefined &&
+              value !== null &&
+              value !== "" &&
+              !isDefaultValue(key, value)
+          )
         );
 
         console.log("Filtered search params:", filteredParams);

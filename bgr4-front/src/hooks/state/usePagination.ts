@@ -6,6 +6,9 @@ export interface UsePaginationOptions {
   pageSize?: number;
   totalCount?: number;
   onPageChange?: (page: number) => void;
+  defaultPageSize?: number;
+  pageSizeOptions?: number[];
+  syncWithUrl?: boolean;
 }
 
 export interface UsePaginationResult {
@@ -19,32 +22,51 @@ export interface UsePaginationResult {
   previousPage: () => void;
   goToFirstPage: () => void;
   goToLastPage: () => void;
+  // 新しいインターフェース用
+  page: number;
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
+  updateUrl: (params: URLSearchParams) => void;
 }
 
 export function usePagination({
   initialPage = 1,
-  pageSize = 20,
+  pageSize: initialPageSize = 20,
   totalCount = 0,
-  onPageChange
+  onPageChange,
+  defaultPageSize = 24,
+  pageSizeOptions = [12, 24, 36, 48],
+  syncWithUrl = false
 }: UsePaginationOptions = {}): UsePaginationResult {
   const router = useRouter();
   const searchParams = useSearchParams();
   
   // URLからページ番号を取得、なければinitialPageを使用
   const urlPage = searchParams.get('page');
+  const urlPageSize = searchParams.get('per_page');
+  
   const [currentPage, setCurrentPage] = useState(() => {
     return urlPage ? parseInt(urlPage, 10) : initialPage;
+  });
+
+  const [pageSize, setPageSizeState] = useState(() => {
+    return urlPageSize ? parseInt(urlPageSize, 10) : (initialPageSize || defaultPageSize);
   });
 
   const totalPages = Math.ceil(totalCount / pageSize);
   const hasNextPage = currentPage < totalPages;
   const hasPreviousPage = currentPage > 1;
 
-  const updateURL = useCallback((page: number) => {
+  const updateURL = useCallback((page: number, newPageSize?: number) => {
+    if (!syncWithUrl) return;
+    
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', page.toString());
+    if (newPageSize) {
+      params.set('per_page', newPageSize.toString());
+    }
     router.push(`?${params.toString()}`);
-  }, [router, searchParams]);
+  }, [router, searchParams, syncWithUrl]);
 
   const goToPage = useCallback((page: number) => {
     if (page < 1 || page > totalPages) return;
@@ -53,6 +75,22 @@ export function usePagination({
     updateURL(page);
     onPageChange?.(page);
   }, [totalPages, updateURL, onPageChange]);
+
+  const setPage = useCallback((page: number) => {
+    goToPage(page);
+  }, [goToPage]);
+
+  const setPageSize = useCallback((size: number) => {
+    setPageSizeState(size);
+    setCurrentPage(1); // ページサイズ変更時は1ページ目に戻る
+    updateURL(1, size);
+  }, [updateURL]);
+
+  const updateUrl = useCallback((params: URLSearchParams) => {
+    if (syncWithUrl) {
+      router.push(`?${params.toString()}`);
+    }
+  }, [router, syncWithUrl]);
 
   const nextPage = useCallback(() => {
     if (hasNextPage) {
@@ -84,6 +122,11 @@ export function usePagination({
     nextPage,
     previousPage,
     goToFirstPage,
-    goToLastPage
+    goToLastPage,
+    // 新しいインターフェース
+    page: currentPage,
+    setPage,
+    setPageSize,
+    updateUrl
   };
-} 
+}
