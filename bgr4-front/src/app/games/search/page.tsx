@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container, Typography, Box } from "@mui/material";
 import SearchForm from "@/components/SearchForm";
@@ -12,7 +12,7 @@ import {
   GamesResponse,
 } from "@/lib/api";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import NoResults from "@/components/NoResults";
+
 import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
 
 export default function SearchPage() {
@@ -22,8 +22,8 @@ export default function SearchPage() {
   const designer = searchParams.get("designer") || "";
 
   const [searchTitle, setSearchTitle] = useState("ゲームを検索");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const [error] = useState<string | null>(null);
 
   // 検索条件に応じて適切なAPIを呼び出す関数
   const fetchGames = async (

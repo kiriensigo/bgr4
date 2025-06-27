@@ -15,7 +15,7 @@ interface GameImageCardProps {
 
 /**
  * ゲーム画像を表示するコンポーネント
- * 
+ *
  * @param imageUrl - ゲーム画像のURL
  * @param gameName - ゲーム名（alt属性に使用）
  * @param gameId - ゲームID（リンク先に使用）
@@ -30,7 +30,7 @@ export default function GameImageCard({
   aspectRatio = "1",
 }: GameImageCardProps) {
   const linkHref = `/games/${gameId}`;
-  
+
   // 実際の画像URLがあるかチェック（空文字、null、undefinedの場合は画像なしとして扱う）
   const hasRealImage = imageUrl && imageUrl.trim() !== "";
 
@@ -50,9 +50,7 @@ export default function GameImageCard({
       }}
     >
       <ImageNotSupportedIcon sx={{ fontSize: 40, mb: 1 }} />
-      <Box sx={{ fontSize: "0.75rem", textAlign: "center" }}>
-        画像なし
-      </Box>
+      <Box sx={{ fontSize: "0.75rem", textAlign: "center" }}>画像なし</Box>
     </Box>
   );
 
@@ -97,11 +95,11 @@ export default function GameImageCard({
             objectFit: "contain",
             bgcolor: "grey.100",
           }}
-          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+          onError={() => {
             console.warn(`Failed to load image: ${imageUrl}`);
           }}
         />
       )}
     </Link>
   );
-} 
+}

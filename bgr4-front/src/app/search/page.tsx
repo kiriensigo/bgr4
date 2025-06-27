@@ -20,21 +20,16 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  ListSubheader,
-  Stack,
-  ToggleButtonGroup,
-  ToggleButton,
 } from "@mui/material";
-import { useRouter, usePathname } from "next/navigation";
-import { searchGames } from "@/lib/api";
+import { useRouter } from "next/navigation";
+
 import SearchIcon from "@mui/icons-material/Search";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
 import Link from "next/link";
 import { EvaluationSection } from "@/components/GameEvaluationForm/EvaluationSection";
-import { CustomToggleButton } from "@/components/GameEvaluationForm/CustomToggleButton";
+
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
-import { PLAYER_COUNT_OPTIONS } from "@/components/GameEvaluationForm/constants";
 
 interface LocalSearchParams {
   keyword: string;
@@ -84,7 +79,7 @@ const SCROLL_POSITION_KEY = "searchPageScrollPosition";
 
 export default function SearchPage() {
   const router = useRouter();
-  const pathname = usePathname();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);

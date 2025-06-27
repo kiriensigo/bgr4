@@ -9,11 +9,7 @@ interface GameCardProps {
   review?: Review;
   type: "game" | "review";
   useOverallScoreDisplay?: boolean;
-  overallScoreVariant?: "default" | "compact" | "large";
-  showOverallScoreOverlay?: boolean;
-  onReviewUpdated?: () => void;
   variant?: "list" | "grid" | "search" | "review" | "carousel";
-  enableSharing?: boolean;
 }
 
 /**
@@ -25,11 +21,7 @@ export default function GameCard({
   review,
   type,
   useOverallScoreDisplay = false,
-  overallScoreVariant = "compact",
-  showOverallScoreOverlay = false,
-  onReviewUpdated,
   variant = "list",
-  enableSharing = true,
 }: GameCardProps) {
   // バリアントに応じた設定
   const getCardSettings = () => {

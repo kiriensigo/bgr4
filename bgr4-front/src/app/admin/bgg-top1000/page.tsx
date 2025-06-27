@@ -8,19 +8,16 @@ import {
   Typography,
   Box,
   Button,
-  Paper,
   CircularProgress,
   Grid,
   Card,
   CardContent,
   Alert,
-  LinearProgress,
   Chip,
   Table,
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
   TableRow,
   Dialog,
   DialogTitle,
@@ -47,7 +44,10 @@ export default function BGGTop1000Page() {
 
   // 管理者権限チェック
   useEffect(() => {
-    if (!authLoading && (!user || !user.email?.endsWith("@boardgamereview.com"))) {
+    if (
+      !authLoading &&
+      (!user || !user.email?.endsWith("@boardgamereview.com"))
+    ) {
       router.push("/");
     }
   }, [user, authLoading, router]);
@@ -57,7 +57,7 @@ export default function BGGTop1000Page() {
     setStatsLoading(true);
     try {
       const authHeaders = getAuthHeaders();
-      
+
       // 登録状況の取得
       const statusResponse = await fetch(
         "http://localhost:3000/api/v1/admin/bgg_registration_status",
@@ -126,7 +126,7 @@ export default function BGGTop1000Page() {
         const data = await response.json();
         setSuccess(data.message);
         setConfirmDialogOpen(false);
-        
+
         // 処理開始後、定期的に進行状況を更新
         const interval = setInterval(() => {
           fetchStats();
@@ -245,7 +245,12 @@ export default function BGGTop1000Page() {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
                 <Typography variant="h6">現在の統計</Typography>
                 <Button
                   size="small"
@@ -256,7 +261,7 @@ export default function BGGTop1000Page() {
                   更新
                 </Button>
               </Box>
-              
+
               {statsLoading ? (
                 <CircularProgress size={24} />
               ) : dbStats ? (
@@ -266,33 +271,49 @@ export default function BGGTop1000Page() {
                       <TableRow>
                         <TableCell>総ゲーム数</TableCell>
                         <TableCell align="right">
-                          <Chip label={dbStats.total_games.toLocaleString()} color="primary" />
+                          <Chip
+                            label={dbStats.total_games.toLocaleString()}
+                            color="primary"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>登録済みゲーム数</TableCell>
                         <TableCell align="right">
-                          <Chip label={dbStats.registered_games.toLocaleString()} color="success" />
+                          <Chip
+                            label={dbStats.registered_games.toLocaleString()}
+                            color="success"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>ユーザーレビュー数</TableCell>
                         <TableCell align="right">
-                          <Chip label={dbStats.user_reviews.toLocaleString()} color="info" />
+                          <Chip
+                            label={dbStats.user_reviews.toLocaleString()}
+                            color="info"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>日本語名付きゲーム</TableCell>
                         <TableCell align="right">
-                          <Chip label={dbStats.games_with_japanese_names.toLocaleString()} color="secondary" />
+                          <Chip
+                            label={dbStats.games_with_japanese_names.toLocaleString()}
+                            color="secondary"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>今日追加されたゲーム</TableCell>
                         <TableCell align="right">
-                          <Chip 
-                            label={dbStats.recent_activity.games_added_today.toLocaleString()} 
-                            color={dbStats.recent_activity.games_added_today > 0 ? "success" : "default"}
+                          <Chip
+                            label={dbStats.recent_activity.games_added_today.toLocaleString()}
+                            color={
+                              dbStats.recent_activity.games_added_today > 0
+                                ? "success"
+                                : "default"
+                            }
                           />
                         </TableCell>
                       </TableRow>
@@ -313,7 +334,7 @@ export default function BGGTop1000Page() {
               <Typography variant="h6" gutterBottom>
                 システムレビュー統計
               </Typography>
-              
+
               {systemStats ? (
                 <TableContainer>
                   <Table size="small">
@@ -321,21 +342,31 @@ export default function BGGTop1000Page() {
                       <TableRow>
                         <TableCell>総システムレビュー数</TableCell>
                         <TableCell align="right">
-                          <Chip label={systemStats.total_system_reviews.toLocaleString()} color="primary" />
+                          <Chip
+                            label={systemStats.total_system_reviews.toLocaleString()}
+                            color="primary"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>システムレビュー付きゲーム</TableCell>
                         <TableCell align="right">
-                          <Chip label={systemStats.games_with_system_reviews.toLocaleString()} color="success" />
+                          <Chip
+                            label={systemStats.games_with_system_reviews.toLocaleString()}
+                            color="success"
+                          />
                         </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell>レビュー不足ゲーム</TableCell>
                         <TableCell align="right">
-                          <Chip 
-                            label={systemStats.games_needing_system_reviews.toLocaleString()} 
-                            color={systemStats.games_needing_system_reviews > 0 ? "warning" : "success"}
+                          <Chip
+                            label={systemStats.games_needing_system_reviews.toLocaleString()}
+                            color={
+                              systemStats.games_needing_system_reviews > 0
+                                ? "warning"
+                                : "success"
+                            }
                           />
                         </TableCell>
                       </TableRow>
@@ -343,7 +374,9 @@ export default function BGGTop1000Page() {
                   </Table>
                 </TableContainer>
               ) : (
-                <Typography variant="body2">システムレビュー統計を読み込み中...</Typography>
+                <Typography variant="body2">
+                  システムレビュー統計を読み込み中...
+                </Typography>
               )}
             </CardContent>
           </Card>
@@ -371,13 +404,18 @@ export default function BGGTop1000Page() {
                       <Typography variant="h4" color="secondary">
                         {registrationStatus.recent_system_reviews_created}
                       </Typography>
-                      <Typography variant="body2">システムレビュー作成</Typography>
+                      <Typography variant="body2">
+                        システムレビュー作成
+                      </Typography>
                     </Box>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Box textAlign="center">
                       <Typography variant="body2" color="text.secondary">
-                        最終更新: {new Date(registrationStatus.last_updated).toLocaleString("ja-JP")}
+                        最終更新:{" "}
+                        {new Date(
+                          registrationStatus.last_updated
+                        ).toLocaleString("ja-JP")}
                       </Typography>
                     </Box>
                   </Grid>
@@ -439,4 +477,4 @@ export default function BGGTop1000Page() {
       </Dialog>
     </Container>
   );
-} 
+}

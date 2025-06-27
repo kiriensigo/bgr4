@@ -6,7 +6,6 @@ import {
   getGameStatistics,
   getGameReviews,
   getRelatedGames,
-  updateJapaneseName,
   updateGameFromBgg,
   type Game,
   updateSystemReviews,
@@ -46,7 +45,7 @@ import ReviewList from "@/components/ReviewList";
 import GameRating from "@/components/GameRating";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getAuthHeaders } from "@/lib/auth";
+
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
@@ -54,29 +53,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import UpdateIcon from "@mui/icons-material/Update";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-
-interface Review {
-  id: number;
-  user: {
-    id: number;
-    name: string;
-  };
-  game_id: string;
-  overall_score: number;
-  play_time: number;
-  rule_complexity: number;
-  luck_factor: number;
-  interaction: number;
-  downtime: number;
-  recommended_players: string[];
-  mechanics: string[];
-  categories: string[];
-  custom_tags: string[];
-  short_comment: string;
-  created_at: string;
-  likes_count: number;
-  liked_by_current_user: boolean;
-}
 
 interface GamePageProps {
   params: {
@@ -192,16 +168,13 @@ export default function GamePage({ params }: GamePageProps) {
   const [game, setGame] = useState<ExtendedGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [japaneseName, setJapaneseName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<
     "success" | "error" | "info" | "warning"
   >("success");
-  const [wishlistItemId, setWishlistItemId] = useState<number | null>(null);
-  const [addingToWishlist, setAddingToWishlist] = useState(false);
+
   const [updatingGame, setUpdatingGame] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
@@ -216,7 +189,7 @@ export default function GamePage({ params }: GamePageProps) {
   const isInitializedRef = useRef(false);
   const fetchInProgressRef = useRef(false);
   const reviewCountFetchedRef = useRef(false);
-  const gameIdRef = useRef<string | null>(null); // 前回のIDを記録
+  // 前回のIDを記録
 
   // 段階的読み込みの状態管理
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -227,14 +200,10 @@ export default function GamePage({ params }: GamePageProps) {
   });
 
   // 段階的に読み込まれるデータの状態
-  const [gameStatistics, setGameStatistics] = useState<any>(null);
+
   const [gameReviews, setGameReviews] = useState<any[]>([]);
-  const [relatedGames, setRelatedGames] = useState<any>(null);
-  const [reviewsPage, setReviewsPage] = useState(1);
-  const [totalReviewsPages, setTotalReviewsPages] = useState(0);
 
   // データ読み込み済みフラグを追加
-  const [hasLoadedData, setHasLoadedData] = useState(false);
 
   // ローディングの進捗状態を更新するタイマー
   useEffect(() => {
@@ -485,102 +454,6 @@ export default function GamePage({ params }: GamePageProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]); // intentionally excluding fetchGameData to prevent infinite loop
-
-  const handleOpenDialog = () => {
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-  };
-
-  const handleSubmitJapaneseName = async () => {
-    if (!game) return;
-
-    setSubmitting(true);
-    try {
-      const authHeaders = getAuthHeaders();
-      const updatedGame = await updateJapaneseName(
-        game.bgg_id,
-        japaneseName,
-        authHeaders
-      );
-      setGame(updatedGame);
-      setOpenDialog(false);
-      setSnackbarMessage("日本語名を登録しました");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error("Error updating Japanese name:", error);
-      setSnackbarMessage(
-        error instanceof Error ? error.message : "日本語名の登録に失敗しました"
-      );
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // やりたいリストに追加する
-  const handleAddToWishlist = async () => {
-    if (!user || !game) return;
-
-    setAddingToWishlist(true);
-    try {
-      const authHeaders = getAuthHeaders();
-      const data = await addToWishlist(game.bgg_id, authHeaders);
-      setWishlistItemId(data.id);
-      setGame({
-        ...game,
-        in_wishlist: true,
-      });
-      setSnackbarMessage("やりたいリストに追加しました");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error("Error adding to wishlist:", error);
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "やりたいリストへの追加に失敗しました"
-      );
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setAddingToWishlist(false);
-    }
-  };
-
-  // やりたいリストから削除する
-  const handleRemoveFromWishlist = async () => {
-    if (!user || !game || wishlistItemId === null) return;
-
-    setAddingToWishlist(true);
-    try {
-      const authHeaders = getAuthHeaders();
-      await removeFromWishlist(wishlistItemId, authHeaders);
-      setWishlistItemId(null);
-      setGame({
-        ...game,
-        in_wishlist: false,
-      });
-      setSnackbarMessage("やりたいリストから削除しました");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error("Error removing from wishlist:", error);
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "やりたいリストからの削除に失敗しました"
-      );
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setAddingToWishlist(false);
-    }
-  };
 
   // BGGからゲーム情報を更新するダイアログを開く
   const handleOpenUpdateDialog = () => {
@@ -1373,7 +1246,7 @@ export default function GamePage({ params }: GamePageProps) {
                           else {
                             try {
                               displayText = JSON.stringify(category);
-                            } catch (e) {
+                            } catch {
                               displayText = "不明";
                             }
                           }
@@ -1438,7 +1311,7 @@ export default function GamePage({ params }: GamePageProps) {
                           else {
                             try {
                               displayText = JSON.stringify(mechanic);
-                            } catch (e) {
+                            } catch {
                               displayText = "不明";
                             }
                           }

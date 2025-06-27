@@ -25,7 +25,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import GroupIcon from "@mui/icons-material/Group";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import StarIcon from "@mui/icons-material/Star";
-import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
 
 interface ProgressiveGameLoaderProps {
   gameId: string;

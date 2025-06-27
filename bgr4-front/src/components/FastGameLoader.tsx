@@ -12,7 +12,6 @@ import {
   Chip,
   Rating,
   Divider,
-  Button,
   Fade,
   Grow,
 } from "@mui/material";
@@ -127,7 +126,7 @@ export default function FastGameLoader({
   const [gameData, setGameData] = useState<GameData>({});
   const [error, setError] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
+  const [, setImageError] = useState(false);
 
   // 段階的読み込みの実装
   const loadGameData = useCallback(async () => {

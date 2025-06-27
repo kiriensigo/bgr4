@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Container,
   Box,
@@ -20,7 +20,6 @@ import {
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ShareIcon from "@mui/icons-material/Share";
-import SortIcon from "@mui/icons-material/Sort";
 
 // 既存のGameGridを使用
 import GameGrid from "@/components/GameGrid";
@@ -46,45 +45,11 @@ export default function SearchResultsPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // 統一ページネーション管理
-  const { updateUrl } = usePagination({
+  const {} = usePagination({
     defaultPageSize: DEFAULT_PAGE_SIZE,
     pageSizeOptions: PAGE_SIZE_OPTIONS,
     syncWithUrl: true,
   });
-
-  // デフォルト値判定関数
-  const isDefaultValue = (key: string, value: string): boolean => {
-    const defaults: Record<string, string[]> = {
-      publisher: ["", "all"],
-      use_reviews_mechanics: ["false"],
-      use_reviews_categories: ["false"],
-      categories_match_all: ["false"],
-      mechanics_match_all: ["false"],
-      recommended_players_match_all: ["false"],
-    };
-
-    return defaults[key]?.includes(value) || false;
-  };
-
-  // 数値デフォルト値判定関数
-  const isDefaultNumericValue = (key: string, value: number): boolean => {
-    const numericDefaults: Record<string, number[]> = {
-      play_time_min: [0, 1],
-      play_time_max: [13, 999],
-      complexity_min: [1],
-      complexity_max: [5],
-      total_score_min: [0],
-      total_score_max: [10],
-      interaction_min: [1],
-      interaction_max: [5],
-      luck_factor_min: [1],
-      luck_factor_max: [5],
-      downtime_min: [1],
-      downtime_max: [5],
-    };
-
-    return numericDefaults[key]?.includes(value) || false;
-  };
 
   // 検索パラメータの構築
   const searchFilters = (() => {

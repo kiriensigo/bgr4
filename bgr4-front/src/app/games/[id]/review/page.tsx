@@ -17,24 +17,11 @@ import {
   Grid,
   CircularProgress,
   Chip,
-  Snackbar,
 } from "@mui/material";
 import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
 import { CustomSlider } from "@/components/GameEvaluationForm/CustomSlider";
 import Cookies from "js-cookie";
 import ShareToTwitterButton from "@/components/ShareToTwitterButton";
-
-interface Game {
-  id: string;
-  bgg_id: string;
-  name: string;
-  image_url: string;
-  description: string;
-  min_players: number;
-  max_players: number;
-  play_time: number;
-  average_score: number;
-}
 
 interface GameDetails {
   id: string;
@@ -102,10 +89,6 @@ const CATEGORIES = [
   "レガシー・キャンペーン",
 ];
 
-type NumericReviewKey = {
-  [K in keyof Review]: Review[K] extends number ? K : never;
-}[keyof Review];
-
 export default function ReviewPage({ params }: { params: { id: string } }) {
   const { user, getAuthHeaders } = useAuth();
   const [game, setGame] = useState<GameDetails | null>(null);
@@ -115,7 +98,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
-  const [gameData, setGameData] = useState<Game | null>(null);
+
   const [showShareOptions, setShowShareOptions] = useState(false);
   const router = useRouter();
 

@@ -1,11 +1,10 @@
 "use client";
 
-import { Card, CardActionArea, Box } from "@mui/material";
+import { Card, Box } from "@mui/material";
 import GameImageCard from "./GameImageCard";
 import GameInfoCard from "./GameInfoCard";
 import ReviewContentCard from "./ReviewContentCard";
 import OverallScoreDisplay from "./OverallScoreDisplay";
-import Link from "next/link";
 
 interface Game {
   id?: string;
@@ -79,10 +78,6 @@ export default function ReviewCard({
 }: ReviewCardProps) {
   const gameId = game.bgg_id || game.id || "";
   const categories = review.categories || [];
-  const score =
-    typeof review.overall_score === "string"
-      ? parseFloat(review.overall_score)
-      : review.overall_score;
 
   // ゲームの平均点を取得（nullまたはundefinedの場合は0を使用）
   const averageScore =

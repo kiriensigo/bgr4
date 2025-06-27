@@ -16,10 +16,6 @@ import {
   ListItem,
   ListItemText,
   CircularProgress,
-  Grid,
-  Card,
-  CardContent,
-  Divider,
   Alert,
   Chip,
   IconButton,
@@ -31,7 +27,6 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
-import InfoIcon from "@mui/icons-material/Info";
 
 export default function BggTop100Page() {
   const { user, loading: authLoading } = useAuth();

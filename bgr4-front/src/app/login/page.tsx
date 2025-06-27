@@ -66,20 +66,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    console.log("Initiating Google login...");
-    // ログイン前にキャッシュをクリア
-    Cookies.remove("access-token");
-    Cookies.remove("client");
-    Cookies.remove("uid");
-    Cookies.remove("expiry");
-    localStorage.removeItem("auth");
-
-    // 現在のタイムスタンプをクエリパラメータとして追加して、キャッシュを防ぐ
-    const timestamp = new Date().getTime();
-    window.location.href = `${API_URL}/auth/google_oauth2?t=${timestamp}`;
-  };
-
   const handleSocialLogin = (provider: "google_oauth2" | "twitter2") => {
     console.log(`Initiating ${provider} login...`);
     // ログイン前にキャッシュをクリア

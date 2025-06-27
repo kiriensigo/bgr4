@@ -8,7 +8,6 @@ import {
   Paper,
   Avatar,
   Grid,
-  Divider,
   CircularProgress,
   Alert,
   Card,
@@ -18,10 +17,9 @@ import {
   Chip,
   Rating,
 } from "@mui/material";
-import { useRouter, usePathname } from "next/navigation";
+
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import GameCard from "@/components/GameCard";
 
 // キャッシュ用のオブジェクト
 const pageCache: Record<
@@ -69,8 +67,6 @@ export default function UserProfilePage({
 }: {
   params: { id: string };
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const { user, getAuthHeaders } = useAuth();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
