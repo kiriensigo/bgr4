@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { getAuthHeaders } from "@/lib/auth";
-import { getTopRankedGames } from "@/lib/bggApi";
-import { registerGame } from "@/lib/api";
+import { useAuth } from "../../../contexts/AuthContext";
+import { getAuthHeaders } from "../../../lib/auth";
+import { getTopRankedGames } from "../../../lib/bggApi";
+import { registerGame } from "../../../lib/api";
 import {
   Container,
   Typography,
