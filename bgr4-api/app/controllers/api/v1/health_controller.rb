@@ -1,7 +1,4 @@
 class Api::V1::HealthController < ApplicationController
-  # 認証をスキップ
-  skip_before_action :authenticate_request, only: [:index]
-
   def index
     health_status = {
       status: 'ok',
