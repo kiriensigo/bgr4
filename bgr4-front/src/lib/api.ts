@@ -403,3 +403,165 @@ export async function postReview(
 
   return response.json();
 }
+
+export async function updateGame(
+  id: string,
+  gameData: any,
+  authHeaders?: Record<string, string>
+): Promise<Game> {
+  const response = await fetch(`${API_BASE_URL}/games/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    body: JSON.stringify({ game: gameData }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "ゲームの更新に失敗しました");
+  }
+
+  return response.json();
+}
+
+export async function getGameImageAndTitle(
+  id: string,
+  authHeaders?: Record<string, string>
+): Promise<Partial<Game>> {
+  const response = await fetch(`${API_BASE_URL}/games/${id}/image_and_title`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+  });
+  if (!response.ok) throw new Error("画像とタイトルの取得に失敗");
+  return response.json();
+}
+
+export async function getGameSpecs(
+  id: string,
+  authHeaders?: Record<string, string>
+): Promise<Partial<Game>> {
+  const response = await fetch(`${API_BASE_URL}/games/${id}/specs`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+  });
+  if (!response.ok) throw new Error("スペック情報の取得に失敗");
+  return response.json();
+}
+
+export async function getGameDescription(
+  id: string,
+  authHeaders?: Record<string, string>
+): Promise<Partial<Game>> {
+  const response = await fetch(`${API_BASE_URL}/games/${id}/description`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+  });
+  if (!response.ok) throw new Error("説明文の取得に失敗");
+  return response.json();
+}
+
+export async function searchGamesByPublisher(
+  publisher: string,
+  page: number = 1,
+  per_page: number = 24,
+  sort_by: string = "created_at"
+): Promise<GamesResponse> {
+  return searchGames({ publisher, page, per_page, sort_by });
+}
+
+export async function searchGamesByDesigner(
+  designer: string,
+  page: number = 1,
+  per_page: number = 24,
+  sort_by: string = "created_at"
+): Promise<GamesResponse> {
+  return searchGames({ designer, page, per_page, sort_by });
+}
+
+export interface GameEditHistory {
+  id: number;
+  game_id: number;
+  game_name: string;
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  action: string;
+  details: any;
+  created_at: string;
+}
+
+export interface GameEditHistoriesResponse {
+  histories: GameEditHistory[];
+  total_pages: number;
+}
+
+export async function getGameEditHistories(
+  authHeaders: Record<string, string>,
+  gameId?: string,
+  page: number = 1
+): Promise<GameEditHistoriesResponse> {
+  const url = new URL(`${API_BASE_URL}/admin/game_edit_histories`);
+  if (gameId) url.searchParams.append("game_id", gameId);
+  url.searchParams.append("page", page.toString());
+
+  const response = await fetch(url.toString(), { headers: authHeaders });
+  if (!response.ok) throw new Error("編集履歴の取得に失敗しました");
+  return response.json();
+}
+
+export interface GameExpansion {
+  id: string;
+  bgg_id: string;
+  name: string;
+  japanese_name: string;
+  image_url: string;
+  japanese_image_url: string;
+  relationship_type: string;
+}
+
+export interface UnregisteredExpansion {
+  id: string;
+  type: string;
+}
+
+export interface GameExpansionsResponse {
+  expansions: GameExpansion[];
+  base_games: GameExpansion[];
+  unregistered_expansion_ids: UnregisteredExpansion[];
+  unregistered_base_game_ids: UnregisteredExpansion[];
+}
+
+export async function getGameExpansions(
+  gameId: string,
+  registeredOnly: boolean,
+  authHeaders: Record<string, string>
+): Promise<GameExpansionsResponse> {
+  const url = new URL(`${API_BASE_URL}/games/${gameId}/expansions`);
+  url.searchParams.append("registered_only", registeredOnly.toString());
+  const response = await fetch(url.toString(), { headers: authHeaders });
+  if (!response.ok) throw new Error("拡張情報の取得に失敗しました");
+  return response.json();
+}
+
+export async function updateGameExpansions(
+  gameId: string,
+  authHeaders: Record<string, string>
+): Promise<GameExpansionsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/games/${gameId}/expansions/update_from_bgg`,
+    {
+      method: "POST",
+      headers: authHeaders,
+    }
+  );
+  if (!response.ok) throw new Error("BGGからの拡張情報更新に失敗しました");
+  return response.json();
+}
