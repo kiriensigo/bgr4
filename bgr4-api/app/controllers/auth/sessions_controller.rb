@@ -1,8 +1,6 @@
 module Auth
   class SessionsController < DeviseTokenAuth::SessionsController
-    include ActionController::RequestForgeryProtection
-    protect_from_forgery with: :null_session
-    skip_before_action :verify_authenticity_token, raise: false
+    before_action :configure_sign_in_params, only: [:create]
 
     def new
       # GETリクエストの場合は、フロントエンドのログインページにリダイレクト

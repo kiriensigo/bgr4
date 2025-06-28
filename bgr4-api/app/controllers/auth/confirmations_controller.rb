@@ -1,7 +1,6 @@
 module Auth
   class ConfirmationsController < DeviseTokenAuth::ConfirmationsController
     include DeviseTokenAuth::Concerns::SetUserByToken
-    skip_before_action :verify_authenticity_token, raise: false
 
     def show
       @resource = resource_class.confirm_by_token(params[:confirmation_token])
