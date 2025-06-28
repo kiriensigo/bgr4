@@ -76,18 +76,45 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Render環境対応: ホスト許可設定
+  config.hosts = [
+    "bgr4-api.onrender.com",                    # メインドメイン
+    /.*\.onrender\.com/,                        # Render全サブドメイン
+    "localhost",                                # ローカル開発
+    "127.0.0.1"                                # ローカルIP
+  ]
 
+  # Render環境対応: ヘルスチェック除外
+  config.host_authorization = { 
+    exclude: ->(request) { 
+      request.path == "/up" || 
+      request.path == "/api/v1/health" 
+    } 
+  }
+
+  # Render環境対応: セッション設定
   config.session_store :cookie_store, 
-    key: '_bgreviews_session',
-    secure: true,
+    key: '_bgr4_session',
+    secure: Rails.env.production?,
     httponly: true,
-    same_site: :strict
+    same_site: :lax
+
+  # Render環境対応: ログ設定
+  if ENV["RAILS_LOG_TO_STDOUT"].present?
+    logger           = ActiveSupport::Logger.new(STDOUT)
+    logger.formatter = config.log_formatter
+    config.logger    = ActiveSupport::TaggedLogging.new(logger)
+  end
+
+  # Render環境対応: ヘルスチェックログ抑制
+  config.silence_healthcheck_path = ["/up", "/api/v1/health"]
+
+  # Render環境対応: アプリケーション設定
+  config.action_mailer.default_url_options = { 
+    host: ENV.fetch('API_URL', 'https://bgr4-api.onrender.com'),
+    protocol: 'https'
+  }
+  
+  # デバッグ用: Render環境での詳細ログ（必要に応じてコメントアウト）
+  # config.log_level = :debug if ENV['RENDER_DEBUG'] == 'true'
 end

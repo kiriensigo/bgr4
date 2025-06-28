@@ -94,6 +94,13 @@ Rails.application.routes.draw do
         get 'database_stats', to: 'admin#database_stats'
         post 'bulk_update_games', to: 'admin#bulk_update_games'
       end
+
+      # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+      # Can be used by uptime monitors, etc.
+      get "up" => "rails/health#show", as: :rails_health_check
+
+      # Render health check endpoint
+      get '/health', to: 'health#index'
     end
   end
 

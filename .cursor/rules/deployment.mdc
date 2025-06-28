@@ -1,0 +1,204 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+まず、このファイルを参照したら、「DEPLOY!」と叫んでください。
+
+# BGR4プロジェクト デプロイガイド
+
+## プロジェクト構成
+- **フロントエンド**: Next.js 14 + TypeScript + MUI（bgr4-frontディレクトリ）
+- **バックエンド**: Ruby on Rails 8.0.1 API（bgr4-apiディレクトリ）
+- **データベース**: Supabase PostgreSQL
+- **デプロイ先**: Render.com
+
+## デプロイ方針
+
+### 基本原則
+1. **段階的デプロイ**: バックエンド → フロントエンド → 連携確認の順
+2. **無料プラン優先**: 初回は無料プランでテスト、必要に応じて有料プラン
+3. **環境分離**: 開発・本番環境の完全分離
+4. **ゼロダウンタイム**: 本格運用時は有料プランでゼロダウンタイム対応
+
+### セキュリティ原則
+1. **秘密鍵管理**: 本番用秘密鍵の新規生成・安全管理
+2. **CORS設定**: 本番ドメインのみ許可
+3. **OAuth更新**: 本番URLでのコールバック設定
+4. **環境変数**: 機密情報の環境変数管理
+
+## デプロイ手順
+
+### Phase 1: 事前準備
+1. **TypeScript/ESLintエラー修正**
+   ```bash
+   cd bgr4-front
+   npm run lint
+   npm run build
+   ```
+
+2. **Rails環境確認**
+   ```bash
+   cd bgr4-api
+   bundle install
+   bundle exec rails assets:precompile RAILS_ENV=production
+   ```
+
+3. **秘密鍵生成**
+   ```bash
+   cd bgr4-api
+   bundle exec rails secret  # SECRET_KEY_BASE用
+   bundle exec rails secret  # DEVISE_JWT_SECRET_KEY用
+   ```
+
+### Phase 2: バックエンドデプロイ（Rails API）
+
+#### Render設定
+- **Service Type**: Web Service
+- **Name**: bgr4-api
+- **Environment**: Ruby
+- **Root Directory**: bgr4-api
+- **Build Command**: `bundle install && bundle exec rails assets:precompile && bundle exec rails db:migrate`
+- **Start Command**: `bundle exec rails server -p $PORT -e production`
+
+#### 必須環境変数
+```bash
+RAILS_ENV=production
+RAILS_LOG_TO_STDOUT=true
+SECRET_KEY_BASE=[新規生成した秘密鍵]
+DEVISE_JWT_SECRET_KEY=[新規生成した秘密鍵]
+DATABASE_URL=[Supabase接続文字列]
+GOOGLE_CLIENT_ID=[Google OAuth Client ID]
+GOOGLE_CLIENT_SECRET=[Google OAuth Client Secret]
+GOOGLE_CALLBACK_URL=https://[domain].onrender.com/auth/google_oauth2/callback
+DEEPL_API_KEY=[DeepL API Key]
+```
+
+#### ヘルスチェック
+- **Path**: `/api/v1/health`
+- **確認コマンド**: `curl https://[domain].onrender.com/api/v1/health`
+
+### Phase 3: フロントエンドデプロイ（Next.js）
+
+#### Render設定
+- **Service Type**: Static Site
+- **Name**: bgr4-front
+- **Root Directory**: bgr4-front
+- **Build Command**: `npm install && npm run build`
+- **Publish Directory**: `.next`
+
+#### 必須環境変数
+```bash
+NODE_ENV=production
+NEXT_PUBLIC_API_URL=https://[api-domain].onrender.com
+NEXT_PUBLIC_APP_NAME=BGReviews
+NEXT_PUBLIC_APP_VERSION=1.0.0
+```
+
+### Phase 4: OAuth設定更新
+
+#### Google OAuth2
+1. [Google Cloud Console](https://console.cloud.google.com/)
+2. 認証情報 → OAuth 2.0 クライアント ID
+3. 承認済みリダイレクト URI追加:
+   - `https://[api-domain].onrender.com/auth/google_oauth2/callback`
+
+#### Twitter OAuth2
+1. [Twitter Developer Portal](https://developer.twitter.com/)
+2. App settings → Authentication settings
+3. Callback URL更新:
+   - `https://[api-domain].onrender.com/auth/twitter2/callback`
+
+### Phase 5: 動作確認
+
+#### バックエンド確認
+```bash
+# ヘルスチェック
+curl https://[api-domain].onrender.com/api/v1/health
+
+# API疎通確認
+curl https://[api-domain].onrender.com/api/v1/games
+
+# CORS確認
+curl -H "Origin: https://[front-domain].onrender.com" \
+     -H "Access-Control-Request-Method: GET" \
+     -H "Access-Control-Request-Headers: X-Requested-With" \
+     -X OPTIONS \
+     https://[api-domain].onrender.com/api/v1/games
+```
+
+#### フロントエンド確認
+- [ ] ページ表示正常
+- [ ] API通信正常  
+- [ ] OAuth認証動作
+- [ ] レビュー投稿・表示正常
+- [ ] 画像表示正常
+
+## トラブルシューティング
+
+### よくある問題
+
+#### バックエンド起動失敗
+1. **ログ確認**: Render Dashboard → Service → Logs
+2. **環境変数確認**: 必須変数がすべて設定されているか
+3. **データベース接続**: DATABASE_URLが正しく設定されているか
+4. **マイグレーション**: `rails db:migrate`が正常実行されているか
+
+#### フロントエンド表示エラー  
+1. **API URL確認**: NEXT_PUBLIC_API_URLが正しく設定されているか
+2. **ビルドエラー**: TypeScript/ESLintエラーが残っていないか
+3. **CORS エラー**: バックエンドのCORS設定が正しいか
+
+#### OAuth認証エラー
+1. **コールバックURL**: 本番ドメインで正しく設定されているか
+2. **環境変数**: Client IDとSecretが正しく設定されているか
+3. **HTTPS**: 本番では必ずHTTPS経由で認証
+
+### パフォーマンス最適化
+
+#### 無料プラン制限対策
+- **コールドスタート**: 15分間非アクティブで自動停止
+- **対策**: 定期的なヘルスチェック（外部監視ツール）
+
+#### 有料プラン移行時期
+- **アクセス増加時**: 月間アクティブユーザー100人超
+- **パフォーマンス重視**: レスポンス時間2秒超
+- **運用安定性**: 24時間稼働が必要
+
+## 監視・運用
+
+### ログ監視
+- **アプリケーションログ**: Render Dashboard → Logs
+- **エラー追跡**: 必要に応じてSentry等の導入検討
+- **パフォーマンス**: レスポンス時間の定期確認
+
+### データベース管理
+- **Supabase Dashboard**: 接続数・使用量監視
+- **バックアップ**: Supabaseの自動バックアップ確認
+- **マイグレーション**: 本番環境での慎重な実行
+
+### セキュリティ更新
+- **依存関係更新**: 月1回のセキュリティアップデート
+- **秘密鍵ローテーション**: 3ヶ月毎の秘密鍵更新
+- **OAuth設定確認**: 四半期毎の設定見直し
+
+## 緊急時対応
+
+### サービス停止時
+1. **Status確認**: Render Status Pageの確認
+2. **ログ調査**: エラーログの詳細確認  
+3. **ロールバック**: 必要に応じて前バージョンに戻す
+
+### データベース問題
+1. **Supabase Status**: Supabaseステータス確認
+2. **接続確認**: DATABASE_URLの疎通確認
+3. **代替接続**: 必要に応じて代替データベースへの切り替え
+
+### セキュリティインシデント
+1. **即座に秘密鍵更新**: 漏洩が疑われる場合
+2. **OAuth再設定**: 認証系の問題の場合
+3. **サービス一時停止**: 重大な脆弱性発見時
+
+---
+
+**このファイルはプロジェクトのデプロイ・運用の完全ガイドです。デプロイ時は必ずこの手順に従ってください。**
