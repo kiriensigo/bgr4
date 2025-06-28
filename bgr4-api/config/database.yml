@@ -59,6 +59,9 @@ test:
 production:
   <<: *default
   url: <%= ENV["DATABASE_URL"] %>
+  queue:
+    <<: *default
+    url: <%= ENV["DATABASE_URL"] %>
 
 cable:
   <<: *default
