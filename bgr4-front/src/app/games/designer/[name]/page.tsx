@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Container, Typography, Box } from "@mui/material";
-import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
+import UnifiedGameList from "../../../../components/ui/GameList/UnifiedGameList";
 import { useParams } from "next/navigation";
 
 export default function DesignerPage() {

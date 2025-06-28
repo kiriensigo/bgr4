@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import type { Game, Review } from "@/types/api";
-import { UnifiedGameCard } from "@/components/ui/GameCard/UnifiedGameCard";
+import type { Game, Review } from "../types/api";
+import { UnifiedGameCard } from "./ui/GameCard/UnifiedGameCard";
 
 interface GameCardProps {
   game: Game;

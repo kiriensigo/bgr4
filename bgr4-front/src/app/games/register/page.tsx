@@ -22,9 +22,9 @@ import {
   Checkbox,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { getBGGGameDetails, type BGGGameDetails } from "@/lib/bggApi";
-import { getGame, registerGame } from "@/lib/api";
+import { useAuth } from "../../../contexts/AuthContext";
+import { getBGGGameDetails, type BGGGameDetails } from "../../../lib/bggApi";
+import { getGame, registerGame } from "../../../lib/api";
 
 // タブのインターフェース
 interface TabPanelProps {

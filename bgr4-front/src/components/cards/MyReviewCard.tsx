@@ -12,9 +12,9 @@ import {
   Tooltip,
 } from "@mui/material";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "../../lib/utils";
 import EditIcon from "@mui/icons-material/Edit";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 
 // レビューオブジェクトの型定義
 interface Review {

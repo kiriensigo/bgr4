@@ -1,9 +1,9 @@
 "use client";
 
 import { Typography, Container } from "@mui/material";
-import GameGrid from "@/components/GameGrid";
+import GameGrid from "../components/GameGrid";
 import { useEffect, useState } from "react";
-import { getGames, Game } from "@/lib/api";
+import { getGames, Game } from "../lib/api";
 
 type GameData = {
   reviewDate: Game[];

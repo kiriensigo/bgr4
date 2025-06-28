@@ -27,9 +27,9 @@ import SearchIcon from "@mui/icons-material/Search";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
 import Link from "next/link";
-import { EvaluationSection } from "@/components/GameEvaluationForm/EvaluationSection";
+import { EvaluationSection } from "../../components/GameEvaluationForm/EvaluationSection";
 
-import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
+import { containerStyle, cardStyle, LAYOUT_CONFIG } from "../../styles/layout";
 
 interface LocalSearchParams {
   keyword: string;

@@ -1,4 +1,4 @@
-import { Game, Review, GamesResponse, ReviewsResponse } from "@/types/api";
+import { Game, Review, GamesResponse, ReviewsResponse } from "./types/api";
 
 // API URL設定
 const API_URL =

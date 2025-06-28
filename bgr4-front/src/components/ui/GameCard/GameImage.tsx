@@ -2,7 +2,7 @@ import React from "react";
 import { Box, CardMedia } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
-import type { Game } from "@/types/game";
+import type { Game } from "../../../types/game";
 
 const StyledCardMedia = styled(CardMedia)(() => ({
   height: 200,

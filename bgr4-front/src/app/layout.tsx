@@ -2,10 +2,10 @@
 
 import { ThemeProvider, CssBaseline, Box } from "@mui/material";
 import { Inter } from "next/font/google";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { AuthProvider } from "@/contexts/AuthContext";
-import theme from "@/lib/theme";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import { AuthProvider } from "../contexts/AuthContext";
+import theme from "../lib/theme";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });

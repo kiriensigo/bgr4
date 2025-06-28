@@ -9,7 +9,7 @@ import {
   updateGameFromBgg,
   type Game,
   updateSystemReviews,
-} from "@/lib/api";
+} from "../../../lib/api";
 import {
   Container,
   Typography,
@@ -41,9 +41,9 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import ReviewList from "@/components/ReviewList";
-import GameRating from "@/components/GameRating";
-import { useAuth } from "@/contexts/AuthContext";
+import ReviewList from "../../../components/ReviewList";
+import GameRating from "../../../components/GameRating";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";

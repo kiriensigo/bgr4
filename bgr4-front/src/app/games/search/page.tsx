@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container, Typography, Box } from "@mui/material";
-import SearchForm from "@/components/SearchForm";
+import SearchForm from "../../../components/SearchForm";
 import {
   searchGames,
   getGames,
   searchGamesByPublisher,
   searchGamesByDesigner,
   GamesResponse,
-} from "@/lib/api";
-import ErrorDisplay from "@/components/ErrorDisplay";
+} from "../../../lib/api";
+import ErrorDisplay from "../../../components/ErrorDisplay";
 
-import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
+import UnifiedGameList from "../../../components/ui/GameList/UnifiedGameList";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();

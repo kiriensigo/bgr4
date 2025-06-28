@@ -11,7 +11,7 @@ import {
   Rating,
 } from "@mui/material";
 import Link from "next/link";
-import type { Game } from "@/types/game";
+import type { Game } from "../../../types/game";
 
 interface UnifiedGameListProps {
   games: Game[];

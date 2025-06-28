@@ -24,8 +24,8 @@ import {
   getGameReviews,
   getRelatedGames,
   type Game,
-} from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+} from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import GroupIcon from "@mui/icons-material/Group";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import StarIcon from "@mui/icons-material/Star";

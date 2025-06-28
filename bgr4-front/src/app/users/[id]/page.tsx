@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../../contexts/AuthContext";
 
 // キャッシュ用のオブジェクト
 const pageCache: Record<

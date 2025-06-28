@@ -22,9 +22,9 @@ import Link from "next/link";
 import ShareIcon from "@mui/icons-material/Share";
 
 // 既存のGameGridを使用
-import GameGrid from "@/components/GameGrid";
-import { useGames } from "@/hooks/useGames";
-import { usePagination } from "@/hooks/state/usePagination";
+import GameGrid from "../../../components/GameGrid";
+import { useGames } from "../../../hooks/useGames";
+import { usePagination } from "../../../hooks/state/usePagination";
 
 // 設定定数
 const PAGE_SIZE_OPTIONS = [12, 24, 36, 48];

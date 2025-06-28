@@ -10,9 +10,9 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { useAuth } from "@/contexts/AuthContext";
-import { getGame, type Game } from "@/lib/api";
-import GameCard from "@/components/GameCard";
+import { useAuth } from "../../../../contexts/AuthContext";
+import { getGame, type Game } from "../../../../lib/api";
+import GameCard from "../../../../components/GameCard";
 import Link from "next/link";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 

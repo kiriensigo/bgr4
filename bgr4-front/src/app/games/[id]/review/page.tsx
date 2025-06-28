@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { postReview, getGame } from "@/lib/api";
-import { FlashMessage } from "@/components/FlashMessage";
-import { useAuth } from "@/contexts/AuthContext";
+import { postReview, getGame } from "../../../../lib/api";
+import { FlashMessage } from "../../../../components/FlashMessage";
+import { useAuth } from "../../../../contexts/AuthContext";
 import {
   Container,
   Typography,
@@ -18,10 +18,14 @@ import {
   CircularProgress,
   Chip,
 } from "@mui/material";
-import { containerStyle, cardStyle, LAYOUT_CONFIG } from "@/styles/layout";
-import { CustomSlider } from "@/components/GameEvaluationForm/CustomSlider";
+import {
+  containerStyle,
+  cardStyle,
+  LAYOUT_CONFIG,
+} from "../../../../styles/layout";
+import { CustomSlider } from "../../../../components/GameEvaluationForm/CustomSlider";
 import Cookies from "js-cookie";
-import ShareToTwitterButton from "@/components/ShareToTwitterButton";
+import ShareToTwitterButton from "../../../../components/ShareToTwitterButton";
 
 interface GameDetails {
   id: string;
