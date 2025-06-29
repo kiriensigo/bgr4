@@ -5,6 +5,14 @@ const nextConfig = {
     // デプロイ時にESLintエラーを無視（開発環境では有効）
     ignoreDuringBuilds: true,
   },
+  webpack: (config) => {
+    // パス解決を確実にするためのwebpack設定
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": require("path").resolve(__dirname, "src"),
+    };
+    return config;
+  },
   images: {
     remotePatterns: [
       {
