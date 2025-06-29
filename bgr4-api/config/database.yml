@@ -60,6 +60,10 @@ production:
   <<: *default
   url: <%= ENV["DATABASE_URL"] %>
 
+queue:
+  <<: *default
+  url: <%= ENV["DATABASE_URL"] %>
+
 cable:
   <<: *default
   database: bgr4_api_production
