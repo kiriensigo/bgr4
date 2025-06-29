@@ -7,11 +7,18 @@
 
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins ENV.fetch('CORS_ORIGINS', 'http://localhost:3001').split(',').map(&:strip)
-    resource '*',
+    origins do |source, _env|
+      if Rails.env.development?
+        "*" # Allow all origins in development environment
+      else
+        ENV["FRONTEND_URL"] # Allow only the origin specified in the FRONTEND_URL environment variable in production environment
+      end
+    end
+
+    resource "*",
       headers: :any,
       methods: [:get, :post, :put, :patch, :delete, :options, :head],
-      credentials: true,
-      expose: ['access-token', 'expiry', 'token-type', 'uid', 'client']
+      expose: ['access-token', 'expiry', 'token-type', 'uid', 'client'],
+      credentials: true
   end
 end

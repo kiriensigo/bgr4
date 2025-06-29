@@ -3,6 +3,8 @@
 module Api
   module V1
     class BaseController < ApplicationController
+      # protect_from_forgery with: :null_session
+      include DeviseTokenAuth::Concerns::SetUserByToken
       include ApiResponse
       include ApiPagination
       include ApiErrorHandling

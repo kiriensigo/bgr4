@@ -99,4 +99,6 @@ Rails.application.routes.draw do
 
   # letter_opener_web
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+
+  get "/health", to: "health#show"
 end
