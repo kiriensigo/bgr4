@@ -1,5 +1,8 @@
 "use client";
 
+// 動的レンダリングを強制（useSearchParams使用のため）
+export const dynamic = "force-dynamic";
+
 import {
   Container,
   Paper,
