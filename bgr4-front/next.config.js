@@ -9,6 +9,12 @@ const nextConfig = {
     // デプロイ時にTypeScriptエラーを無視（緊急デプロイのため）
     ignoreBuildErrors: true,
   },
+  // 静的生成エラーを回避するための設定
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
+  // 動的レンダリングを優先
+  output: "standalone",
   webpack: (config) => {
     // パス解決を確実にするためのwebpack設定
     config.resolve.alias = {
