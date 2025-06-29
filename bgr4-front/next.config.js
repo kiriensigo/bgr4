@@ -24,6 +24,13 @@ const nextConfig = {
       },
     ];
   },
+  // キャッシュの設定を追加
+  onDemandEntries: {
+    // サーバーサイドページのキャッシュ期間
+    maxInactiveAge: 60 * 1000,
+    // 同時にキャッシュできるページ数
+    pagesBufferLength: 5,
+  },
   webpack: (config) => {
     // パス解決を確実にするためのwebpack設定
     config.resolve.alias = {

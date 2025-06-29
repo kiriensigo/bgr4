@@ -411,3 +411,171 @@ export async function postReview(
 
   return response.json();
 }
+
+export async function getGameEditHistories(
+  page: number = 1,
+  per_page: number = 24,
+  authHeaders?: Record<string, string>
+): Promise<any> {
+  const url = `${API_BASE_URL}/admin/edit_histories?page=${page}&per_page=${per_page}`;
+
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("編集履歴の取得に失敗しました");
+  }
+
+  return response.json();
+}
+
+export async function updateGame(
+  id: string,
+  gameData: any,
+  authHeaders?: Record<string, string>
+): Promise<Game> {
+  const url = `${API_BASE_URL}/games/${id}`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    body: JSON.stringify(gameData),
+  });
+
+  if (!response.ok) {
+    throw new Error("ゲーム情報の更新に失敗しました");
+  }
+
+  return response.json();
+}
+
+export async function searchGamesByDesigner(
+  designerName: string,
+  page: number = 1,
+  per_page: number = 24
+): Promise<GamesResponse> {
+  const url = `${API_BASE_URL}/games/search?designer=${encodeURIComponent(
+    designerName
+  )}&page=${page}&per_page=${per_page}`;
+
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("デザイナーによるゲーム検索に失敗しました");
+  }
+
+  const data = await response.json();
+  return {
+    games: data.games || [],
+    pagination: data.pagination,
+    totalItems: data.pagination?.total_count || 0,
+    totalPages: data.pagination?.total_pages || 0,
+  };
+}
+
+export async function searchGamesByPublisher(
+  publisherName: string,
+  page: number = 1,
+  per_page: number = 24
+): Promise<GamesResponse> {
+  const url = `${API_BASE_URL}/games/search?publisher=${encodeURIComponent(
+    publisherName
+  )}&page=${page}&per_page=${per_page}`;
+
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("パブリッシャーによるゲーム検索に失敗しました");
+  }
+
+  const data = await response.json();
+  return {
+    games: data.games || [],
+    pagination: data.pagination,
+    totalItems: data.pagination?.total_count || 0,
+    totalPages: data.pagination?.total_pages || 0,
+  };
+}
+
+export async function getGameImageAndTitle(
+  id: string,
+  options: { cache?: RequestCache; revalidate?: number } = {}
+): Promise<{ image: string; title: string }> {
+  const url = `${API_BASE_URL}/games/${id}/basic`;
+
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    cache: options.cache || "force-cache",
+    next: options.revalidate ? { revalidate: options.revalidate } : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error("ゲーム画像とタイトルの取得に失敗しました");
+  }
+
+  const data = await response.json();
+  return {
+    image: data.image_url || "",
+    title: data.title || "",
+  };
+}
+
+export async function getGameSpecs(
+  id: string,
+  options: { cache?: RequestCache; revalidate?: number } = {}
+): Promise<any> {
+  const url = `${API_BASE_URL}/games/${id}/specs`;
+
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    cache: options.cache || "force-cache",
+    next: options.revalidate ? { revalidate: options.revalidate } : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error("ゲームスペックの取得に失敗しました");
+  }
+
+  return response.json();
+}
+
+export async function getGameDescription(
+  id: string,
+  options: { cache?: RequestCache; revalidate?: number } = {}
+): Promise<string> {
+  const url = `${API_BASE_URL}/games/${id}/description`;
+
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    cache: options.cache || "force-cache",
+    next: options.revalidate ? { revalidate: options.revalidate } : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error("ゲーム説明の取得に失敗しました");
+  }
+
+  const data = await response.json();
+  return data.description || "";
+}

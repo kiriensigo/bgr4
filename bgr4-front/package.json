@@ -2,10 +2,13 @@
   "name": "bgr5",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start -p 3001",
+    "start": "node server.js",
     "lint": "next lint"
   },
   "dependencies": {
