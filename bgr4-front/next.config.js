@@ -15,6 +15,15 @@ const nextConfig = {
   },
   // 動的レンダリングを優先
   output: "standalone",
+  // 動的ルートの設定を追加
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
+      },
+    ];
+  },
   webpack: (config) => {
     // パス解決を確実にするためのwebpack設定
     config.resolve.alias = {
