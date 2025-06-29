@@ -4,7 +4,7 @@ import { styled } from "@mui/material/styles";
 import { useRouter } from "next/navigation";
 import { GameImage } from "./GameImage";
 import { GameMeta } from "./GameMeta";
-import type { Game } from "@/types/game";
+import type { Game } from "../../../types/game";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   height: "100%",

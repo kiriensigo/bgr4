@@ -16,7 +16,11 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import GameGrid from "../../components/GameGrid";
+<<<<<<< HEAD
 import { getGames, Game, GamesResponse } from "../../lib/api";
+=======
+import { getGames, GamesResponse } from "../../lib/api";
+>>>>>>> 391c7a7cccd3f676731b6712fbf739c4deb914d7
 
 const SORT_OPTIONS = [
   { value: "created_at", label: "新規登録順" },

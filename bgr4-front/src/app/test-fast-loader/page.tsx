@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Container, Typography, Box, Paper, Button } from "@mui/material";
-import FastGameLoader from "@/components/FastGameLoader";
-import { Game } from "@/lib/api";
+import FastGameLoader from "../../components/FastGameLoader";
+import { Game } from "../../lib/api";
 
 export default function TestFastLoaderPage() {
   const [gameId, setGameId] = useState("1077158561237663745"); // Ark Nova

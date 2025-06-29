@@ -3,7 +3,6 @@ import { Box, Button, Typography, Paper, Grid, Divider } from "@mui/material";
 import { EvaluationSection } from "./EvaluationSection";
 import { CommentSection } from "./CommentSection";
 import { OverallScoreSection } from "./OverallScoreSection";
-import { MECHANICS, CATEGORIES } from "./constants";
 
 interface GameEvaluationFormProps {
   initialValues?: {

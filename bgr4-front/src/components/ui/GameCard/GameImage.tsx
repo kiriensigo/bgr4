@@ -2,9 +2,9 @@ import React from "react";
 import { Box, CardMedia } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
-import type { Game } from "@/types/game";
+import type { Game } from "../../../types/game";
 
-const StyledCardMedia = styled(CardMedia)(({ theme }) => ({
+const StyledCardMedia = styled(CardMedia)(() => ({
   height: 200,
   objectFit: "cover",
   transition: "transform 0.3s ease-in-out",
@@ -38,9 +38,7 @@ interface GameImageProps {
 export function GameImage({ game, height = 200, className }: GameImageProps) {
   // 実際の画像URLがあるかチェック（no-image.pngやplaceholderは除く）
   const hasRealImage = game.image_url || game.thumbnail_url;
-  const imageUrl = hasRealImage 
-    ? (game.image_url || game.thumbnail_url) 
-    : null;
+  const imageUrl = hasRealImage ? game.image_url || game.thumbnail_url : null;
 
   return (
     <ImageContainer className={className}>
@@ -61,9 +59,7 @@ export function GameImage({ game, height = 200, className }: GameImageProps) {
         // 画像がない場合は直接プレースホルダーを表示（ネットワークリクエストなし）
         <PlaceholderContainer sx={{ height }}>
           <ImageNotSupportedIcon sx={{ fontSize: 40, mb: 1 }} />
-          <Box sx={{ fontSize: "0.75rem", textAlign: "center" }}>
-            画像なし
-          </Box>
+          <Box sx={{ fontSize: "0.75rem", textAlign: "center" }}>画像なし</Box>
         </PlaceholderContainer>
       )}
     </ImageContainer>

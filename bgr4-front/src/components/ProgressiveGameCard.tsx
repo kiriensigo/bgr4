@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useInView } from "react-intersection-observer";
-import { getGame, Game } from "@/lib/api";
+import { getGame, Game } from "../lib/api";
 import GameCard from "./GameCard";
 
 interface ProgressiveGameCardProps {
@@ -42,7 +42,7 @@ export default function ProgressiveGameCard({
 
     fetchGameData();
   }, [inView, game, gameId]);
-  
+
   // エラーが発生した場合は何も表示しないか、エラーメッセージを表示する
   if (error) {
     return null;

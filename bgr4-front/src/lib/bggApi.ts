@@ -244,7 +244,7 @@ async function getVersionDetails(versionId: string): Promise<{
             if (!isNaN(dateObj.getTime())) {
               releaseDate = dateObj.toISOString().split("T")[0];
             }
-          } catch (e) {
+          } catch {
             // 解析できない場合は年だけ抽出
             const yearMatch = dateText.match(/\b(\d{4})\b/);
             releaseDate = yearMatch ? `${yearMatch[1]}-01-01` : undefined;
@@ -1278,7 +1278,7 @@ export async function getTopRankedGames(limit: number = 100): Promise<any[]> {
     ];
 
     // 重複を除外
-    let uniqueIds = new Set(topGamesList);
+    const uniqueIds = new Set(topGamesList);
 
     // limit数までに制限
     const gameIds = Array.from(uniqueIds).slice(0, limit);

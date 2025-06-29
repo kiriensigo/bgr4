@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   Container,
   Paper,
@@ -64,20 +64,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    console.log("Initiating Google login...");
-    // ログイン前にキャッシュをクリア
-    Cookies.remove("access-token");
-    Cookies.remove("client");
-    Cookies.remove("uid");
-    Cookies.remove("expiry");
-    localStorage.removeItem("auth");
-
-    // 現在のタイムスタンプをクエリパラメータとして追加して、キャッシュを防ぐ
-    const timestamp = new Date().getTime();
-    window.location.href = `${API_URL}/auth/google_oauth2?t=${timestamp}`;
   };
 
   const handleSocialLogin = (provider: "google_oauth2" | "twitter2") => {

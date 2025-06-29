@@ -1,25 +1,24 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Box, TextField, Button, Rating, Typography } from '@mui/material'
+import { useState } from "react";
+import { Box, TextField, Button, Rating, Typography } from "@mui/material";
 
 type ReviewFormProps = {
-  gameId: number
-  onSubmit: (review: { content: string; rating: number }) => void
-}
+  onSubmit: (review: { content: string; rating: number }) => void;
+};
 
-export default function ReviewForm({ gameId, onSubmit }: ReviewFormProps) {
-  const [content, setContent] = useState('')
-  const [rating, setRating] = useState<number | null>(null)
+export default function ReviewForm({ onSubmit }: ReviewFormProps) {
+  const [content, setContent] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (content && rating) {
-      onSubmit({ content, rating })
-      setContent('')
-      setRating(null)
+      onSubmit({ content, rating });
+      setContent("");
+      setRating(null);
     }
-  }
+  };
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
@@ -50,5 +49,5 @@ export default function ReviewForm({ gameId, onSubmit }: ReviewFormProps) {
         レビューを投稿
       </Button>
     </Box>
-  )
-} 
+  );
+}

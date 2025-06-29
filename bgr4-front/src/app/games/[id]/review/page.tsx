@@ -17,7 +17,6 @@ import {
   Grid,
   CircularProgress,
   Chip,
-  Snackbar,
 } from "@mui/material";
 import {
   containerStyle,
@@ -27,6 +26,7 @@ import {
 import { CustomSlider } from "../../../../components/GameEvaluationForm/CustomSlider";
 import Cookies from "js-cookie";
 import ShareToTwitterButton from "../../../../components/ShareToTwitterButton";
+<<<<<<< HEAD
 
 interface Game {
   id: string;
@@ -39,6 +39,8 @@ interface Game {
   play_time: number;
   average_score: number;
 }
+=======
+>>>>>>> 391c7a7cccd3f676731b6712fbf739c4deb914d7
 
 interface GameDetails {
   id: string;
@@ -106,10 +108,6 @@ const CATEGORIES = [
   "レガシー・キャンペーン",
 ];
 
-type NumericReviewKey = {
-  [K in keyof Review]: Review[K] extends number ? K : never;
-}[keyof Review];
-
 export default function ReviewPage({ params }: { params: { id: string } }) {
   const { user, getAuthHeaders } = useAuth();
   const [game, setGame] = useState<GameDetails | null>(null);
@@ -119,7 +117,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [existingReview, setExistingReview] = useState<Review | null>(null);
-  const [gameData, setGameData] = useState<Game | null>(null);
+
   const [showShareOptions, setShowShareOptions] = useState(false);
   const router = useRouter();
 

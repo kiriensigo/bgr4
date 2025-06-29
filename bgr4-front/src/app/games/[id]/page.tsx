@@ -2,19 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  getGame,
   getGameBasicInfo,
   getGameStatistics,
   getGameReviews,
   getRelatedGames,
-  updateJapaneseName,
-  addToWishlist,
-  removeFromWishlist,
-  getWishlist,
   updateGameFromBgg,
   type Game,
-  gameCache,
-  CACHE_EXPIRY,
   updateSystemReviews,
 } from "../../../lib/api";
 import {
@@ -24,7 +17,6 @@ import {
   Box,
   Paper,
   Button,
-  Rating,
   Divider,
   CircularProgress,
   Chip,
@@ -32,30 +24,24 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Snackbar,
   Alert,
-  Tooltip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   FormControlLabel,
   Checkbox,
   LinearProgress,
-  Link as MuiLink,
   Skeleton,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 import GroupIcon from "@mui/icons-material/Group";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import StarIcon from "@mui/icons-material/Star";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import TranslateIcon from "@mui/icons-material/Translate";
-import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
-import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
 import RefreshIcon from "@mui/icons-material/Refresh";
+<<<<<<< HEAD
 import GameCard from "../../../components/GameCard";
 import ReviewList from "../../../components/ReviewList";
 import GameRating from "../../../components/GameRating";
@@ -63,6 +49,13 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatDate } from "../../../lib/utils";
 import { getAuthHeaders } from "../../../lib/auth";
+=======
+import ReviewList from "../../../components/ReviewList";
+import GameRating from "../../../components/GameRating";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
+
+>>>>>>> 391c7a7cccd3f676731b6712fbf739c4deb914d7
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
@@ -70,6 +63,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import UpdateIcon from "@mui/icons-material/Update";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+<<<<<<< HEAD
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 
@@ -99,6 +93,8 @@ interface Review {
   likes_count: number;
   liked_by_current_user: boolean;
 }
+=======
+>>>>>>> 391c7a7cccd3f676731b6712fbf739c4deb914d7
 
 interface GamePageProps {
   params: {
@@ -129,175 +125,18 @@ interface LoadingStates {
   relatedGames: boolean;
 }
 
-// レビューの平均点を計算する関数
-// この関数はバックエンドから取得した平均点がない場合のフォールバックとして使用
-const calculateAverageScores = (reviews: Review[]) => {
-  if (!reviews || reviews.length === 0) return null;
-
-  const validReviews = reviews.filter(
-    (review) =>
-      review.rule_complexity &&
-      review.luck_factor &&
-      review.interaction &&
-      review.downtime
-  );
-
-  if (validReviews.length === 0) return null;
-
-  return {
-    rule_complexity: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.rule_complexity, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    luck_factor: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.luck_factor, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    interaction: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.interaction, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-    downtime: Number(
-      (
-        validReviews.reduce((sum, r) => sum + r.downtime, 0) /
-        validReviews.length
-      ).toFixed(1)
-    ),
-  };
-};
-
-// 人気のカテゴリーを集計する関数
-const getPopularCategories = (reviews: any[]) => {
-  if (!reviews || reviews.length === 0) return [];
-
-  const categoryCount = new Map<string, number>();
-  reviews.forEach((review) => {
-    // categoriesとcustom_tagsが配列であることを確認し、そうでない場合は空配列を使用
-    const categories = Array.isArray(review.categories)
-      ? review.categories
-      : [];
-    const customTags = Array.isArray(review.custom_tags)
-      ? review.custom_tags
-      : [];
-
-    [...categories, ...customTags].forEach((category) => {
-      if (category) {
-        // categoryがnullやundefinedでないことを確認
-        categoryCount.set(category, (categoryCount.get(category) || 0) + 1);
-      }
-    });
-  });
-
-  return Array.from(categoryCount.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, count]) => ({ name, count }));
-};
-
-// 人気のメカニクスを集計する関数
-const getPopularMechanics = (reviews: any[]) => {
-  const mechanics: { [key: string]: number } = {};
-  reviews.forEach((review) => {
-    if (review.mechanics && Array.isArray(review.mechanics)) {
-      review.mechanics.forEach((mechanic: string) => {
-        mechanics[mechanic] = (mechanics[mechanic] || 0) + 1;
-      });
-    }
-  });
-  return Object.entries(mechanics)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map((entry) => entry[0]);
-};
-
 // スコアを表示するためのヘルパー関数を修正
 const formatScore = (
   score: number | string | null | undefined,
   isLoading: boolean = false
 ): string => {
-  if (isLoading) return "--";
-  if (score === null || score === undefined) return "未評価";
-  const numScore = typeof score === "string" ? parseFloat(score) : score;
-  // NaNの場合のみ「未評価」と表示する（0は有効な評価値として扱う）
-  return Number.isNaN(numScore) ? "未評価" : numScore.toFixed(1);
-};
-
-const getNumericScore = (score: number | string | null | undefined): number => {
-  if (score === null || score === undefined) return 0;
-  const numScore = typeof score === "string" ? parseFloat(score) : score;
-  return Number.isNaN(numScore) ? 0 : numScore;
-};
-
-// プレイ人数情報
-const PlayerCountInfo = ({ game }: { game: Game }) => {
-  // 基本情報セクションを削除
-  return null;
-};
-
-// 出版社情報
-const PublisherInfo = ({ game }: { game: Game }) => {
-  const japanesePublisher = game.japanese_publisher;
-  const router = useRouter();
-
-  // 出版社がない場合は表示しない
-  if (!japanesePublisher) {
-    return null;
+  if (isLoading) return "...";
+  if (score === null || score === undefined) return "N/A";
+  if (typeof score === "string") {
+    const parsed = parseFloat(score);
+    return isNaN(parsed) ? "N/A" : parsed.toFixed(1);
   }
-
-  const handlePublisherClick = () => {
-    router.push(
-      `/search/results?publisher=${encodeURIComponent(japanesePublisher)}`
-    );
-  };
-
-  return (
-    <Box>
-      <Typography variant="subtitle2" color="text.secondary">
-        出版社:
-      </Typography>
-      <Typography variant="body2">
-        <Button
-          onClick={handlePublisherClick}
-          sx={{
-            textTransform: "none",
-            padding: "0",
-            minWidth: "auto",
-            color: "primary.main",
-            "&:hover": {
-              backgroundColor: "transparent",
-              textDecoration: "underline",
-            },
-          }}
-        >
-          {japanesePublisher}
-        </Button>
-      </Typography>
-    </Box>
-  );
-};
-
-// デザイナー情報
-const DesignerInfo = ({ game }: { game: Game }) => {
-  const designer = game.designer || "不明";
-
-  return (
-    <Box>
-      <Typography variant="subtitle2" color="text.secondary">
-        デザイナー:
-      </Typography>
-      <Typography variant="body2">
-        <Link href={`/games/designer/${encodeURIComponent(designer)}`} passHref>
-          {designer}
-        </Link>
-      </Typography>
-    </Box>
-  );
+  return typeof score === "number" ? score.toFixed(1) : "N/A";
 };
 
 // エラー表示コンポーネントを追加
@@ -371,16 +210,13 @@ export default function GamePage({ params }: GamePageProps) {
   const [game, setGame] = useState<ExtendedGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [japaneseName, setJapaneseName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<
     "success" | "error" | "info" | "warning"
   >("success");
-  const [wishlistItemId, setWishlistItemId] = useState<number | null>(null);
-  const [addingToWishlist, setAddingToWishlist] = useState(false);
+
   const [updatingGame, setUpdatingGame] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
@@ -395,7 +231,7 @@ export default function GamePage({ params }: GamePageProps) {
   const isInitializedRef = useRef(false);
   const fetchInProgressRef = useRef(false);
   const reviewCountFetchedRef = useRef(false);
-  const gameIdRef = useRef<string | null>(null); // 前回のIDを記録
+  // 前回のIDを記録
 
   // 段階的読み込みの状態管理
   const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -406,14 +242,10 @@ export default function GamePage({ params }: GamePageProps) {
   });
 
   // 段階的に読み込まれるデータの状態
-  const [gameStatistics, setGameStatistics] = useState<any>(null);
+
   const [gameReviews, setGameReviews] = useState<any[]>([]);
-  const [relatedGames, setRelatedGames] = useState<any>(null);
-  const [reviewsPage, setReviewsPage] = useState(1);
-  const [totalReviewsPages, setTotalReviewsPages] = useState(0);
 
   // データ読み込み済みフラグを追加
-  const [hasLoadedData, setHasLoadedData] = useState(false);
 
   // ローディングの進捗状態を更新するタイマー
   useEffect(() => {
@@ -663,102 +495,6 @@ export default function GamePage({ params }: GamePageProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]); // intentionally excluding fetchGameData to prevent infinite loop
-
-  const handleOpenDialog = () => {
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-  };
-
-  const handleSubmitJapaneseName = async () => {
-    if (!game) return;
-
-    setSubmitting(true);
-    try {
-      const authHeaders = getAuthHeaders();
-      const updatedGame = await updateJapaneseName(
-        game.bgg_id,
-        japaneseName,
-        authHeaders
-      );
-      setGame(updatedGame);
-      setOpenDialog(false);
-      setSnackbarMessage("日本語名を登録しました");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error("Error updating Japanese name:", error);
-      setSnackbarMessage(
-        error instanceof Error ? error.message : "日本語名の登録に失敗しました"
-      );
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // やりたいリストに追加する
-  const handleAddToWishlist = async () => {
-    if (!user || !game) return;
-
-    setAddingToWishlist(true);
-    try {
-      const authHeaders = getAuthHeaders();
-      const data = await addToWishlist(game.bgg_id, authHeaders);
-      setWishlistItemId(data.id);
-      setGame({
-        ...game,
-        in_wishlist: true,
-      });
-      setSnackbarMessage("やりたいリストに追加しました");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error("Error adding to wishlist:", error);
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "やりたいリストへの追加に失敗しました"
-      );
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setAddingToWishlist(false);
-    }
-  };
-
-  // やりたいリストから削除する
-  const handleRemoveFromWishlist = async () => {
-    if (!user || !game || wishlistItemId === null) return;
-
-    setAddingToWishlist(true);
-    try {
-      const authHeaders = getAuthHeaders();
-      await removeFromWishlist(wishlistItemId, authHeaders);
-      setWishlistItemId(null);
-      setGame({
-        ...game,
-        in_wishlist: false,
-      });
-      setSnackbarMessage("やりたいリストから削除しました");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-    } catch (error) {
-      console.error("Error removing from wishlist:", error);
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "やりたいリストからの削除に失敗しました"
-      );
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setAddingToWishlist(false);
-    }
-  };
 
   // BGGからゲーム情報を更新するダイアログを開く
   const handleOpenUpdateDialog = () => {
@@ -1551,7 +1287,7 @@ export default function GamePage({ params }: GamePageProps) {
                           else {
                             try {
                               displayText = JSON.stringify(category);
-                            } catch (e) {
+                            } catch {
                               displayText = "不明";
                             }
                           }
@@ -1616,7 +1352,7 @@ export default function GamePage({ params }: GamePageProps) {
                           else {
                             try {
                               displayText = JSON.stringify(mechanic);
-                            } catch (e) {
+                            } catch {
                               displayText = "不明";
                             }
                           }

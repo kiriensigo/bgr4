@@ -1,19 +1,15 @@
 "use client";
 
 import React from "react";
-import type { Game, Review } from "@/types/api";
-import { UnifiedGameCard } from "@/components/ui/GameCard/UnifiedGameCard";
+import type { Game, Review } from "../types/api";
+import { UnifiedGameCard } from "./ui/GameCard/UnifiedGameCard";
 
 interface GameCardProps {
   game: Game;
   review?: Review;
   type: "game" | "review";
   useOverallScoreDisplay?: boolean;
-  overallScoreVariant?: "default" | "compact" | "large";
-  showOverallScoreOverlay?: boolean;
-  onReviewUpdated?: () => void;
   variant?: "list" | "grid" | "search" | "review" | "carousel";
-  enableSharing?: boolean;
 }
 
 /**
@@ -25,11 +21,7 @@ export default function GameCard({
   review,
   type,
   useOverallScoreDisplay = false,
-  overallScoreVariant = "compact",
-  showOverallScoreOverlay = false,
-  onReviewUpdated,
   variant = "list",
-  enableSharing = true,
 }: GameCardProps) {
   // バリアントに応じた設定
   const getCardSettings = () => {

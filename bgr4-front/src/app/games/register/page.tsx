@@ -22,10 +22,9 @@ import {
   Checkbox,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { getBGGGameDetails, type BGGGameDetails } from "@/lib/bggApi";
-import { getGame, registerGame } from "@/lib/api";
-import Link from "next/link";
+import { useAuth } from "../../../contexts/AuthContext";
+import { getBGGGameDetails, type BGGGameDetails } from "../../../lib/bggApi";
+import { getGame, registerGame } from "../../../lib/api";
 
 // タブのインターフェース
 interface TabPanelProps {
@@ -108,8 +107,8 @@ export default function RegisterGamePage() {
             console.error("レビュー数の取得に失敗しました:", response.status);
             setReviewCount(0);
           }
-        } catch (error) {
-          console.error("レビュー数の取得に失敗しました:", error);
+        } catch {
+          console.error("レビュー数の取得に失敗しました");
           setReviewCount(0);
         } finally {
           setLoadingReviews(false);
@@ -153,14 +152,6 @@ export default function RegisterGamePage() {
         [name]: value,
       }));
     }
-  };
-
-  // 難易度選択処理
-  const handleWeightChange = (e: any) => {
-    setManualForm((prev) => ({
-      ...prev,
-      weight: e.target.value,
-    }));
   };
 
   // セレクト入力の処理
@@ -219,7 +210,7 @@ export default function RegisterGamePage() {
           router.push(`/games/${bggId}`);
           return;
         }
-      } catch (error) {
+      } catch {
         // ゲームが見つからない場合は続行（新規登録へ）
       }
 

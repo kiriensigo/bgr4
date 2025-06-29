@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Box, Typography, Paper, Rating, Grid } from "@mui/material";
-import { formatDate } from "@/lib/utils";
+
 import LikeButton from "./LikeButton";
 import Link from "next/link";
 import SearchPagination from "./SearchPagination";

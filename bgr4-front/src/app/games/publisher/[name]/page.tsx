@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { Container, Typography, Box } from "@mui/material";
-import { searchGamesByPublisher } from "@/lib/api";
-import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
+// import { searchGamesByPublisher } from "@/lib/api"; // 未実装
 import { useParams } from "next/navigation";
 
 export default function PublisherPage() {
@@ -17,16 +16,12 @@ export default function PublisherPage() {
       </Typography>
 
       <Box sx={{ mt: 4 }}>
-        <UnifiedGameList
-          title=""
-          fetchGames={(page, pageSize, sortBy) =>
-            searchGamesByPublisher(publisherName, page, pageSize, sortBy)
-          }
-          showTitle={false}
-          showSort={true}
-          emptyMessage={`出版社 "${publisherName}" のゲームが見つかりませんでした`}
-          gridItemProps={{ xs: 12, sm: 6, md: 4 }}
-        />
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          出版社検索機能は開発中です。
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          メインの検索機能は /search ページをご利用ください。
+        </Typography>
       </Box>
     </Container>
   );

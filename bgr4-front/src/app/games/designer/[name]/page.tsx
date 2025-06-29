@@ -1,14 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { Container, Typography, Box } from "@mui/material";
+<<<<<<< HEAD
 import { searchGamesByDesigner } from "../../../../lib/api";
+=======
+>>>>>>> 391c7a7cccd3f676731b6712fbf739c4deb914d7
 import UnifiedGameList from "../../../../components/ui/GameList/UnifiedGameList";
 import { useParams } from "next/navigation";
 
 export default function DesignerPage() {
   const params = useParams();
   const designerName = decodeURIComponent(params.name as string);
+
+  // TODO: searchGamesByDesigner関数の実装待ち
+  const searchGamesByDesigner = async (
+    designer: string,
+    page: number,
+    pageSize: number,
+    sortBy: string
+  ) => {
+    // 仮実装 - 空の結果を返す
+    return {
+      games: [],
+      pagination: {
+        current_page: 1,
+        total_pages: 1,
+        total_count: 0,
+        per_page: pageSize,
+      },
+      totalItems: 0,
+      totalPages: 1,
+    };
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -17,6 +41,9 @@ export default function DesignerPage() {
       </Typography>
 
       <Box sx={{ mt: 4 }}>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          デザイナー検索機能は開発中です。
+        </Typography>
         <UnifiedGameList
           title=""
           fetchGames={(page, pageSize, sortBy) =>

@@ -17,18 +17,16 @@ import {
   List,
   ListItem,
   ListItemText,
-  Divider,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   getGameExpansions,
   updateGameExpansions,
   type GameExpansion,
-  type ExpansionsResponse,
   type UnregisteredExpansion,
-} from "@/lib/api";
+} from "../../lib/api";
 
 interface GameExpansionsProps {
   gameId: string;

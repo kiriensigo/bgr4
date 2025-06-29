@@ -1,0 +1,46 @@
+services:
+  # フロントエンド (Next.js)
+  - type: web
+    name: bgr4-front
+    runtime: node
+    plan: free
+    buildCommand: cd bgr4-front && npm install && npm run build
+    startCommand: cd bgr4-front && npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+    domains:
+      - bgr4-reviews.onrender.com
+
+  # バックエンド (Rails API)
+  - type: web
+    name: bgr4-api
+    runtime: ruby
+    plan: free
+    buildCommand: cd bgr4-api && bundle install && bundle exec rails assets:precompile
+    startCommand: cd bgr4-api && bundle exec rails server -p $PORT -e production
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_LOG_TO_STDOUT
+        value: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY_BASE
+        sync: false
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+# データベース (Supabase継続の場合は不要)
+# databases:
+#   - name: bgr4-db
+#     plan: free

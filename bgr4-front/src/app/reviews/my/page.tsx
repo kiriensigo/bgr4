@@ -9,9 +9,9 @@ import {
   CircularProgress,
   Alert,
 } from "@mui/material";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import GameCard from "@/components/GameCard";
+import GameCard from "../../../components/GameCard";
 
 interface Game {
   id: string;

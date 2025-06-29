@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Typography, Chip, CardContent } from "@mui/material";
+import { Box, Typography, CardContent } from "@mui/material";
 import Link from "next/link";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import GroupIcon from "@mui/icons-material/Group";
@@ -19,11 +19,9 @@ interface GameInfoCardProps {
     min_play_time?: number;
     average_score?: number | null;
   };
-  categories?: string[];
   showRating?: boolean;
   useOverallScoreDisplay?: boolean;
   reviewsCount?: number;
-  maxTagsToShow?: number;
 }
 
 /**
@@ -38,11 +36,9 @@ interface GameInfoCardProps {
  */
 export default function GameInfoCard({
   game,
-  categories = [],
   showRating = true,
   useOverallScoreDisplay = false,
   reviewsCount = 0,
-  maxTagsToShow = 3,
 }: GameInfoCardProps) {
   const gameId = game.bgg_id || game.id;
   const displayName = game.japanese_name || game.name;

@@ -12,7 +12,6 @@ import {
   Chip,
   Rating,
   Divider,
-  Button,
   Fade,
   Grow,
 } from "@mui/material";
@@ -25,8 +24,8 @@ import {
   getGameReviews,
   getRelatedGames,
   type Game,
-} from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+} from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import GroupIcon from "@mui/icons-material/Group";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import StarIcon from "@mui/icons-material/Star";
@@ -127,7 +126,7 @@ export default function FastGameLoader({
   const [gameData, setGameData] = useState<GameData>({});
   const [error, setError] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
+  const [, setImageError] = useState(false);
 
   // 段階的読み込みの実装
   const loadGameData = useCallback(async () => {

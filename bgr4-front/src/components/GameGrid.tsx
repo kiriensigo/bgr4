@@ -3,7 +3,7 @@
 import React from "react";
 import { Box, Grid, Typography, Skeleton } from "@mui/material";
 import GameCard from "./GameCard";
-import { Game } from "@/lib/api";
+import { Game } from "../lib/api";
 
 interface GameGridProps {
   title: string;

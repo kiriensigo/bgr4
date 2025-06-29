@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Typography, Rating, Chip } from "@mui/material";
 import { People, AccessTime } from "@mui/icons-material";
-import type { Game } from "@/types/game";
+import type { Game } from "../../../types/game";
 
 interface GameMetaProps {
   game: Game;

@@ -9,7 +9,7 @@ import {
   Divider,
 } from "@mui/material";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "../lib/utils";
 import LikeButton from "./LikeButton";
 
 interface ReviewContentCardProps {
