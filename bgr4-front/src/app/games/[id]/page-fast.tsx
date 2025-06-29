@@ -8,7 +8,7 @@ import {
   updateGameFromBgg,
   type Game,
   updateSystemReviews,
-} from "@/lib/api";
+} from "../../../lib/api";
 import {
   Container,
   Typography,
@@ -33,8 +33,8 @@ import TranslateIcon from "@mui/icons-material/Translate";
 import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
 import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
 import UpdateIcon from "@mui/icons-material/Update";
-import FastGameLoader from "@/components/FastGameLoader";
-import { useAuth } from "@/contexts/AuthContext";
+import FastGameLoader from "../../../components/FastGameLoader";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 interface GamePageProps {

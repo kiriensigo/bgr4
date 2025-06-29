@@ -16,7 +16,7 @@ import {
   gameCache,
   CACHE_EXPIRY,
   updateSystemReviews,
-} from "@/lib/api";
+} from "../../../lib/api";
 import {
   Container,
   Typography,
@@ -56,13 +56,13 @@ import TranslateIcon from "@mui/icons-material/Translate";
 import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
 import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import GameCard from "@/components/GameCard";
-import ReviewList from "@/components/ReviewList";
-import GameRating from "@/components/GameRating";
-import { useAuth } from "@/contexts/AuthContext";
+import GameCard from "../../../components/GameCard";
+import ReviewList from "../../../components/ReviewList";
+import GameRating from "../../../components/GameRating";
+import { useAuth } from "../../../contexts/AuthContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { formatDate } from "@/lib/utils";
-import { getAuthHeaders } from "@/lib/auth";
+import { formatDate } from "../../../lib/utils";
+import { getAuthHeaders } from "../../../lib/auth";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";

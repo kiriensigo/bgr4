@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../../../contexts/AuthContext";
 import {
   Container,
   Typography,
@@ -22,7 +22,7 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
-import { getGame, updateGame } from "@/lib/api";
+import { getGame, updateGame } from "../../../../lib/api";
 import Link from "next/link";
 
 export default function EditGamePage({ params }: { params: { id: string } }) {

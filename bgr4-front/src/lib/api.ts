@@ -4,7 +4,7 @@ import {
   PaginationInfo,
   GamesResponse,
   ReviewsResponse,
-} from "@/types/api";
+} from "../types/api";
 
 // API URL設定
 const API_URL =
@@ -157,10 +157,11 @@ export async function getGameStatistics(
 export async function getGameReviews(
   id: string,
   page: number = 1,
+  per_page: number = 5,
   authHeaders?: Record<string, string>,
   options: { cache?: RequestCache; revalidate?: number } = {}
 ): Promise<ReviewsResponse> {
-  const url = `${API_BASE_URL}/games/${id}/reviews?page=${page}`;
+  const url = `${API_BASE_URL}/games/${id}/reviews?page=${page}&per_page=${per_page}`;
 
   const response = await fetch(url, {
     headers: {

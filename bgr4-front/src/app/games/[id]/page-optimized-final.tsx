@@ -2,18 +2,37 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Box, Typography, Grid, Chip, Alert, Button, Snackbar, LinearProgress } from "@mui/material";
-import { Star, StarBorder, Edit, Add, Remove, AccessTime, People, Edit as EditIcon, Update as UpdateIcon } from "@mui/icons-material";
+import {
+  Box,
+  Typography,
+  Grid,
+  Chip,
+  Alert,
+  Button,
+  Snackbar,
+  LinearProgress,
+} from "@mui/material";
+import {
+  Star,
+  StarBorder,
+  Edit,
+  Add,
+  Remove,
+  AccessTime,
+  People,
+  Edit as EditIcon,
+  Update as UpdateIcon,
+} from "@mui/icons-material";
 import { Rating } from "@mui/material";
-import GameImageCard from "@/components/GameImageCard";
-import GameEvaluationForm from "@/components/GameEvaluationForm";
+import GameImageCard from "../../../components/GameImageCard";
+import GameEvaluationForm from "../../../components/GameEvaluationForm";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import { AxiosError } from "axios";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../../contexts/AuthContext";
 import {
   getGameBasicInfo,
   getGameStatistics,
@@ -24,8 +43,8 @@ import {
   removeFromWishlist,
   updateGameFromBgg,
   updateSystemReviews,
-} from "@/lib/api";
-import type { Game } from "@/types/game";
+} from "../../../lib/api";
+import type { Game } from "../../../types/game";
 import MuiAlert, { AlertProps } from "@mui/material/Alert";
 import { styled } from "@mui/material/styles";
 import Button from "@mui/material/Button";
@@ -142,7 +161,8 @@ const calculateAverageScores = (reviews: Review[]) => {
   return {
     average_overall_score: Math.round((totals.overall_score / count) * 10) / 10,
     average_play_time: Math.round((totals.play_time / count) * 10) / 10,
-    average_rule_complexity: Math.round((totals.rule_complexity / count) * 10) / 10,
+    average_rule_complexity:
+      Math.round((totals.rule_complexity / count) * 10) / 10,
     average_luck_factor: Math.round((totals.luck_factor / count) * 10) / 10,
     average_interaction: Math.round((totals.interaction / count) * 10) / 10,
     average_downtime: Math.round((totals.downtime / count) * 10) / 10,
@@ -153,8 +173,8 @@ const getPopularCategories = (reviews: any[]) => {
   if (!reviews || reviews.length === 0) return [];
 
   const categoryCount: { [key: string]: number } = {};
-  
-  reviews.forEach(review => {
+
+  reviews.forEach((review) => {
     if (review.categories && Array.isArray(review.categories)) {
       review.categories.forEach((category: string) => {
         categoryCount[category] = (categoryCount[category] || 0) + 1;
@@ -172,8 +192,8 @@ const getPopularMechanics = (reviews: any[]) => {
   if (!reviews || reviews.length === 0) return [];
 
   const mechanicCount: { [key: string]: number } = {};
-  
-  reviews.forEach(review => {
+
+  reviews.forEach((review) => {
     if (review.mechanics && Array.isArray(review.mechanics)) {
       review.mechanics.forEach((mechanic: string) => {
         mechanicCount[mechanic] = (mechanicCount[mechanic] || 0) + 1;
@@ -361,7 +381,9 @@ export default function GamePage({ params }: GamePageProps) {
   // Snackbar states
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error" | "info">("success");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<
+    "success" | "error" | "info"
+  >("success");
 
   // Update states
   const [updatingGame, setUpdatingGame] = useState(false);
@@ -419,7 +441,7 @@ export default function GamePage({ params }: GamePageProps) {
   useEffect(() => {
     if (user && !reviewCountFetchedRef.current) {
       reviewCountFetchedRef.current = true;
-      
+
       const fetchReviewCount = async () => {
         try {
           const response = await fetch(
@@ -451,7 +473,7 @@ export default function GamePage({ params }: GamePageProps) {
 
       fetchReviewCount();
     }
-    
+
     // ユーザーがログアウトした場合はフラグをリセット
     if (!user) {
       reviewCountFetchedRef.current = false;
@@ -665,7 +687,12 @@ export default function GamePage({ params }: GamePageProps) {
   // Render loading state
   if (loading && !game) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
         <Typography>読み込み中...</Typography>
       </Box>
     );
@@ -674,12 +701,12 @@ export default function GamePage({ params }: GamePageProps) {
   // Render error state
   if (error) {
     return (
-      <ErrorDisplay 
-        error={error} 
+      <ErrorDisplay
+        error={error}
         onRetry={() => {
           isInitializedRef.current = false;
           fetchGameData(true);
-        }} 
+        }}
       />
     );
   }
@@ -687,12 +714,12 @@ export default function GamePage({ params }: GamePageProps) {
   // Render game not found
   if (!game) {
     return (
-      <ErrorDisplay 
-        error="ゲームが見つかりませんでした" 
+      <ErrorDisplay
+        error="ゲームが見つかりませんでした"
         onRetry={() => {
           isInitializedRef.current = false;
           fetchGameData(true);
-        }} 
+        }}
       />
     );
   }
@@ -709,7 +736,7 @@ export default function GamePage({ params }: GamePageProps) {
             <Typography variant="h4" component="h1" gutterBottom>
               {game.name}
             </Typography>
-            
+
             {game.japanese_name && (
               <Typography variant="h5" color="text.secondary" gutterBottom>
                 {game.japanese_name}
@@ -718,10 +745,13 @@ export default function GamePage({ params }: GamePageProps) {
 
             <Box sx={{ mb: 2 }}>
               <Chip
-                label={formatScore(game.average_overall_score, loadingStates.basicInfo)}
+                label={formatScore(
+                  game.average_overall_score,
+                  loadingStates.basicInfo
+                )}
                 color="primary"
                 size="small"
-                sx={{ mr: 1, backgroundColor: '#1976d2', color: 'white' }}
+                sx={{ mr: 1, backgroundColor: "#1976d2", color: "white" }}
               />
               <Rating
                 value={getNumericScore(game.average_overall_score) / 2}
@@ -732,7 +762,12 @@ export default function GamePage({ params }: GamePageProps) {
               />
               <PlayerCountInfo game={game} />
               {game.min_time && game.max_time && (
-                <Box display="flex" alignItems="center" gap={0.5} sx={{ mt: 1 }}>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={0.5}
+                  sx={{ mt: 1 }}
+                >
                   <AccessTime fontSize="small" color="action" />
                   <Typography variant="body2" color="text.secondary">
                     {game.min_time === game.max_time
@@ -750,7 +785,7 @@ export default function GamePage({ params }: GamePageProps) {
             )}
 
             {/* アクションボタン */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
               {user && (
                 <>
                   {game.in_wishlist ? (
@@ -772,7 +807,7 @@ export default function GamePage({ params }: GamePageProps) {
                       やりたいリストに追加
                     </Button>
                   )}
-                  
+
                   <Button
                     variant="outlined"
                     startIcon={<EditIcon />}
@@ -818,18 +853,32 @@ export default function GamePage({ params }: GamePageProps) {
             <GameEvaluationForm gameId={game.bgg_id} />
           </Box>
         )}
-        
+
         {/* レビュー一覧 */}
         {loadingStates.reviews ? (
           <Typography>レビューを読み込み中...</Typography>
         ) : gameReviews && gameReviews.length > 0 ? (
           <Box>
             {gameReviews.map((review: any) => (
-              <Box key={review.id} sx={{ mb: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+              <Box
+                key={review.id}
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                }}
+              >
                 <Typography variant="subtitle1" gutterBottom>
                   {review.user.name}さんのレビュー
                 </Typography>
-                <Rating value={review.overall_score / 2} precision={0.1} readOnly size="small" />
+                <Rating
+                  value={review.overall_score / 2}
+                  precision={0.1}
+                  readOnly
+                  size="small"
+                />
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   {review.short_comment}
                 </Typography>
@@ -837,7 +886,9 @@ export default function GamePage({ params }: GamePageProps) {
             ))}
           </Box>
         ) : (
-          <Typography color="text.secondary">まだレビューがありません</Typography>
+          <Typography color="text.secondary">
+            まだレビューがありません
+          </Typography>
         )}
       </Box>
 
@@ -853,7 +904,7 @@ export default function GamePage({ params }: GamePageProps) {
             <Grid container spacing={2}>
               {relatedGames.slice(0, 4).map((relatedGame: Game) => (
                 <Grid item xs={12} sm={6} md={3} key={relatedGame.id}>
-                  <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ textAlign: "center" }}>
                     <GameImageCard game={relatedGame} size="small" />
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       {relatedGame.name}
@@ -867,7 +918,12 @@ export default function GamePage({ params }: GamePageProps) {
       )}
 
       {/* ダイアログ */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>日本語名を編集</DialogTitle>
         <DialogContent>
           <TextField
@@ -883,8 +939,8 @@ export default function GamePage({ params }: GamePageProps) {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>キャンセル</Button>
-          <Button 
-            onClick={handleSubmitJapaneseName} 
+          <Button
+            onClick={handleSubmitJapaneseName}
             variant="contained"
             disabled={submitting}
           >
@@ -898,7 +954,7 @@ export default function GamePage({ params }: GamePageProps) {
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <SnackbarAlert
           onClose={() => setSnackbarOpen(false)}
@@ -909,4 +965,4 @@ export default function GamePage({ params }: GamePageProps) {
       </Snackbar>
     </Box>
   );
-} 
+}

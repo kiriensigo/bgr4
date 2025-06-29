@@ -24,8 +24,8 @@ import {
   DialogContentText,
   DialogActions,
 } from "@mui/material";
-import { useAuth } from "@/contexts/AuthContext";
-import { getGameEditHistories, type GameEditHistory } from "@/lib/api";
+import { useAuth } from "../../../contexts/AuthContext";
+import { getGameEditHistories, type GameEditHistory } from "../../../lib/api";
 import Link from "next/link";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";

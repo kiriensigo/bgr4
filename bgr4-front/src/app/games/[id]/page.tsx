@@ -16,7 +16,7 @@ import {
   gameCache,
   CACHE_EXPIRY,
   updateSystemReviews,
-} from "@/lib/api";
+} from "../../../lib/api";
 import {
   Container,
   Typography,
@@ -56,13 +56,13 @@ import TranslateIcon from "@mui/icons-material/Translate";
 import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
 import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import GameCard from "@/components/GameCard";
-import ReviewList from "@/components/ReviewList";
-import GameRating from "@/components/GameRating";
-import { useAuth } from "@/contexts/AuthContext";
+import GameCard from "../../../components/GameCard";
+import ReviewList from "../../../components/ReviewList";
+import GameRating from "../../../components/GameRating";
+import { useAuth } from "../../../contexts/AuthContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { formatDate } from "@/lib/utils";
-import { getAuthHeaders } from "@/lib/auth";
+import { formatDate } from "../../../lib/utils";
+import { getAuthHeaders } from "../../../lib/auth";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
@@ -72,6 +72,10 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+
+// page.tsx で使用する Game 型を api.ts からインポートするように変更
+// これにより、型の不整合が解消される
+// import type { Game } from "../../../types/game";
 
 interface Review {
   id: number;
@@ -532,56 +536,55 @@ export default function GamePage({ params }: GamePageProps) {
         setLoading(false); // 基本情報が読み込まれたらメインのローディングを終了
 
         // ステップ2-4を並行実行（重複回避のため一度だけ実行）
-        const [stats, reviewData, related] = await Promise.allSettled([
-          // ステップ2: 統計情報を取得
-          getGameStatistics(params.id, headers),
-          // ステップ3: レビューを取得（引数順序修正）
-          getGameReviews(params.id, 1, headers),
-          // ステップ4: 関連ゲームを取得
-          getRelatedGames(params.id, headers),
-        ]);
+        console.log("Fetching additional data concurrently...");
+        const [statsResult, reviewsResult, relatedResult] =
+          await Promise.allSettled([
+            getGameStatistics(params.id, headers),
+            getGameReviews(params.id, 1, 5, headers),
+            getRelatedGames(params.id, headers),
+          ]);
 
         // 統計情報の処理
-        if (stats.status === "fulfilled") {
-          console.log("Statistics received:", stats.value);
-          setGameStatistics(stats.value);
+        if (statsResult.status === "fulfilled") {
+          console.log("Statistics received:", statsResult.value);
+          setGameStatistics(statsResult.value);
           setGame((prevGame) => {
             if (prevGame) {
-              return { ...prevGame, ...stats.value };
+              return { ...prevGame, ...statsResult.value };
             }
             return prevGame;
           });
         } else {
-          console.error("Failed to fetch statistics:", stats.reason);
+          console.error("Failed to fetch statistics:", statsResult.reason);
         }
         setLoadingStates((prev) => ({ ...prev, statistics: false }));
 
         // レビューの処理
-        if (reviewData.status === "fulfilled") {
-          console.log("Reviews received:", reviewData.value);
-          setGameReviews(reviewData.value.reviews);
-          setTotalReviewsPages(reviewData.value.totalPages);
+        if (reviewsResult.status === "fulfilled") {
+          console.log("Reviews received:", reviewsResult.value);
+          setGameReviews(reviewsResult.value.reviews);
+          setTotalReviewsPages(reviewsResult.value.totalPages);
           setGame((prevGame) => {
             if (prevGame) {
               return {
                 ...prevGame,
-                reviews: reviewData.value.reviews,
-                reviews_count: reviewData.value.totalItems,
+                reviews: reviewsResult.value.reviews,
+                reviews_count: reviewsResult.value.totalItems,
               };
             }
             return prevGame;
           });
         } else {
-          console.error("Failed to fetch reviews:", reviewData.reason);
+          console.error("Failed to fetch reviews:", reviewsResult.reason);
         }
         setLoadingStates((prev) => ({ ...prev, reviews: false }));
 
         // 関連ゲームの処理
-        if (related.status === "fulfilled") {
-          console.log("Related games received:", related.value);
-          setRelatedGames(related.value);
+        if (relatedResult.status === "fulfilled") {
+          console.log("Related games received:", relatedResult.value);
+          setRelatedGames(relatedResult.value);
         } else {
-          console.error("Failed to fetch related games:", related.reason);
+          console.error("Failed to fetch related games:", relatedResult.reason);
         }
         setLoadingStates((prev) => ({ ...prev, relatedGames: false }));
 
@@ -1393,7 +1396,8 @@ export default function GamePage({ params }: GamePageProps) {
                       >
                         {formatScore(game.average_overall_score)}
                       </Typography>
-                    )}<GameRating
+                    )}
+                    <GameRating
                       score={game.average_overall_score}
                       reviewsCount={game.reviews_count}
                       size="large"
@@ -1419,7 +1423,8 @@ export default function GamePage({ params }: GamePageProps) {
                       >
                         {formatScore(game.average_rule_complexity)}
                       </Typography>
-                    )}</Grid>
+                    )}
+                  </Grid>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
                       運要素
