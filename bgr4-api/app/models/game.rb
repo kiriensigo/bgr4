@@ -687,35 +687,13 @@ class Game < ApplicationRecord
     bgg_mechanic_to_site_mechanic_map = {
       'Area Majority / Influence' => 'エリア支配',
       'Auction / Bidding' => 'オークション',
-      'Auction Compensation' => 'オークション',
-      'Auction: Dexterity' => 'オークション',
-      'Auction: Dutch' => 'オークション',
-      'Auction: Dutch Priority' => 'オークション',
-      'Auction: English' => 'オークション',
-      'Auction: Fixed Placement' => 'オークション',
-      'Auction: Multiple Lot' => 'オークション',
-      'Auction: Once Around' => 'オークション',
-      'Auction: Sealed Bid' => 'オークション',
-      'Auction: Turn Order Until Pass' => 'オークション',
-      'Betting and Bluffing' => '賭け',
-      'Closed Drafting' => 'ドラフト',
       'Cooperative Game' => '協力',
-      'Deck Construction' => 'デッキ/バッグビルド',
       'Deck, Bag, and Pool Building' => 'デッキ/バッグビルド',
       'Dice Rolling' => 'ダイスロール',
       'Hidden Roles' => '正体隠匿',
-      'Modular Board' => 'モジュラーボード',
-      'Network and Route Building' => 'ルート構築',
-      'Open Drafting' => 'ドラフト',
-      'Push Your Luck' => 'バースト',
-      'Set Collection' => 'セット収集',
-      'Simultaneous Action Selection' => '同時手番',
-      'Tile Placement' => 'タイル配置',
-      'Variable Player Powers' => 'プレイヤー別能力',
-      'Variable Set-up' => 'プレイヤー別能力',
       'Worker Placement' => 'ワカプレ',
-      'Worker Placement with Dice Workers' => 'ワカプレ',
-      'Worker Placement, Different Worker Types' => 'ワカプレ'
+      'Set Collection' => 'セット収集',
+      'Tile Placement' => 'タイル配置'
     }
     
     bgg_category_to_site_mechanic_map = {
@@ -744,7 +722,43 @@ class Game < ApplicationRecord
   # 日本語名の自動クリーンアップ（中国語を除外）
   before_save :cleanup_chinese_japanese_name
 
+  def needs_update?
+    # Check if essential fields are missing or if the last update was more than a week ago
+    description.blank? ||
+      min_players.nil? ||
+      max_players.nil? ||
+      play_time.nil? ||
+      min_play_time.nil? ||
+      weight.nil? ||
+      bgg_score.nil? ||
+      publisher.blank? ||
+      designer.blank? ||
+      updated_at < 1.week.ago
+  end
+
+  # BGGランク
+  attribute :bgg_rank, :integer
+
+  # ------------------------------
+  # 📊 平均値初期化コールバック
+  # ------------------------------
+  # BGG 経由でゲームを登録するとレビューが 0 件のまま終わるため
+  # average_score_value などが nil となり、フロント表示が「未評価」になる。
+  # ゲーム登録直後に BGG 基準点を用いた平均値を計算・保存しておく。
+  after_create :initialize_average_values_if_needed
+
   private
+
+  # ゲーム作成直後に平均値を設定
+  def initialize_average_values_if_needed
+    # 既に値が入っている／BGG スコアが無い場合はスキップ
+    return if average_score_value.present? || bgg_score.blank?
+
+    # reviews は 0 件でも update_average_values で BGG 基準値ベースの計算が行われる
+    update_average_values
+  rescue => e
+    Rails.logger.error "Failed to initialize average values for game #{id}: #{e.message}"
+  end
 
   def cleanup_chinese_japanese_name
     if japanese_name.present? && LanguageDetectionService.chinese?(japanese_name)

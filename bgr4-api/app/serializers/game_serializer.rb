@@ -7,7 +7,8 @@ class GameSerializer < ActiveModel::Serializer
              # Calculated values
              :average_score, :reviews_count,
              :average_rule_complexity, :average_luck_factor, :average_interaction,
-             :average_downtime, :site_recommended_players
+             :average_downtime, :site_recommended_players,
+             :popular_categories, :popular_mechanics
   
   # BGGの元スコアはbgg_scoreとして返す
   attribute :bgg_score do
@@ -53,16 +54,17 @@ class GameSerializer < ActiveModel::Serializer
     categories = object.popular_categories
     
     if categories.present?
-      # ハッシュの配列の場合、nameプロパティを抽出
+      # ハッシュの配列の場合、そのまま返す（nameとcountを保持）
       if categories.is_a?(Array) && categories.first.is_a?(Hash)
-        categories.map { |cat| cat[:name] || cat['name'] }.compact
-      else
-        # 文字列の配列の場合、そのまま返す
         categories
+      else
+        # 文字列の配列の場合、ハッシュ形式に変換
+        categories.map { |cat| { name: cat, count: 1 } }
       end
     else
-      # popular_categoriesが空の場合、BGGから直接取得
-      object.get_bgg_converted_categories
+      # popular_categoriesが空の場合、BGGから直接取得してハッシュ形式に変換
+      bgg_categories = object.get_bgg_converted_categories
+      bgg_categories.map { |cat| { name: cat, count: 10 } }
     end
   end
   
@@ -71,16 +73,17 @@ class GameSerializer < ActiveModel::Serializer
     mechanics = object.popular_mechanics
     
     if mechanics.present?
-      # ハッシュの配列の場合、nameプロパティを抽出
+      # ハッシュの配列の場合、そのまま返す（nameとcountを保持）
       if mechanics.is_a?(Array) && mechanics.first.is_a?(Hash)
-        mechanics.map { |mech| mech[:name] || mech['name'] }.compact
-      else
-        # 文字列の配列の場合、そのまま返す
         mechanics
+      else
+        # 文字列の配列の場合、ハッシュ形式に変換
+        mechanics.map { |mech| { name: mech, count: 1 } }
       end
     else
-      # popular_mechanicsが空の場合、BGGから直接取得
-      object.get_bgg_converted_mechanics
+      # popular_mechanicsが空の場合、BGGから直接取得してハッシュ形式に変換
+      bgg_mechanics = object.get_bgg_converted_mechanics
+      bgg_mechanics.map { |mech| { name: mech, count: 10 } }
     end
   end
   
