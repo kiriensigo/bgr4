@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_20_111446) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_30_210215) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -73,6 +73,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_20_111446) do
     t.float "average_interaction_value"
     t.float "average_downtime_value"
     t.float "average_luck_factor_value"
+    t.integer "year_published"
+    t.integer "min_age"
+    t.decimal "average_score", precision: 5, scale: 2
+    t.decimal "complexity", precision: 5, scale: 2
+    t.string "designers", default: [], array: true
+    t.string "artists", default: [], array: true
+    t.string "publishers", default: [], array: true
+    t.integer "bgg_rank"
+    t.integer "max_play_time"
+    t.integer "rank"
     t.index ["bgg_id"], name: "index_games_on_bgg_id", unique: true
     t.index ["popular_categories"], name: "index_games_on_popular_categories", using: :gin
     t.index ["popular_mechanics"], name: "index_games_on_popular_mechanics", using: :gin

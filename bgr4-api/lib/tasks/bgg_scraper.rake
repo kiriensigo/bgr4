@@ -9,12 +9,7 @@ namespace :bgg_scraper do
       puts "Processing game with BGG ID: #{bgg_id}"
       
       begin
-        game = Game.find_or_create_by!(bgg_id: bgg_id)
-        
-        if game.name.present? && game.name != "Unknown"
-          puts "  -> Game '#{game.name}' already exists. Skipping update."
-          return
-        end
+        game = Game.find_or_initialize_by(bgg_id: bgg_id)
         
         puts "  -> Updating details from BGG..."
         game.update_from_bgg(true)

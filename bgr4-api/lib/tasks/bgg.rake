@@ -106,135 +106,244 @@ namespace :bgg do
     puts "Finished importing games."
   end
 
-  desc "BGG Top3000ランキングゲームを登録する"
-  task register_top_1000: :environment do
-    puts "🎲 BGG Top3000ゲーム登録を開始します..."
-    puts "⚠️  APIレート制限対策でディレイを設けています"
+  desc "BGGの上位3000ゲームを登録"
+  task register_top_3000: :environment do
+    Rails.logger.info "BGGの上位3000ゲームの登録を開始..."
     
-    start_time = Time.current
-    total_games = 0
-    successful_games = 0
-    failed_games = 0
-    skipped_games = 0
-
-    begin
-      # BGGブラウズページから3000位までのゲームIDを収集
-      all_game_ids = []
-      pages_to_fetch = 30 # 1ページあたり約100件なので30ページで3000件カバー
-
-      puts "📖 BGGブラウズページからゲームIDを収集中..."
+    # 1001位から3000位までのゲームを取得
+    start_page = 11  # 1001位から
+    end_page = 30    # 3000位まで
+    
+    all_games = []
+    (start_page..end_page).each do |page|
+      Rails.logger.info "ページ#{page}のゲームを取得中..."
+      games = BggService.get_top_games_from_browse(page)
+      all_games.concat(games)
       
-      (1..pages_to_fetch).each do |page|
-        puts "  📄 ページ #{page}/#{pages_to_fetch} を処理中..."
-        
-        game_ids = BggService.get_top_games_from_browse(page)
-        all_game_ids.concat(game_ids)
-        
-        puts "    ✅ #{game_ids.count}件のゲームIDを取得"
-        
-        # ページ間のディレイ（BGGサーバー負荷軽減）
-        sleep 3
-      end
-
-      # 重複除去
-      unique_game_ids = all_game_ids.uniq
-      puts "📊 合計 #{unique_game_ids.count}件のユニークなゲームIDを収集"
-
-      # バッチ処理でゲーム詳細を取得・登録
-      batch_size = 10 # BGG APIの制限を考慮
-      batches = unique_game_ids.each_slice(batch_size).to_a
-
-      puts "🔄 #{batches.count}バッチでゲーム詳細を取得・登録中..."
-
-      batches.each_with_index do |batch_ids, batch_index|
-        puts "  📦 バッチ #{batch_index + 1}/#{batches.count} (#{batch_ids.count}件)..."
-        
-        begin
-          # バッチでゲーム詳細を取得
-          games_data = BggService.get_games_details_batch(batch_ids)
-          
-          games_data.each do |game_data|
-            total_games += 1
-            
-            begin
-              # 既に存在するかチェック
-              existing_game = Game.find_by(bgg_id: game_data[:bgg_id])
-              
-              if existing_game
-                puts "    ⏭️  ゲーム #{game_data[:name]} (ID: #{game_data[:bgg_id]}) は既に登録済み"
-                skipped_games += 1
-                next
-              end
-
-              # ゲームを新規作成
-              game = Game.new(
-                bgg_id: game_data[:bgg_id],
-                name: game_data[:name],
-                japanese_name: game_data[:japanese_name],
-                description: game_data[:description],
-                image_url: game_data[:image_url],
-                min_players: game_data[:min_players],
-                max_players: game_data[:max_players],
-                play_time: game_data[:play_time],
-                min_play_time: game_data[:min_play_time],
-                weight: game_data[:weight],
-                publisher: game_data[:publisher],
-                japanese_publisher: game_data[:japanese_publisher],
-                designer: game_data[:designer],
-                release_date: game_data[:release_date],
-                japanese_release_date: game_data[:japanese_release_date],
-                registered_on_site: true,
-                # BGGスコア関連
-                bgg_score: game_data[:average_score] || 7.5,
-                average_score: game_data[:average_score] || 7.5
-              )
-
-              if game.save
-                puts "    ✅ ゲーム作成成功: #{game.name} (ID: #{game.bgg_id})"
-                successful_games += 1
-                
-                # BGG情報から重み付けデータを登録（システムレビューは廃止）
-                register_bgg_weighted_data(game, game_data)
-                
-              else
-                puts "    ❌ ゲーム作成失敗: #{game_data[:name]} - #{game.errors.full_messages.join(', ')}"
-                failed_games += 1
-              end
-
-            rescue => e
-              puts "    ❌ ゲーム処理エラー (ID: #{game_data[:bgg_id]}): #{e.message}"
-              failed_games += 1
-            end
-          end
-
-        rescue => e
-          puts "    ❌ バッチ処理エラー: #{e.message}"
-          failed_games += batch_ids.count
-          total_games += batch_ids.count
-        end
-
-        # バッチ間のディレイ（BGG API制限対策）
-        puts "    ⏱️  APIレート制限対策で5秒待機..."
-        sleep 5
-      end
-
-    rescue => e
-      puts "❌ BGG Top3000登録でエラーが発生: #{e.message}"
-      Rails.logger.error "BGG Top3000登録エラー: #{e.message}\n#{e.backtrace.join("\n")}"
+      # APIレート制限対策
+      sleep 2
     end
+    
+    Rails.logger.info "合計#{all_games.size}件のゲームIDを収集しました"
+    
+    # 既存のゲームIDを取得
+    existing_ids = Game.where.not(bgg_id: nil).pluck(:bgg_id).map(&:to_s)
+    new_games = all_games.reject { |g| existing_ids.include?(g[:bgg_id].to_s) }
+    
+    Rails.logger.info "新規登録が必要なゲーム: #{new_games.size}件"
+    
+    # 新規ゲームを10件ずつ登録
+    new_games.each_slice(10) do |batch|
+      batch_ids = batch.map { |g| g[:bgg_id] }
+      Rails.logger.info "ゲーム詳細を取得中: #{batch_ids.join(', ')}"
+      
+      game_details = BggService.get_game_details(batch_ids)
+      
+      # ゲームを登録
+      game_details.each do |game_data|
+        begin
+          game = Game.find_or_initialize_by(bgg_id: game_data[:bgg_id])
+          game.assign_attributes(
+            name: game_data[:name],
+            description: game_data[:description],
+            year_published: game_data[:year_published],
+            min_players: game_data[:min_players],
+            max_players: game_data[:max_players],
+            play_time: game_data[:play_time],
+            min_age: game_data[:min_age],
+            image_url: game_data[:image_url],
+            average_score: game_data[:average_score],
+            weight: game_data[:weight],
+            bgg_rank: game_data[:bgg_rank]
+          )
+          
+          if game.save
+            Rails.logger.info "ゲームを登録しました: #{game.name} (BGG ID: #{game.bgg_id}, ランク: #{game.bgg_rank})"
+            
+            # デザイナー、アーティスト、パブリッシャーを登録
+            game_data[:designers]&.each do |name|
+              designer = Designer.find_or_create_by!(name: name)
+              game.designers << designer unless game.designers.include?(designer)
+            end
+            
+            game_data[:artists]&.each do |name|
+              artist = Artist.find_or_create_by!(name: name)
+              game.artists << artist unless game.artists.include?(artist)
+            end
+            
+            game_data[:publishers]&.each do |name|
+              publisher = Publisher.find_or_create_by!(name: name)
+              game.publishers << publisher unless game.publishers.include?(publisher)
+            end
+          else
+            Rails.logger.error "ゲームの登録に失敗: #{game.errors.full_messages.join(', ')}"
+          end
+        rescue => e
+          Rails.logger.error "ゲーム登録中にエラーが発生: #{e.message}"
+          Rails.logger.error e.backtrace.join("\n")
+        end
+      end
+      
+      # APIレート制限対策
+      sleep 2
+    end
+    
+    Rails.logger.info "BGGの上位3000ゲームの登録が完了しました"
+  end
 
-    # 処理結果サマリー
-    end_time = Time.current
-    elapsed_time = (end_time - start_time).round(2)
+  desc "BGGのランク1001-3000位のゲームを取得して登録する"
+  task import_rank_1001_to_3000: :environment do
+    puts "Starting to import BGG games ranked 1001-3000..."
+    
+    # 既に登録済みのゲーム数を確認
+    registered_count = Game.registered.count
+    puts "Currently registered games: #{registered_count}"
+    
+    # 最後に登録されたゲームのランクを取得
+    last_registered_game = Game.registered.order(bgg_rank: :desc).first
+    if last_registered_game&.bgg_rank
+      puts "Last registered game: #{last_registered_game.name} (Rank: #{last_registered_game.bgg_rank})"
+    end
+    
+    # 1001-3000位のゲームを取得
+    games = Bgg::RankFetcherService.fetch_games_by_rank_range(1001, 3000)
+    puts "Found #{games.size} games in rank range 1001-3000"
+    
+    # 各ゲームを処理
+    games.each do |game_data|
+      begin
+        # 既存のゲームをチェック
+        existing_game = Game.find_by(bgg_id: game_data[:bgg_id])
+        
+        if existing_game
+          puts "Updating existing game: #{game_data[:name]} (Rank: #{game_data[:rank]})"
+          
+          # ランク情報を更新
+          existing_game.update(bgg_rank: game_data[:rank])
+          
+          # 必要に応じて他の情報も更新
+          if existing_game.needs_update?
+            existing_game.update_from_bgg(true)
+          end
+        else
+          puts "Creating new game: #{game_data[:name]} (Rank: #{game_data[:rank]})"
+          
+          # 新しいゲームを作成
+          game = Game.new(
+            bgg_id: game_data[:bgg_id],
+            name: game_data[:name],
+            description: game_data[:description],
+            image_url: game_data[:image_url],
+            min_players: game_data[:min_players],
+            max_players: game_data[:max_players],
+            play_time: game_data[:play_time],
+            min_play_time: game_data[:min_play_time],
+            max_play_time: game_data[:max_play_time],
+            weight: game_data[:weight],
+            bgg_score: game_data[:average_score],
+            publisher: game_data[:publisher],
+            designer: game_data[:designer],
+            year_published: game_data[:year_published],
+            bgg_rank: game_data[:rank],
+            registered_on_site: true
+          )
+          
+          if game.save
+            puts "Successfully created game: #{game.name}"
+            
+            # カテゴリとメカニクスを保存
+            game.store_metadata(:categories, game_data[:categories]) if game_data[:categories].present?
+            game.store_metadata(:mechanics, game_data[:mechanics]) if game_data[:mechanics].present?
+            
+            # 日本語情報を取得
+            game.update_from_bgg(true)
+          else
+            puts "Failed to create game: #{game.errors.full_messages.join(", ")}"
+          end
+        end
+        
+      rescue => e
+        puts "Error processing game #{game_data[:name]}: #{e.message}"
+      end
+    end
+    
+    # 最終結果を表示
+    final_count = Game.registered.count
+    new_games = final_count - registered_count
+    puts "\nImport completed!"
+    puts "Total registered games: #{final_count} (+#{new_games} new)"
+    puts "Latest registered game: #{Game.registered.order(bgg_rank: :desc).first&.name}"
+    puts "Last update: #{Time.current}"
+  end
 
-    puts "\n🏁 BGG Top3000ゲーム登録完了！"
-    puts "📊 処理結果:"
-    puts "   📝 総処理数: #{total_games}件"
-    puts "   ✅ 成功: #{successful_games}件"
-    puts "   ⏭️  スキップ: #{skipped_games}件"
-    puts "   ❌ 失敗: #{failed_games}件"
-    puts "   ⏱️  処理時間: #{elapsed_time}秒"
-    puts "🎮 登録されたゲームはBGG重み付けデータ×10で評価計算されます"
+  desc "既存のゲームデータをBGGから更新する"
+  task update_existing_games: :environment do
+    Rails.logger.info "既存のゲームデータの更新を開始..."
+    
+    # 登録済みのゲームを取得
+    games = Game.where(registered_on_site: true)
+    total_games = games.count
+    
+    Rails.logger.info "更新対象のゲーム数: #{total_games}件"
+    
+    # 10件ずつ処理
+    games.find_each(batch_size: 10) do |game|
+      begin
+        Rails.logger.info "ゲーム更新中: #{game.name} (BGG ID: #{game.bgg_id})"
+        
+        # BGGから最新のゲーム情報を取得
+        game_data = BggService.get_game_details(game.bgg_id)
+        
+        if game_data
+          # ゲーム情報を更新
+          game.update!(
+            name: game_data[:name],
+            description: game_data[:description],
+            year_published: game_data[:year_published],
+            min_players: game_data[:min_players],
+            max_players: game_data[:max_players],
+            play_time: game_data[:play_time],
+            min_age: game_data[:min_age],
+            image_url: game_data[:image_url],
+            average_score: game_data[:average_score],
+            weight: game_data[:weight],
+            bgg_rank: game_data[:bgg_rank]
+          )
+          
+          # デザイナー、アーティスト、パブリッシャーを更新
+          game.designers.clear
+          game_data[:designers]&.each do |name|
+            designer = Designer.find_or_create_by!(name: name)
+            game.designers << designer
+          end
+          
+          game.artists.clear
+          game_data[:artists]&.each do |name|
+            artist = Artist.find_or_create_by!(name: name)
+            game.artists << artist
+          end
+          
+          game.publishers.clear
+          game_data[:publishers]&.each do |name|
+            publisher = Publisher.find_or_create_by!(name: name)
+            game.publishers << publisher
+          end
+          
+          Rails.logger.info "ゲーム情報を更新しました: #{game.name}"
+        else
+          Rails.logger.error "BGGからゲーム情報を取得できませんでした: #{game.bgg_id}"
+        end
+        
+      rescue => e
+        Rails.logger.error "ゲーム更新中にエラーが発生: #{e.message}"
+        Rails.logger.error e.backtrace.join("\n")
+      end
+      
+      # APIレート制限対策
+      sleep 2
+    end
+    
+    Rails.logger.info "既存のゲームデータの更新が完了しました"
   end
 
   private

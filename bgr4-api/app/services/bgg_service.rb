@@ -1,6 +1,11 @@
 require 'net/http'
 require 'nokogiri'
 require 'httparty'
+require 'csv'
+require 'puppeteer-ruby'
+require 'selenium-webdriver'
+require 'set'
+require 'thread'
 
 class BggService
   include HTTParty
@@ -32,121 +37,218 @@ class BggService
   end
 
   def self.get_game_details(bgg_id)
-    # カスカディアの場合は特別な処理
-    if bgg_id == '314343'
-      return {
-        bgg_id: '314343',
-        name: 'Cascadia',
-        description: 'Cascadia is a puzzly tile-laying and token-drafting game featuring the habitats and wildlife of the Pacific Northwest.',
-        image_url: 'https://cf.geekdo-images.com/MjeJZfulbsM1DSV3DrGJYA__original/img/B374C04Exn1PUW5AvCJGxo9t7TA=/0x0/filters:format(jpeg)/pic5100691.jpg',
-        min_players: 1,
-        max_players: 4,
-        play_time: 45,
-        min_play_time: 30,
-        average_score: 8.0,
-        weight: 2.0,
-        publisher: 'Alderac Entertainment Group',
-        designer: 'Randy Flynn',
-        release_date: '2021-01-01',
-        japanese_name: 'カスカディア',
-        japanese_publisher: '株式会社ケンビル',
-        japanese_release_date: '2022-01-01',
-        expansions: [
-          { id: '328151', name: 'Cascadia: Landmarks', type: 'expansion' },
-          { id: '359970', name: 'Cascadia: The Dice Tower Promo', type: 'expansion' }
-        ],
-        categories: ['Animals', 'Environmental', 'Puzzle', 'Territory Building'],
-        mechanics: ['Drafting', 'Hexagon Grid', 'Pattern Building', 'Tile Placement']
-      }
-    end
-    
     max_retries = 3
-    retry_count = 0
-    base_wait_time = 2
-    
-    begin
+    attempt      = 0
+    base_wait    = 2
+
+    loop do
       url = "#{BASE_URL}/thing?id=#{bgg_id}&stats=1"
-      Rails.logger.info "Requesting URL: #{url}"
-      
-      # HTTPartyの設定
+      Rails.logger.info "Requesting URL: #{url} (Attempt #{attempt + 1}/#{max_retries})"
+
       options = {
         headers: {
-          'Accept' => 'application/xml',
-          'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+          'Accept'      => 'application/xml',
+          'User-Agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         },
         timeout: 60,
-        verify: true
+        verify:  true
       }
-      
-      Rails.logger.info "Fetching game details for BGG ID: #{bgg_id} (Attempt #{retry_count + 1}/#{max_retries})"
-      Rails.logger.debug "Request options: #{options}"
-      
-      # 最初のリクエストの前に少し待機
-      sleep(base_wait_time)
-      
-      response = HTTParty.get(url, options)
-      Rails.logger.info "Response status: #{response.code} for BGG ID: #{bgg_id}"
-      Rails.logger.debug "Response headers: #{response.headers}"
-      
-      case response.code
-      when 200
-        doc = Nokogiri::XML(response.body)
-        Rails.logger.debug "Response body: #{response.body}"
+
+      begin
+        response = get(url, options)
         
-        item = doc.at_xpath('//item')
-        if item
-          game_data = parse_game_item(item)
+        if response.code == 200
+          Rails.logger.info "Response status: #{response.code} for BGG ID: #{bgg_id}"
+          doc = Nokogiri::XML(response.body)
+          
+          # ゲーム情報の解析
+          item = doc.at_xpath('//item')
+          return nil unless item
+
+          # 名前の取得（プライマリ名を優先）
+          names = item.xpath('.//name')
+          primary_name = names.find { |n| n['type'] == 'primary' }
+          name = primary_name ? primary_name['value'] : names.first&.[]('value')
+          
+          Rails.logger.info "Found name: #{name} (type: #{primary_name&.[]('type')})"
+          Rails.logger.info "Found primary name: #{primary_name&.[]('value')}"
+
+          # プレイ人数の推奨度を解析
+          Rails.logger.info "プレイ人数投票解析開始 for BGG ID: #{bgg_id}..."
+          poll = item.at_xpath('.//poll[@name="suggested_numplayers"]')
+          best_players = []
+          recommended_players = []
+
+          if poll
+            results = poll.xpath('.//results')
+            Rails.logger.info "投票結果数: #{results.size}"
+
+            results.each do |result|
+              num_players = result['numplayers']
+              Rails.logger.info "処理中: #{num_players}人"
+              
+              best_votes = result.at_xpath('.//result[@value="Best"]')&.[]('numvotes')&.to_i || 0
+              recommended_votes = result.at_xpath('.//result[@value="Recommended"]')&.[]('numvotes')&.to_i || 0
+              not_recommended_votes = result.at_xpath('.//result[@value="Not Recommended"]')&.[]('numvotes')&.to_i || 0
+
+              total_votes = best_votes + recommended_votes + not_recommended_votes
+              next if total_votes == 0
+
+              if best_votes > recommended_votes && best_votes > not_recommended_votes
+                best_players << num_players
+              elsif recommended_votes > not_recommended_votes
+                recommended_players << num_players
+              end
+            end
+          end
+
+          # ゲームデータの構築
+          game_data = {
+            bgg_id: bgg_id.to_s,
+            name: name,
+            japanese_name: nil,
+            description: item.at_xpath('.//description')&.text,
+            image_url: item.at_xpath('.//image')&.text,
+            min_players: begin
+              val = item.at_xpath('.//minplayers')&.[]('value')&.to_i
+              val.zero? ? nil : val
+            end,
+            max_players: begin
+              val = item.at_xpath('.//maxplayers')&.[]('value')&.to_i
+              val.zero? ? nil : val
+            end,
+            play_time: begin
+              val = item.at_xpath('.//playingtime')&.[]('value')&.to_i
+              val.zero? ? nil : val
+            end,
+            min_play_time: begin
+              val = item.at_xpath('.//minplaytime')&.[]('value')&.to_i
+              val.zero? ? nil : val
+            end,
+            max_play_time: begin
+              val = item.at_xpath('.//maxplaytime')&.[]('value')&.to_i
+              val.zero? ? nil : val
+            end,
+            average_score: item.at_xpath('.//statistics/ratings/average')&.[]('value')&.to_f,
+            weight: item.at_xpath('.//statistics/ratings/averageweight')&.[]('value')&.to_f,
+            bgg_rank: item.at_xpath('.//statistics/ratings/ranks/rank[@type="subtype"][@name="boardgame"]')&.[]('value'),
+            publisher: item.xpath('.//link[@type="boardgamepublisher"]').first&.[]('value'),
+            japanese_publisher: nil,
+            designers: item.xpath('.//link[@type="boardgamedesigner"]').map { |d| d['value'] },
+            artists: item.xpath('.//link[@type="boardgameartist"]').map { |a| a['value'] },
+            year_published: item.at_xpath('.//yearpublished')&.[]('value')&.to_i,
+            min_age: item.at_xpath('.//minage')&.[]('value')&.to_i,
+            categories: item.xpath('.//link[@type="boardgamecategory"]').map { |c| c['value'] },
+            mechanics: item.xpath('.//link[@type="boardgamemechanic"]').map { |m| m['value'] },
+            best_num_players: best_players,
+            recommended_num_players: recommended_players
+          }
+
           Rails.logger.info "Successfully parsed game data for BGG ID: #{bgg_id}"
-          Rails.logger.debug "Parsed game data: #{game_data}"
-          return game_data
+          Rails.logger.debug "Parsed game data: #{game_data.inspect}"
+          
+          game_data
+        elsif response.code.to_i == 429
+          attempt += 1
+          if attempt < max_retries
+            wait = base_wait ** attempt
+            Rails.logger.warn "BGG API rate-limited (429) for ID #{bgg_id}. Waiting #{wait}s before retry..."
+            sleep wait
+            next
+          else
+            Rails.logger.error "BGG API rate-limit persisted for ID #{bgg_id} after #{max_retries} attempts"
+            return nil
+          end
         else
-          Rails.logger.error "No item found in BGG response for ID: #{bgg_id}"
-          Rails.logger.debug "XML document: #{doc.to_xml}"
-          return nil
+          Rails.logger.error "Failed to fetch game details. Status: #{response.code}"
+          nil
         end
-        
-      when 202
-        # BGGがデータを準備中の場合
-        wait_time = base_wait_time * (2 ** retry_count)
-        Rails.logger.info "BGG is processing the request for ID: #{bgg_id}. Waiting #{wait_time} seconds..."
-        sleep(wait_time)
-        raise "BGG data not ready"
-        
-      when 429
-        # レート制限に達した場合
-        wait_time = (response.headers['Retry-After']&.to_i || 30)
-        Rails.logger.warn "Rate limit reached. Waiting #{wait_time} seconds..."
-        Rails.logger.debug "Rate limit headers: #{response.headers['Retry-After']}"
-        sleep(wait_time)
-        raise "Rate limit reached"
-        
-      when 500..599
-        # サーバーエラーの場合
-        wait_time = base_wait_time * (2 ** retry_count)
-        Rails.logger.error "BGG server error #{response.code} for ID: #{bgg_id}. Waiting #{wait_time} seconds..."
-        Rails.logger.debug "Error response body: #{response.body}"
-        sleep(wait_time)
-        raise "BGG server error"
-        
-      else
-        Rails.logger.error "BGG API error: #{response.code} #{response.message} for ID: #{bgg_id}"
-        Rails.logger.debug "Error response body: #{response.body}"
-        return nil
+      rescue => e
+        attempt += 1
+        if attempt < max_retries
+          wait = base_wait ** attempt
+          Rails.logger.warn "Error fetching game details (attempt #{attempt}/#{max_retries}): #{e.message}. Retrying in #{wait}s..."
+          sleep wait
+          next
+        else
+          Rails.logger.error "Failed to fetch game details after #{max_retries} attempts: #{e.message}"
+          raise
+        end
       end
-      
-    rescue => e
-      retry_count += 1
-      if retry_count < max_retries
-        wait_time = base_wait_time * (2 ** retry_count)
-        Rails.logger.warn "Retry #{retry_count}/#{max_retries} for BGG ID #{bgg_id}. Waiting #{wait_time} seconds... Error: #{e.message}"
-        Rails.logger.debug "Error details: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
-        sleep(wait_time)
-        retry
-      end
-      Rails.logger.error "Error fetching game details for BGG ID #{bgg_id} after #{max_retries} retries: #{e.message}"
-      Rails.logger.debug "Final error details: #{e.class} - #{e.message}\n#{e.backtrace.join("\n")}"
-      return nil
-    end
+    end # loop
+  end
+
+  def self.parse_game_item(item)
+    # IDの取得
+    bgg_id = item['id']
+    
+    # 名前の取得（プライマリ名）
+    name = item.at_xpath('.//name[@type="primary"]/@value')&.value.to_s
+    
+    # 説明の取得
+    description = item.at_xpath('.//description')&.text.to_s
+    
+    # 画像URLの取得
+    image_url = item.at_xpath('.//image')&.text
+    
+    # プレイ人数の取得
+    min_players = item.at_xpath('.//minplayers/@value')&.value.to_i
+    max_players = item.at_xpath('.//maxplayers/@value')&.value.to_i
+    
+    # プレイ時間の取得
+    play_time = item.at_xpath('.//playingtime/@value')&.value.to_i
+    
+    # 年齢制限の取得
+    min_age = item.at_xpath('.//minage/@value')&.value.to_i
+    
+    # 出版年の取得
+    year_published = item.at_xpath('.//yearpublished/@value')&.value.to_i
+    
+    # 重さ（複雑さ）の取得
+    weight = item.at_xpath('.//statistics/ratings/averageweight/@value')&.value.to_f
+    
+    # 平均スコアの取得
+    average_score = item.at_xpath('.//statistics/ratings/average/@value')&.value.to_f
+    
+    # ランクの取得
+    rank_item = item.at_xpath('.//statistics/ratings/ranks/rank[@name="boardgame"]')
+    rank = rank_item&.attr('value')&.to_i
+    rank = rank == 0 ? nil : rank
+    
+    # カテゴリーの取得
+    categories = item.xpath('.//link[@type="boardgamecategory"]/@value').map(&:value)
+    
+    # メカニクスの取得
+    mechanics = item.xpath('.//link[@type="boardgamemechanic"]/@value').map(&:value)
+    
+    # デザイナーの取得
+    designers = item.xpath('.//link[@type="boardgamedesigner"]').map { |d| d['value'] }
+    
+    # アーティストの取得
+    artists = item.xpath('.//link[@type="boardgameartist"]').map { |a| a['value'] }
+    
+    # パブリッシャーの取得（最初の1つのみ）
+    publisher = item.at_xpath('.//link[@type="boardgamepublisher"]/@value')&.value
+    
+    {
+      bgg_id: bgg_id,
+      name: name,
+      description: description,
+      image_url: image_url,
+      min_players: min_players,
+      max_players: max_players,
+      play_time: play_time,
+      min_age: min_age,
+      year_published: year_published,
+      weight: weight,
+      average_score: average_score,
+      rank: rank,
+      categories: categories,
+      mechanics: mechanics,
+      designers: designers,
+      artists: artists,
+      publisher: publisher
+    }
   end
   
   # 日本語バージョン情報を取得するメソッド
@@ -818,13 +920,91 @@ class BggService
   end
 
   def self.get_hot_games
-    uri = URI("#{BASE_URL}/hot?type=boardgame")
-    response = Net::HTTP.get(uri)
-    response.to_s
-  rescue StandardError => e
-    Rails.logger.error "Error in BggService#get_hot_games: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    ""
+    Rails.logger.info "BGGのホットゲームリストを取得中..."
+    
+    begin
+      url = "https://boardgamegeek.com/xmlapi2/hot?type=boardgame"
+      Rails.logger.info "APIリクエスト: #{url}"
+      
+      response = HTTParty.get(url)
+      return [] unless response.success?
+      
+      doc = Nokogiri::XML(response.body)
+      games = doc.css('item').map do |item|
+        {
+          bgg_id: item['id'],
+          name: item.at_css('name')['value'],
+          rank: item['rank']
+        }
+      end
+      
+      Rails.logger.info "#{games.size}件のホットゲームを取得しました"
+      games
+    rescue => e
+      Rails.logger.error "ホットゲーム取得中にエラーが発生: #{e.message}"
+      []
+    end
+  end
+
+  def self.get_recommended_games(game_id)
+    Rails.logger.info "ゲーム#{game_id}の関連ゲームを取得中..."
+    
+    begin
+      url = "https://boardgamegeek.com/xmlapi2/thing?id=#{game_id}&stats=1"
+      Rails.logger.info "APIリクエスト: #{url}"
+      
+      response = HTTParty.get(url)
+      sleep(2) # APIレート制限対策
+      
+      return [] unless response.success?
+      
+      doc = Nokogiri::XML(response.body)
+      links = doc.css('link[type="boardgame"]')
+      games = links.map do |link|
+        {
+          bgg_id: link['id'],
+          name: link['value']
+        }
+      end
+      
+      Rails.logger.info "#{games.size}件の関連ゲームを取得しました"
+      games
+    rescue => e
+      Rails.logger.error "関連ゲーム取得中にエラーが発生: #{e.message}"
+      []
+    end
+  end
+  
+  def self.collect_game_ids
+    Rails.logger.info "ゲームIDの収集を開始..."
+    
+    collected_ids = Set.new
+    queue = Queue.new
+    
+    # まずホットゲームを取得
+    hot_games = get_hot_games
+    hot_games.each do |game|
+      collected_ids.add(game[:bgg_id])
+      queue << game[:bgg_id]
+    end
+    
+    Rails.logger.info "ホットゲーム#{hot_games.size}件を収集しました"
+    
+    # 関連ゲームを収集（最大3000件まで）
+    while collected_ids.size < 3000 && !queue.empty?
+      game_id = queue.pop
+      recommended = get_recommended_games(game_id)
+      
+      recommended.each do |game|
+        next if collected_ids.include?(game[:bgg_id])
+        collected_ids.add(game[:bgg_id])
+        queue << game[:bgg_id] if collected_ids.size < 3000
+      end
+      
+      Rails.logger.info "現在#{collected_ids.size}件のゲームIDを収集済み"
+    end
+    
+    collected_ids.to_a
   end
 
   # BGGランキングページから上位ゲームのIDを取得するメソッド
@@ -832,40 +1012,154 @@ class BggService
     Rails.logger.info "BGGブラウズページ#{page}から上位ゲームを取得中..."
     
     begin
-      url = "https://boardgamegeek.com/browse/boardgame/page/#{page}"
-      response = HTTParty.get(url, headers: {
-        'User-Agent' => 'BGReviews Bot (contact: system@boardgamereview.com)',
-        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language' => 'en-US,en;q=0.5',
-        'Accept-Encoding' => 'gzip, deflate',
-        'Connection' => 'keep-alive'
-      })
+      # --- ⭐ URL選択ロジック --------------------------------------------------
+      # 10ページ（=1〜1000位）までは従来の page/ パスでも問題ないが、
+      # 11ページ以降は静的 HTML が返らず、JS で後から埋め込まれるため
+      # スクレイピング時には body がスケルトン状態（約 11 KB）になってしまう。
+      # そのため、必ず rank パラメータを用いた URL 形式に統一し、
+      # 100 件ずつのランキングブロックを取得するようにする。
+
+      #   https://boardgamegeek.com/browse/boardgame?rank=1001 → 1001-1100 位
+      #   https://boardgamegeek.com/browse/boardgame?rank=1101 → 1101-1200 位
+      # という規則なので、ページ番号から開始ランクを計算する。
+
+      start_rank = ((page - 1) * 100) + 1
+      url = "https://boardgamegeek.com/browse/boardgame?rank=#{start_rank}"
+
+      # より詳細なHTTPヘッダーでリクエスト
+      response = HTTParty.get(url, 
+        headers: {
+          'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language' => 'en-US,en;q=0.9',
+          'Accept-Encoding' => 'gzip, deflate, br',
+          'Cache-Control' => 'no-cache',
+          'Pragma' => 'no-cache',
+          'Sec-Fetch-Dest' => 'document',
+          'Sec-Fetch-Mode' => 'navigate',
+          'Sec-Fetch-Site' => 'none',
+          'Sec-Fetch-User' => '?1',
+          'Upgrade-Insecure-Requests' => '1'
+        },
+        timeout: 30,
+        follow_redirects: true
+      )
       
-      return [] unless response.success?
+      Rails.logger.info "HTTPレスポンス: #{response.code} - Content-Length: #{response.body&.length || 0} (URL: #{url})"
+      
+      if !response.success?
+        Rails.logger.error "HTTP request failed: #{response.code} - #{response.message}"
+        return []
+      end
+      
+      # レスポンスが空の場合
+      if response.body.nil? || response.body.empty?
+        Rails.logger.error "Empty response body for page #{page}"
+        return []
+      end
       
       doc = Nokogiri::HTML(response.body)
-      game_ids = []
+      games = []
       
-      # ゲームリンクからIDを抽出
-      doc.css('a[href*="/boardgame/"]').each do |link|
-        href = link['href']
-        if match = href.match(/\/boardgame\/(\d+)\//)
-          game_id = match[1]
-          game_ids << game_id unless game_ids.include?(game_id)
+      # 複数のCSSセレクタパターンを試す
+      selectors = [
+        'table.collection_table tr:not(:first-child)',
+        'table.collection_objecttable tr:not(:first-child)',
+        'tr[id^="row_"]',
+        '.collection_table tbody tr'
+      ]
+      
+      table_found = false
+      
+      selectors.each do |selector|
+        rows = doc.css(selector)
+        Rails.logger.info "セレクタ '#{selector}': #{rows.length} 行が見つかりました"
+        
+        if rows.length > 0
+          table_found = true
+          
+          rows.each do |row|
+            begin
+              # ランクの取得（複数のパターンを試す）
+              rank_cell = row.at_css('td.collection_rank, td:first-child, .collection_rank')
+              rank_text = rank_cell&.text&.strip
+              rank = rank_text&.to_i
+              
+              next if rank.nil? || rank <= 0
+              
+              # ゲームリンクの取得（複数のパターンを試す）
+              game_link = row.at_css('td.collection_objectname a, td:nth-child(3) a, a.primary, .collection_objectname a')
+              
+              next unless game_link
+              
+              href = game_link['href']
+              game_name = game_link.text&.strip
+              
+              next if href.nil? || game_name.nil? || game_name.empty?
+              
+              # BGG IDの抽出
+              if href =~ /\/boardgame\/(\d+)\//
+                bgg_id = $1.to_i
+                
+                if bgg_id > 0
+                  game_info = {
+                    bgg_id: bgg_id,
+                    name: game_name,
+                    rank: rank
+                  }
+                  
+                  games << game_info
+                  Rails.logger.info "Found game: #{game_name} (BGG ID: #{bgg_id}, Rank: #{rank})"
+                end
+              end
+              
+            rescue => e
+              Rails.logger.error "Row parsing error: #{e.message}"
+              next
+            end
+          end
+          
+          break # 成功したセレクタで処理完了
         end
       end
       
-      Rails.logger.info "ページ#{page}から#{game_ids.count}件のゲームIDを取得"
+      if !table_found
+        Rails.logger.error "No table found with any selector for page #{page}"
+        # デバッグ用にページの一部を出力
+        page_sample = response.body[0..1000]
+        Rails.logger.debug "Page sample: #{page_sample}"
+      end
       
-      # APIリクエスト後の待機
-      sleep 3
+      Rails.logger.info "取得したゲーム数: #{games.length}"
+      games
       
-      game_ids.uniq
-      
+    rescue Net::TimeoutError => e
+      Rails.logger.error "BGG browse timeout for page #{page}: #{e.message}"
+      []
     rescue => e
-      Rails.logger.error "BGGブラウズページ#{page}の取得エラー: #{e.message}"
+      Rails.logger.error "BGG browse error for page #{page}: #{e.message}"
+      Rails.logger.error "Backtrace: #{e.backtrace.first(5).join('\n')}"
       []
     end
+  end
+
+  def self.get_game_info(game_id)
+    url = "#{BASE_URL}/thing?id=#{game_id}&stats=1"
+    response = HTTParty.get(url, headers: {
+      'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept' => 'application/xml'
+    })
+    
+    return nil unless response.success?
+    
+    doc = Nokogiri::XML(response.body)
+    item = doc.at_xpath('//item')
+    
+    return nil unless item
+    
+    {
+      year: item.at_xpath('.//yearpublished')&.[]('value')&.to_i || 0
+    }
   end
 
   # バッチでゲーム詳細を取得するメソッド（複数IDを一度に処理）
@@ -909,167 +1203,6 @@ class BggService
       Rails.logger.error "バッチ取得エラー: #{e.message}"
       []
     end
-  end
-
-  # 単一のゲームアイテムXMLを解析するメソッド
-  def self.parse_game_item(item)
-    # IDの取得
-    bgg_id = item['id']
-    
-    # 名前の取得（プライマリ名と日本語名）
-    names = item.xpath('.//name')
-    primary_name = nil
-    japanese_name = nil
-    
-    names.each do |name|
-      Rails.logger.info "Found name: #{name['value']} (type: #{name['type']})"
-      if name['type'] == 'primary'
-        primary_name = name['value']
-        Rails.logger.info "Found primary name: #{primary_name}"
-      elsif name['value'].match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
-        # 中国語かどうかをチェック
-        if LanguageDetectionService.chinese?(name['value'])
-          Rails.logger.info "Skipping Chinese name: #{name['value']}"
-          next
-        end
-        # ひらがな・カタカナを含む場合は日本語として優先
-        if name['value'].match?(/[\p{Hiragana}\p{Katakana}]/)
-          japanese_name = name['value']
-          Rails.logger.info "Found Japanese name with kana: #{japanese_name}"
-          break # ひらがな・カタカナがある場合は最優先で確定
-        elsif japanese_name.nil? && name['value'].match?(/\p{Han}/)
-          # 漢字のみで、まだ日本語名が見つかっていない場合のみ候補として保存
-          japanese_name = name['value']
-          Rails.logger.info "Found potential Japanese name (kanji only): #{japanese_name}"
-        end
-      end
-    end
-    
-    # 説明の取得
-    description = item.at_xpath('.//description')&.text&.strip
-    
-    # 画像URLの取得
-    image_url = item.at_xpath('.//image')&.text
-    
-    # プレイヤー数の取得
-    min_players = item.at_xpath('.//minplayers')&.[]('value')&.to_i
-    max_players = item.at_xpath('.//maxplayers')&.[]('value')&.to_i
-    
-    # プレイ時間の取得
-    min_play_time = item.at_xpath('.//minplaytime')&.[]('value')&.to_i
-    max_play_time = item.at_xpath('.//maxplaytime')&.[]('value')&.to_i
-    play_time = max_play_time > 0 ? max_play_time : min_play_time
-    
-    # 評価の取得
-    stats = item.at_xpath('.//statistics/ratings')
-    average_score = stats&.at_xpath('.//average')&.[]('value')&.to_f
-    weight = stats&.at_xpath('.//averageweight')&.[]('value')&.to_f
-    
-    # パブリッシャーの取得
-    publishers = item.xpath('.//link[@type="boardgamepublisher"]').map { |pub| pub['value'] }
-    publisher = publishers.first
-    japanese_publisher = publishers.find { |pub| pub.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/) }
-    
-    # デザイナーの取得
-    designer = item.at_xpath('.//link[@type="boardgamedesigner"]')&.[]('value')
-    
-    # リリース日の取得（BGGにはない場合が多いので、とりあえず空にしておく）
-    release_date = nil
-    japanese_release_date = nil
-    
-    # 拡張の取得
-    expansions = item.xpath('.//link[@type="boardgameexpansion"]').map do |exp|
-      {
-        id: exp['id'],
-        name: exp['value'],
-        type: 'expansion'
-      }
-    end
-    
-    # カテゴリとメカニクスの取得
-    categories = item.xpath('.//link[@type="boardgamecategory"]').map { |cat| cat['value'] }
-    mechanics = item.xpath('.//link[@type="boardgamemechanic"]').map { |mech| mech['value'] }
-    
-    # プレイ人数投票の解析
-    Rails.logger.info "プレイ人数投票解析開始 for BGG ID: #{bgg_id}..."
-    best_num_players = []
-    recommended_num_players = []
-    
-    poll_results = item.xpath('.//poll[@name="suggested_numplayers"]/results')
-    Rails.logger.info "投票結果数: #{poll_results.size}"
-    
-    poll_results.each do |result|
-      num_players = result['numplayers']
-      next if num_players.include?('+') # "4+"のような場合はスキップ
-      
-      Rails.logger.info "処理中: #{num_players}人"
-      
-      best_votes = 0
-      recommended_votes = 0
-      not_recommended_votes = 0
-      
-      result.xpath('.//result').each do |vote|
-        vote_value = vote['value']
-        vote_count = vote['numvotes'].to_i
-        
-        case vote_value
-        when 'Best'
-          best_votes = vote_count
-        when 'Recommended'
-          recommended_votes = vote_count
-        when 'Not Recommended'
-          not_recommended_votes = vote_count
-        end
-      end
-      
-      total_votes = best_votes + recommended_votes + not_recommended_votes
-      
-      if total_votes > 0
-        # Bestの割合が30%以上の場合
-        best_percentage = (best_votes.to_f / total_votes * 100)
-        if best_percentage >= 30.0
-          best_num_players << num_players
-          Rails.logger.info "  → Best判定: #{num_players}人 (#{best_percentage.round(1)}%)"
-        end
-        
-        # Best + Recommendedの合計がNot Recommendedより多い場合は推奨とする
-        if (best_votes + recommended_votes) > not_recommended_votes
-          recommended_num_players << num_players
-          Rails.logger.info "  → Recommended判定: #{num_players}人"
-        end
-      end
-    end
-    
-    Rails.logger.info "最終Best Players: #{best_num_players}"
-    Rails.logger.info "最終Recommended Players: #{recommended_num_players}"
-    
-    # ゲームデータの構築
-    game_data = {
-      bgg_id: bgg_id,
-      name: primary_name,
-      description: description,
-      image_url: image_url,
-      min_players: min_players,
-      max_players: max_players,
-      play_time: play_time,
-      min_play_time: min_play_time,
-      average_score: average_score,
-      weight: weight,
-      publisher: publisher,
-      designer: designer,
-      release_date: release_date,
-      japanese_name: japanese_name,
-      japanese_publisher: japanese_publisher,
-      japanese_release_date: japanese_release_date,
-      expansions: expansions,
-      categories: categories,
-      mechanics: mechanics,
-      best_num_players: best_num_players,
-      recommended_num_players: recommended_num_players
-    }
-    
-    Rails.logger.debug "Parsed game data: #{game_data.inspect}"
-    game_data
   end
 
   def self.extract_japanese_publisher(item)

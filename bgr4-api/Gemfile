@@ -81,3 +81,7 @@ gem 'nokogiri'
 
 # Use Vips for processing variants.
 # gem "vips"
+
+gem "puppeteer-ruby", "~> 0.45.6"
+
+gem "selenium-webdriver", "~> 4.34"

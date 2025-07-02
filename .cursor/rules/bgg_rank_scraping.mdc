@@ -1,0 +1,44 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+description: BGG_RANK_SCRAPING
+---
+このルールを参照したら必ず「BGG_RANK_SCRAPING!」と叫んでください。
+
+# BGG ランキングページ（1001 位以降）の取得方法
+
+BGG の `/browse/boardgame/page/11` 以降は JavaScript でテーブルを後読み込みするため、
+静的 HTML をリクエストすると中身が空（約 11 KB のスケルトン）になります。
+そのためスクレイピングや Nokogiri 解析を行う場合は、**page 式 URL ではなく
+`?rank=` パラメータ式 URL** を必ず使用してください。
+
+```
+https://boardgamegeek.com/browse/boardgame?rank=<開始順位>
+```
+
+開始順位は 1 からの連番で、1 リクエストで 100 件（<開始順位> 〜 <開始順位>+99）の
+ゲームが返ります。
+
+例：
+* `?rank=1001` → 1001–1100 位
+* `?rank=1101` → 1101–1200 位
+* …
+
+## 実装ポイント
+1. **start_rank = ((page - 1) * 100) + 1** でページ番号から開始順位を計算。
+2. 生成した URL を `HTTParty.get` や `Net::HTTP` などで取得。
+3. Content-Length が 150 kB 前後返ってくれば成功、11 kB なら失敗（スケルトン）。
+4. CSS セレクタ例：`table.collection_table tr:not(:first-child)`
+
+## サンプル（Ruby）
+```ruby
+start_rank = ((page - 1) * 100) + 1
+url = "https://boardgamegeek.com/browse/boardgame?rank=#{start_rank}"
+response = HTTParty.get(url, headers: {
+  'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...'
+})
+```
+
+これを用いればログイン無しで 3000 位まで静的 HTML を取得できます。
