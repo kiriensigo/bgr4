@@ -55,9 +55,6 @@ export async function getGames(
   const url = `${API_BASE_URL}/games?page=${page}&per_page=${per_page}&sort_by=${sort_by}`;
 
   try {
-    console.log(
-      `Fetching games: page=${page}, per_page=${per_page}, sort_by=${sort_by}`
-    );
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
@@ -71,7 +68,6 @@ export async function getGames(
     }
 
     const data = await response.json();
-    console.log("Games API response:", data);
 
     return {
       games: data.games || [],
