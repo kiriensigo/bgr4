@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
-  getGame,
   getGameBasicInfo,
   getGameStatistics,
   getGameReviews,
@@ -10,11 +9,8 @@ import {
   updateJapaneseName,
   addToWishlist,
   removeFromWishlist,
-  getWishlist,
   updateGameFromBgg,
   type Game,
-  gameCache,
-  CACHE_EXPIRY,
   updateSystemReviews,
 } from "@/lib/api";
 import {
@@ -24,7 +20,6 @@ import {
   Box,
   Paper,
   Button,
-  Rating,
   Divider,
   CircularProgress,
   Chip,
@@ -32,37 +27,27 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Snackbar,
   Alert,
-  Tooltip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   FormControlLabel,
   Checkbox,
   LinearProgress,
-  Link as MuiLink,
   Skeleton,
 } from "@mui/material";
 import Image from "next/image";
 import Link from "next/link";
 import GroupIcon from "@mui/icons-material/Group";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import StarIcon from "@mui/icons-material/Star";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import TranslateIcon from "@mui/icons-material/Translate";
-import BookmarkAddIcon from "@mui/icons-material/BookmarkAdd";
-import BookmarkRemoveIcon from "@mui/icons-material/BookmarkRemove";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import GameCard from "@/components/GameCard";
 import ReviewList from "@/components/ReviewList";
 import GameRating from "@/components/GameRating";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { formatDate } from "@/lib/utils";
-import { getAuthHeaders } from "@/lib/auth";
+import { useRouter, useSearchParams } from "next/navigation";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import ImageNotSupportedIcon from "@mui/icons-material/ImageNotSupported";
@@ -70,8 +55,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import UpdateIcon from "@mui/icons-material/Update";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 
 interface Review {
   id: number;
@@ -1393,7 +1376,8 @@ export default function GamePage({ params }: GamePageProps) {
                       >
                         {formatScore(game.average_overall_score)}
                       </Typography>
-                    )}<GameRating
+                    )}
+                    <GameRating
                       score={game.average_overall_score}
                       reviewsCount={game.reviews_count}
                       size="large"
@@ -1419,7 +1403,8 @@ export default function GamePage({ params }: GamePageProps) {
                       >
                         {formatScore(game.average_rule_complexity)}
                       </Typography>
-                    )}</Grid>
+                    )}
+                  </Grid>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="subtitle2" color="text.secondary">
                       運要素

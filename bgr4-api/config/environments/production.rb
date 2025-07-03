@@ -55,7 +55,19 @@ Rails.application.configure do
   # config.action_mailer.raise_delivery_errors = false
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  config.action_mailer.default_url_options = { 
+    host: ENV.fetch('API_URL', 'bgr4-api.onrender.com').gsub('https://', '').gsub('http://', '')
+  }
+
+  # Enable DNS rebinding protection and other `Host` header attacks.
+  if ENV['RENDER']
+    # Render環境での設定
+    allowed_hosts = [
+      ENV.fetch('RENDER_EXTERNAL_HOSTNAME', 'bgr4-api.onrender.com'),
+      'bgr4-front.onrender.com'  # フロントエンドのホスト名
+    ]
+    config.hosts = allowed_hosts
+  end
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -76,12 +88,6 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 

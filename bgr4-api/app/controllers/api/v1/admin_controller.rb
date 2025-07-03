@@ -154,6 +154,138 @@ module Api
         end
       end
 
+      def create_system_user
+        begin
+          # システムユーザーが既に存在するかチェック
+          existing_user = User.find_by(email: 'system@boardgamereviews.com')
+          
+          if existing_user
+            render json: { 
+              message: 'システムユーザーは既に存在します',
+              user: {
+                id: existing_user.id,
+                email: existing_user.email,
+                name: existing_user.name
+              }
+            }
+            return
+          end
+          
+          # システムユーザーを作成
+          system_user = User.create!(
+            email: 'system@boardgamereviews.com',
+            name: 'BoardGameGeek',
+            password: SecureRandom.hex(20),
+            confirmed_at: Time.current,
+            is_admin: false
+          )
+          
+          render json: { 
+            message: 'システムユーザーを作成しました',
+            user: {
+              id: system_user.id,
+              email: system_user.email,
+              name: system_user.name
+            }
+          }
+          
+        rescue => e
+          render json: { error: "システムユーザー作成エラー: #{e.message}" }, status: 422
+        end
+      end
+
+      def import_games_data
+        begin
+          # パラメータからJSONデータを受け取る
+          games_data = params[:games_data]
+          
+          unless games_data.present?
+            render json: { error: 'games_dataパラメータが必要です' }, status: 400
+            return
+          end
+          
+          # システムユーザーを確認
+          system_user = User.find_by(email: 'system@boardgamereviews.com')
+          unless system_user
+            render json: { error: 'システムユーザーが見つかりません。先にcreate_system_userを実行してください。' }, status: 404
+            return
+          end
+          
+          imported_count = 0
+          skipped_count = 0
+          error_count = 0
+          
+          games_data.each do |game_data|
+            begin
+              # 既存ゲームをチェック
+              existing_game = Game.find_by(bgg_id: game_data['bgg_id'])
+              if existing_game
+                skipped_count += 1
+                next
+              end
+              
+              # ゲームを作成
+              Game.create!(
+                title: game_data['title'],
+                japanese_name: game_data['japanese_name'],
+                bgg_id: game_data['bgg_id'],
+                description: game_data['description'],
+                japanese_description: game_data['japanese_description'],
+                year_published: game_data['year_published'],
+                min_players: game_data['min_players'],
+                max_players: game_data['max_players'],
+                min_playtime: game_data['min_playtime'],
+                max_playtime: game_data['max_playtime'],
+                min_age: game_data['min_age'],
+                complexity: game_data['complexity'],
+                bgg_score: game_data['bgg_score'],
+                bgg_rank: game_data['bgg_rank'],
+                bgg_num_votes: game_data['bgg_num_votes'],
+                image_url: game_data['image_url'],
+                japanese_image_url: game_data['japanese_image_url'],
+                categories: game_data['categories'],
+                mechanics: game_data['mechanics'],
+                popular_categories: game_data['popular_categories'],
+                popular_mechanics: game_data['popular_mechanics'],
+                publishers: game_data['publishers'],
+                designers: game_data['designers'],
+                japanese_publisher: game_data['japanese_publisher'],
+                release_date: game_data['release_date'],
+                weight: game_data['weight'],
+                average_complexity: game_data['average_complexity'],
+                average_luck_factor: game_data['average_luck_factor'],
+                average_interaction: game_data['average_interaction'],
+                average_accessibility: game_data['average_accessibility'],
+                average_play_time: game_data['average_play_time'],
+                average_score: game_data['average_score'],
+                registered_on_site: game_data['registered_on_site'] || false,
+                created_at: game_data['created_at'],
+                updated_at: game_data['updated_at']
+              )
+              
+              imported_count += 1
+              
+            rescue => e
+              error_count += 1
+              Rails.logger.error "Game import error: #{e.message}"
+            end
+          end
+          
+          render json: {
+            message: 'データインポート完了',
+            statistics: {
+              imported: imported_count,
+              skipped: skipped_count,
+              errors: error_count,
+              total_processed: games_data.length
+            }
+          }
+          
+        rescue => e
+          render json: { error: "インポートエラー: #{e.message}" }, status: 422
+        end
+      end
+
       private
 
       # 管理者権限の確認

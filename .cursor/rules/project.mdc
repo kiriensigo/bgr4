@@ -1,6 +1,8 @@
 ---
 description: 
 globs: 
+alwaysApply: false
+---
 ---
 ---
 ---
@@ -124,6 +126,30 @@ git push やgit commitを行わないでください。
 ## 開発環境
 - フロントエンド: localhost:3001
 - バックエンド: localhost:3000
+
+## デプロイ方針
+
+### 本番環境
+- **フロントエンド**: Render（静的サイトホスティング）
+- **バックエンド**: Render（Webサービス） 
+- **データベース**: Supabase（PostgreSQL）
+
+### デプロイ設定
+- **バックエンドURL**: https://bgr4-api.onrender.com
+- **フロントエンドURL**: https://bgr4-front.onrender.com
+- **ビルドスクリプト**: `./bin/render-build.sh`（バックエンド）、`npm run render-build`（フロントエンド）
+
+### 重要な注意事項
+- デプロイ前にESLintエラーを修正または無視設定を確認
+- 環境変数（RAILS_MASTER_KEY、DATABASE_URL等）を正しく設定
+- フロントエンドはバックエンドのデプロイ完了後に実行
+- データベースマイグレーションは自動実行される
+
+### デプロイ順序
+1. Supabaseデータベース設定
+2. バックエンド（bgr4-api）のRenderデプロイ
+3. フロントエンド（bgr4-front）のRenderデプロイ
+4. 本番環境での動作確認
 
 ## ゲーム登録の仕組み
 

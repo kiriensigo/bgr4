@@ -1,26 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 import {
-  Button,
   Container,
   Typography,
+  Grid,
+  Paper,
   Box,
   Card,
   CardContent,
-  Grid,
+  CardActions,
+  Button,
   CircularProgress,
   List,
   ListItem,
   ListItemText,
-  Paper,
-  Divider,
 } from "@mui/material";
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
 

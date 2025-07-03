@@ -27,7 +27,7 @@ import Link from "next/link";
 
 export default function EditGamePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { user, loading: authLoading, getAuthHeaders } = useAuth();
+  const { user, isLoading: authLoading, getAuthHeaders } = useAuth();
   const [game, setGame] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

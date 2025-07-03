@@ -93,6 +93,8 @@ Rails.application.routes.draw do
         get 'system_reviews_stats', to: 'admin#system_reviews_stats'
         get 'database_stats', to: 'admin#database_stats'
         post 'bulk_update_games', to: 'admin#bulk_update_games'
+        post 'create_system_user', to: 'admin#create_system_user'
+        post 'import_games_data', to: 'admin#import_games_data'
       end
     end
   end
