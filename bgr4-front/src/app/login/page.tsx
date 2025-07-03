@@ -20,10 +20,11 @@ import {
 import GoogleIcon from "@mui/icons-material/Google";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import Cookies from "js-cookie";
+import { Suspense } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const { signIn } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
@@ -223,5 +224,13 @@ export default function LoginPage() {
         </Paper>
       </Box>
     </Container>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   );
 }

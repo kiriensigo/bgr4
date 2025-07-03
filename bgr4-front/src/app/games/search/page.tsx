@@ -3,7 +3,7 @@
 // 動的レンダリングを強制（useSearchParams使用のため）
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Container, Typography, Box } from "@mui/material";
 import SearchForm from "@/components/SearchForm";
@@ -18,7 +18,7 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import NoResults from "@/components/NoResults";
 import UnifiedGameList from "@/components/ui/GameList/UnifiedGameList";
 
-export default function SearchPage() {
+function SearchPageInner() {
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
   const publisher = searchParams.get("publisher") || "";
@@ -97,5 +97,13 @@ export default function SearchPage() {
         />
       </Box>
     </Container>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchPageInner />
+    </Suspense>
   );
 }

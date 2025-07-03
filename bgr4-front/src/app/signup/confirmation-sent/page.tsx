@@ -14,8 +14,9 @@ import {
 import Link from "next/link";
 import MailIcon from "@mui/icons-material/Mail";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function ConfirmationSentPage() {
+function ConfirmationSentPageInner() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
 
@@ -62,5 +63,13 @@ export default function ConfirmationSentPage() {
         </Paper>
       </Box>
     </Container>
+  );
+}
+
+export default function ConfirmationSentPage() {
+  return (
+    <Suspense>
+      <ConfirmationSentPageInner />
+    </Suspense>
   );
 }
