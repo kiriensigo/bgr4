@@ -29,7 +29,7 @@ module Api
           query = query.order('average_score_value DESC NULLS LAST, games.id ASC')
         when 'review_date'
           # 登録日時でソート（シンプルなソート）
-          base_query = base_query.order(created_at: :desc, id: :asc)
+          query = query.order(created_at: :desc, id: :asc)
         when 'name_asc'
           query = query.order(name: :asc, id: :asc)
         when 'name_desc'
