@@ -5,10 +5,10 @@
 ### データベース (Supabase)
 
 ```
-DATABASE_URL=postgresql://postgres.xrjciwduolukeqrrpiky:[YOUR-PASSWORD]@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.xrjciwduolukeqrrpiky:bppKrdza3VL3LX2i@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres
 ```
 
-**注意**: `[YOUR-PASSWORD]` には Supabase のデータベースパスワードを設定してください。  
+**注意**: パスワードは `bppKrdza3VL3LX2i` に更新済み  
 **Transaction Pooler** (ポート 6543) を使用することで Render 環境での最適なパフォーマンスが得られます。
 
 ### Rails 設定
