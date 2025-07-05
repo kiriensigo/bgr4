@@ -59,6 +59,10 @@ test:
 production:
   <<: *default
   url: <%= ENV["DATABASE_URL"] %>
+  # Supabase Transaction Poolerでのprepared statement問題を回避
+  prepared_statements: false
+  variables:
+    statement_timeout: 5000
 
 queue:
   <<: *default
