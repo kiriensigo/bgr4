@@ -20,9 +20,12 @@ function AuthCallbackInner() {
     const cookieOptions = {
       path: "/",
       domain:
+        typeof window !== "undefined" &&
         window.location.hostname === "localhost"
           ? "localhost"
-          : window.location.hostname,
+          : typeof window !== "undefined"
+          ? window.location.hostname
+          : "",
     };
 
     // 既存のトークンを確実にクリア
@@ -47,9 +50,12 @@ function AuthCallbackInner() {
       expires: 7,
       path: "/",
       domain:
+        typeof window !== "undefined" &&
         window.location.hostname === "localhost"
           ? "localhost"
-          : window.location.hostname,
+          : typeof window !== "undefined"
+          ? window.location.hostname
+          : "",
     };
 
     // トークンを保存

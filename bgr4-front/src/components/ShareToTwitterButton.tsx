@@ -35,7 +35,9 @@ export default function ShareToTwitterButton({
     const formattedScore = typeof score === "number" ? score.toFixed(1) : score;
 
     // ゲームのURL
-    const gameUrl = `${window.location.origin}/games/${gameId}`;
+    const gameUrl = `${
+      typeof window !== "undefined" ? window.location.origin : ""
+    }/games/${gameId}`;
 
     // ツイート本文（140文字制限を考慮）
     let tweetText = `「${gameName}」を評価しました！\n評価: ${formattedScore}/10\n`;
@@ -55,7 +57,9 @@ export default function ShareToTwitterButton({
     const encodedText = encodeURIComponent(tweetText);
 
     // ツイート投稿ページを開く
-    window.open(`https://x.com/intent/tweet?text=${encodedText}`, "_blank");
+    if (typeof window !== "undefined") {
+      window.open(`https://x.com/intent/tweet?text=${encodedText}`, "_blank");
+    }
   };
 
   return (
