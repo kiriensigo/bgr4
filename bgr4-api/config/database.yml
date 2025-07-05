@@ -61,16 +61,20 @@ production:
   url: <%= ENV["DATABASE_URL"] %>
   # Supabase Transaction Poolerでのprepared statement問題を回避
   prepared_statements: false
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   variables:
     statement_timeout: 5000
+    application_name: bgr4_api
 
 queue:
   <<: *default
   url: <%= ENV["DATABASE_URL"] %>
+  prepared_statements: false
 
 cache:
   <<: *default
   url: <%= ENV["DATABASE_URL"] %>
+  prepared_statements: false
 
 cable:
   <<: *default

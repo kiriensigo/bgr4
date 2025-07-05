@@ -52,5 +52,13 @@ module Bgr4Api
       secure: Rails.env.production?,
       httponly: true,
       same_site: :lax
+
+    # Supabase Transaction Pooler対応
+    config.after_initialize do
+      if Rails.env.production?
+        ActiveRecord::Base.connection_pool.disconnect!
+        ActiveRecord::Base.establish_connection
+      end
+    end
   end
 end
