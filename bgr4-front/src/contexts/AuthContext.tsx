@@ -51,7 +51,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sameSite: "lax" as const,
     expires: 7,
     path: "/",
-    domain: getHostname(),
+    domain:
+      window.location.hostname === "localhost"
+        ? "localhost"
+        : window.location.hostname,
   };
 
   const clearAllAuthCookies = () => {
