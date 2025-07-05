@@ -9,6 +9,8 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
+    // Renderでの画像最適化問題を回避
+    unoptimized: true,
   },
   eslint: {
     // デプロイ時にESLintエラーを無視する（一時的設定）
