@@ -33,12 +33,12 @@ class Review < ApplicationRecord
   validate :validate_one_review_per_game_for_non_system_user
 
   # レビュー作成・更新・削除時にゲーム情報を更新するコールバック
-  after_save :update_game_popular_features
-  after_destroy :update_game_popular_features
+  # after_save :update_game_popular_features
+  # after_destroy :update_game_popular_features
   
   # レビュー作成・更新・削除時にゲームの平均値を更新するコールバック
-  after_save :update_game_average_values
-  after_destroy :update_game_average_values
+  # after_save :update_game_average_values
+  # after_destroy :update_game_average_values
 
   def likes_count
     likes.count

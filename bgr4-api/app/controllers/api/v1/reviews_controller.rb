@@ -35,9 +35,14 @@ module Api
             Rails.logger.info "Review errors: #{@review.errors.full_messages}" unless @review.valid?
             
             if @review.save
-              # ゲームの平均スコアを更新
+              # ゲームの平均スコアを更新（同期処理）
               Rails.logger.info "Review saved successfully, updating game average values"
-              @game.update_average_values
+              begin
+                @game.update_average_values
+              rescue => e
+                Rails.logger.error "Error updating game average values: #{e.message}"
+                # エラーが発生してもレビュー作成は成功とする
+              end
               render json: review_with_details(@review), status: :created
             else
               Rails.logger.error "Review creation failed: #{@review.errors.full_messages}"
