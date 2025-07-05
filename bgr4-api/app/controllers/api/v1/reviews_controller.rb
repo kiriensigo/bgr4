@@ -29,8 +29,14 @@ module Api
             @review = @game.reviews.build(review_params)
             @review.user = current_user
             
+            # バリデーション前のログ
+            Rails.logger.info "Review before save: #{@review.inspect}"
+            Rails.logger.info "Review valid? #{@review.valid?}"
+            Rails.logger.info "Review errors: #{@review.errors.full_messages}" unless @review.valid?
+            
             if @review.save
               # ゲームの平均スコアを更新
+              Rails.logger.info "Review saved successfully, updating game average values"
               @game.update_average_values
               render json: review_with_details(@review), status: :created
             else
