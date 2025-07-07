@@ -221,12 +221,18 @@ module Api
           return
         end
         
-        # BGGからゲーム情報を取得
-        bgg_game_info = BggService.get_game_details(bgg_id)
+        # フロントエンドから送信されたデータを優先し、不足分のみBGGから取得
+        bgg_game_info = {}
         
-        if bgg_game_info.nil?
-          render json: { error: "ゲーム情報の更新に失敗しました" }, status: :not_found
-          return
+        # フロントエンドから送信されていない項目のみBGGから取得を試行
+        if game_params[:categories].blank? || game_params[:mechanics].blank?
+          begin
+            fetched_bgg_info = BggService.get_game_details(bgg_id)
+            bgg_game_info = fetched_bgg_info || {}
+          rescue => e
+            Rails.logger.warn "BGGからの追加情報取得に失敗しましたが、フロントエンドのデータで続行します: #{e.message}"
+            bgg_game_info = {}
+          end
         end
         
         # 日本語版情報を取得
@@ -249,10 +255,10 @@ module Api
         cleaned_description = description.present? ? DeeplTranslationService.cleanup_html_entities(description) : nil
         cleaned_japanese_description = japanese_description.present? ? DeeplTranslationService.cleanup_html_entities(japanese_description) : nil
         
-        # ゲームを作成
+        # ゲームを作成（フロントエンドから送信されたデータを優先使用）
         @game = Game.new(
           bgg_id: bgg_id,
-          name: game_params[:name] || bgg_game_info[:name],
+          name: game_params[:title] || game_params[:name] || bgg_game_info[:name],
           japanese_name: game_params[:japanese_name] || bgg_game_info[:japanese_name],
           description: cleaned_description,
           japanese_description: cleaned_japanese_description,
@@ -260,8 +266,8 @@ module Api
           japanese_image_url: game_params[:japanese_image_url] || bgg_game_info[:japanese_image_url],
           min_players: game_params[:min_players] || bgg_game_info[:min_players],
           max_players: game_params[:max_players] || bgg_game_info[:max_players],
-          play_time: game_params[:play_time] || bgg_game_info[:play_time],
-          min_play_time: game_params[:min_play_time] || bgg_game_info[:min_play_time],
+          play_time: game_params[:max_playtime] || game_params[:play_time] || bgg_game_info[:play_time],
+          min_play_time: game_params[:min_playtime] || game_params[:min_play_time] || bgg_game_info[:min_play_time],
           weight: game_params[:weight] || bgg_game_info[:weight],
           publisher: game_params[:publisher] || bgg_game_info[:publisher],
           designer: game_params[:designer] || bgg_game_info[:designer],
@@ -271,15 +277,15 @@ module Api
           registered_on_site: true
         )
         
-        # メタデータを設定
+        # メタデータを設定（フロントエンドから送信されたデータを優先）
         @game.store_metadata(:expansions, bgg_game_info[:expansions]) if bgg_game_info[:expansions].present?
         @game.store_metadata(:best_num_players, bgg_game_info[:best_num_players]) if bgg_game_info[:best_num_players].present?
         @game.store_metadata(:recommended_num_players, bgg_game_info[:recommended_num_players]) if bgg_game_info[:recommended_num_players].present?
-        @game.store_metadata(:categories, bgg_game_info[:categories]) if bgg_game_info[:categories].present?
-        @game.store_metadata(:mechanics, bgg_game_info[:mechanics]) if bgg_game_info[:mechanics].present?
+        @game.store_metadata(:categories, game_params[:categories] || bgg_game_info[:categories]) if game_params[:categories].present? || bgg_game_info[:categories].present?
+        @game.store_metadata(:mechanics, game_params[:mechanics] || bgg_game_info[:mechanics]) if game_params[:mechanics].present? || bgg_game_info[:mechanics].present?
         
-        # 拡張ゲームかどうかを保存
-        @game.store_metadata(:is_expansion, bgg_game_info[:is_expansion]) if bgg_game_info[:is_expansion].present?
+        # 拡張ゲームかどうかを保存（フロントエンドから送信されたデータを優先）
+        @game.store_metadata(:is_expansion, game_params[:is_expansion] || bgg_game_info[:is_expansion]) if game_params[:is_expansion].present? || bgg_game_info[:is_expansion].present?
         
         # 親ゲーム（基本ゲーム）の情報を保存
         @game.store_metadata(:base_game, bgg_game_info[:base_game]) if bgg_game_info[:base_game].present?
