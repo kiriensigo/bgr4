@@ -362,7 +362,25 @@ export async function registerGame(
     body: JSON.stringify({
       game: manualRegistration
         ? gameDetails // 手動登録の場合はそのまま送信
-        : { bgg_id: gameDetails.bggId }, // BGG登録の場合はBGG IDのみ
+        : {
+            bgg_id: gameDetails.id, // BGG登録の場合はBGG IDと基本情報を送信
+            title: gameDetails.name,
+            description: gameDetails.description,
+            image_url: gameDetails.image,
+            min_players: gameDetails.minPlayers,
+            max_players: gameDetails.maxPlayers,
+            min_playtime: gameDetails.minPlayTime,
+            max_playtime: gameDetails.maxPlayTime,
+            year_published: gameDetails.yearPublished,
+            weight: gameDetails.weight,
+            categories: gameDetails.categories,
+            mechanics: gameDetails.mechanics,
+            japanese_name: gameDetails.japaneseName,
+            japanese_image_url: gameDetails.japaneseImage,
+            japanese_publisher: gameDetails.japanesePublisher,
+            japanese_release_date: gameDetails.japaneseReleaseDate,
+            is_expansion: gameDetails.isExpansion,
+          },
       auto_register: autoRegister,
       manual_registration: manualRegistration,
     }),
