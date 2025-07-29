@@ -105,6 +105,7 @@ export default function Header() {
     { label: "検索", path: "/search" },
     { label: "ゲーム一覧", path: "/games" },
     { label: "レビュー一覧", path: "/reviews" },
+    { label: "About", path: "/about" },
     ...(user && (showGameRegister || isAdmin)
       ? [{ label: "ゲーム登録", path: "/games/register" }]
       : []),
