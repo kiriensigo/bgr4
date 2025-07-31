@@ -1,0 +1,43 @@
+name: Keep Render Services Alive
+
+on:
+  schedule:
+    # 12分間隔で実行 (Renderは15分でスリープするため)
+    - cron: '*/12 * * * *'
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Ping Backend API
+      run: |
+        echo "Pinging backend API..."
+        response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${BACKEND_URL}/health" || echo "000")
+        echo "Backend response code: $response"
+        if [ "$response" != "000" ]; then
+          echo "✅ Backend is responding"
+        else
+          echo "❌ Backend did not respond"
+        fi
+      env:
+        BACKEND_URL: ${{ secrets.BACKEND_URL || 'https://your-backend-url.onrender.com' }}
+
+    - name: Ping Frontend
+      run: |
+        echo "Pinging frontend..."
+        response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${FRONTEND_URL}" || echo "000")
+        echo "Frontend response code: $response"
+        if [ "$response" != "000" ]; then
+          echo "✅ Frontend is responding"
+        else
+          echo "❌ Frontend did not respond"
+        fi
+      env:
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'https://your-frontend-url.onrender.com' }}
+
+    - name: Log Status
+      run: |
+        echo "Keep-alive ping completed at $(date)"
+        echo "Next scheduled run in 12 minutes"
