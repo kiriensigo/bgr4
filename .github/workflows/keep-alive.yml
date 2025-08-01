@@ -6,6 +6,10 @@ on:
     - cron: '*/12 * * * *'
   workflow_dispatch: # 手動実行も可能
 
+# 権限を明示的に設定
+permissions:
+  contents: read
+
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
@@ -22,7 +26,7 @@ jobs:
           echo "❌ Backend did not respond"
         fi
       env:
-        BACKEND_URL: ${{ secrets.BACKEND_URL || 'https://your-backend-url.onrender.com' }}
+        BACKEND_URL: ${{ secrets.BACKEND_URL || 'https://bgr4-api.onrender.com' }}
 
     - name: Ping Frontend
       run: |
@@ -35,7 +39,7 @@ jobs:
           echo "❌ Frontend did not respond"
         fi
       env:
-        FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'https://your-frontend-url.onrender.com' }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL || 'https://bgr4-front.onrender.com' }}
 
     - name: Log Status
       run: |
