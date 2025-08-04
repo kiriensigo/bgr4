@@ -116,9 +116,17 @@ export default function Header() {
     return (
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            BGR
-          </Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <Box
+              component="img"
+              src="/images/bgrlogo.png"
+              alt="BGR"
+              sx={{
+                height: 36,
+                width: 70,
+              }}
+            />
+          </Box>
           <IconButton
             size="large"
             edge="end"
@@ -159,14 +167,15 @@ export default function Header() {
       <Container maxWidth="lg">
         <Toolbar sx={{ justifyContent: "space-between" }}>
           <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-            <Typography
-              variant="h6"
-              color="inherit"
-              noWrap
-              sx={{ fontWeight: "bold" }}
-            >
-              BGR
-            </Typography>
+            <Box
+              component="img"
+              src="/images/bgrlogo.png"
+              alt="BGR"
+              sx={{
+                height: 60,
+                width: 120,
+              }}
+            />
           </Link>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
