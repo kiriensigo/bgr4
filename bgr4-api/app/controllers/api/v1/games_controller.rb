@@ -28,8 +28,12 @@ module Api
         when 'average_score'
           query = query.order('average_score_value DESC NULLS LAST, games.id ASC')
         when 'review_date'
-          # 登録日時でソート（シンプルなソート）
-          query = query.order(created_at: :desc, id: :asc)
+          # 最新レビュー日時でソート（システムユーザーを除く）
+          system_user = User.find_by(email: 'system@boardgamereview.com')
+          query = query.left_joins(:reviews)
+                      .where.not(reviews: { user_id: system_user&.id })
+                      .group('games.id')
+                      .order('MAX(reviews.created_at) DESC NULLS LAST, games.id ASC')
         when 'name_asc'
           query = query.order(name: :asc, id: :asc)
         when 'name_desc'
