@@ -65,9 +65,11 @@ yarn-error.log*
 # Cache
 .eslintcache
 
+# AI coding assistants
 .cursor/** */
-
 .cursorrules
+.claude/
+CLAUDE.md
 
 # Ignore all log files
 /bgr4-api/log/*.log
