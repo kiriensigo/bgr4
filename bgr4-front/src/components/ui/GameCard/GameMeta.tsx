@@ -101,7 +101,15 @@ export function GameMeta({
 
       {/* 評価: 7.8 ★★★★☆ */}
       {showRating && hasAverageScore && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 0.5,
+            mb: 0.5,
+          }}
+        >
           <Chip
             label={rating.toFixed(1)}
             size={chipSize}
@@ -120,6 +128,7 @@ export function GameMeta({
             size={starSize}
             readOnly
             sx={{
+              padding: "8px",
               "& .MuiRating-iconEmpty": {
                 color: "text.disabled",
               },

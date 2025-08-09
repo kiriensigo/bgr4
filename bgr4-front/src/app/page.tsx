@@ -22,7 +22,7 @@ export default function Home() {
         setLoading(true);
         const [reviewDateRes, createdAtRes, reviewsCountRes, recommendedRes] =
           await Promise.all([
-            getGames(1, 8, "review_date"),
+            getGames(1, 8, "review_date", { cache: "no-cache" }),
             getGames(1, 8, "created_at"),
             getGames(1, 8, "reviews_count"),
             getGames(1, 8, "created_at"), // "おすすめ"のソート順は一旦 created_at にしています
