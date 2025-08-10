@@ -1,47 +1,32 @@
 "use client";
 
-import { Typography, Container } from "@mui/material";
+import { Typography, Container, Box, CircularProgress } from "@mui/material";
+import LazyGameGrid from "@/components/LazyGameGrid";
 import GameGrid from "@/components/GameGrid";
 import { useEffect, useState } from "react";
 import { getGames, Game } from "@/lib/api";
 
-type GameData = {
-  reviewDate: Game[];
-  createdAt: Game[];
-  reviewsCount: Game[];
-  recommended: Game[];
-};
-
 export default function Home() {
-  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [firstSectionGames, setFirstSectionGames] = useState<Game[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAllGames = async () => {
+    // 最初のセクションだけ即座に読み込み
+    const fetchFirstSection = async () => {
       try {
         setLoading(true);
-        const [reviewDateRes, createdAtRes, reviewsCountRes, recommendedRes] =
-          await Promise.all([
-            getGames(1, 8, "review_date", { cache: "no-cache" }),
-            getGames(1, 8, "created_at"),
-            getGames(1, 8, "reviews_count"),
-            getGames(1, 8, "created_at"), // "おすすめ"のソート順は一旦 created_at にしています
-          ]);
-
-        setGameData({
-          reviewDate: reviewDateRes.games,
-          createdAt: createdAtRes.games,
-          reviewsCount: reviewsCountRes.games,
-          recommended: recommendedRes.games,
-        });
+        console.log("Loading first section...");
+        const response = await getGames(1, 8, "review_date", { cache: "no-cache" });
+        setFirstSectionGames(response.games);
+        console.log("First section loaded with", response.games.length, "games");
       } catch (error) {
-        console.error("Error fetching home page games:", error);
+        console.error("Error fetching first section:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllGames();
+    fetchFirstSection();
   }, []);
 
   return (
@@ -50,26 +35,41 @@ export default function Home() {
         ボードゲームレビュー
       </Typography>
 
-      <GameGrid
-        title="レビュー新着ゲーム"
-        games={gameData?.reviewDate}
-        loading={loading}
-      />
-      <GameGrid
-        title="新規登録ゲーム"
-        games={gameData?.createdAt}
-        loading={loading}
-      />
-      <GameGrid
-        title="人気のゲーム"
-        games={gameData?.reviewsCount}
-        loading={loading}
-      />
-      <GameGrid
-        title="おすすめ"
-        games={gameData?.recommended}
-        loading={loading}
-      />
+      {loading ? (
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            minHeight: '60vh'
+          }}
+        >
+          <CircularProgress size={60} />
+        </Box>
+      ) : (
+        <>
+          {/* 最初のセクション - 即座に表示 */}
+          <GameGrid
+            title="レビュー新着ゲーム"
+            games={firstSectionGames}
+            loading={false}
+          />
+          
+          {/* 以下は遅延読み込み */}
+          <LazyGameGrid
+            title="新規登録ゲーム"
+            sortBy="created_at"
+          />
+          <LazyGameGrid
+            title="人気のゲーム"
+            sortBy="reviews_count"
+          />
+          <LazyGameGrid
+            title="おすすめ"
+            sortBy="created_at"
+          />
+        </>
+      )}
     </Container>
   );
 }

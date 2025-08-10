@@ -102,7 +102,7 @@ export default function Header() {
 
   const menuItems = [
     { label: "ホーム", path: "/" },
-    { label: "検索", path: "/search" },
+    //{ label: "検索", path: "/search" },
     { label: "ゲーム一覧", path: "/games" },
     { label: "レビュー一覧", path: "/reviews" },
     { label: "About", path: "/about" },
