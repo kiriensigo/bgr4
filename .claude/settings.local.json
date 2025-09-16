@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:bgrq.netlify.app)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl:*)",
+      "Bash(pg_ctl status:*)",
+      "Bash(pg_ctl:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(NODE_ENV=production npm run build)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(rm:*)",
+      "Bash(git rm:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git gc:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(git reset:*)",
+      "Bash(npm test:*)",
+      "Bash(node:*)",
+      "Bash(true)",
+      "Bash(pkill:*)",
+      "Bash(npx next dev:*)",
+      "Bash(git remote set-url:*)",
+      "WebFetch(domain:bgrq.netlify.app)",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__list_tables",
+      "Bash(npx playwright:*)",
+      "WebFetch(domain:github.com)",
+      "mcp__ide__executeCode",
+      "WebSearch",
+      "Bash(npx @playwright/mcp@latest:*)"
+    ],
+    "deny": [],
+    "defaultMode": "acceptEdits"
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase",
+    "playwright",
+    "serena"
+  ]
+}

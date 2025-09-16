@@ -1,0 +1,56 @@
+# MCP関連フォルダ
+.claude-code-router/
+.serena/
+.playwright-mcp/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+
+# Environment variables
+.env.local
+.env.production.local
+.env
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+.nyc_output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Database
+local_db/
+
+# Build
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+
+# Local AI assistant docs
+# These are editor/assistant working notes and shouldn't be committed
+CODEX*.md
+CLAUDE*.md
+*.local.md

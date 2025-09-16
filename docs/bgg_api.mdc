@@ -1,0 +1,190 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+---
+## BGGとサイトの変換メカニクス
+
+BGGとサイトでは「カテゴリー」と「メカニクス」の概念が混在しています。これは意図的な設計で、日本のボードゲームユーザー向けに最適化された分類方法です。
+
+### 変換の基本方針
+
+1. **BGGのカテゴリーやメカニクスの中には、当サイトのカテゴリーになるものとメカニクスになるものが混在しています**
+2. **マッピングにないBGGのカテゴリーやメカニクスは除外します（当サイトは過多な情報を必要としていません）**
+3. **BGGのベストプレイ人数 → 本サイトの「ソロ向き」「ペア向き」「多人数向き」カテゴリー**
+
+### BGGカテゴリーからの変換マップ
+
+```ruby
+bgg_category_to_site_category = {
+  'Animals' => '動物',
+  'Bluffing' => 'ブラフ',
+  'Card Game' => 'カードゲーム',
+  "Children's Game" => '子供向け',
+  'Deduction' => '推理',
+  'Memory' => '記憶',
+  'Negotiation' => '交渉',
+  'Party Game' => 'パーティー',
+  'Puzzle' => 'パズル',
+  'Wargame' => 'ウォーゲーム',
+  'Word Game' => 'ワードゲーム'
+}
+
+bgg_category_to_site_mechanic = {
+  'Dice' => 'ダイスロール'
+}
+```
+
+### BGGメカニクスからの変換マップ
+
+```ruby
+bgg_mechanic_to_site_category = {
+  'Acting' => '演技',
+  'Deduction' => '推理',
+  'Legacy Game' => 'レガシー・キャンペーン',
+  'Memory' => '記憶',
+  'Negotiation' => '交渉',
+  'Paper-and-Pencil' => '紙ペン',
+  'Scenario / Mission / Campaign Game' => 'レガシー・キャンペーン',
+  'Solo / Solitaire Game' => 'ソロ向き',
+  'Pattern Building' => 'パズル',
+  'Trick-taking' => 'トリテ'
+}
+
+bgg_mechanic_to_site_mechanic = {
+  'Area Majority / Influence' => 'エリア支配',
+  'Auction / Bidding' => 'オークション',
+  'Auction Compensation' => 'オークション',
+  'Auction: Dexterity' => 'オークション',
+  'Auction: Dutch' => 'オークション',
+  'Auction: Dutch Priority' => 'オークション',
+  'Auction: English' => 'オークション',
+  'Auction: Fixed Placement' => 'オークション',
+  'Auction: Multiple Lot' => 'オークション',
+  'Auction: Once Around' => 'オークション',
+  'Auction: Sealed Bid' => 'オークション',
+  'Auction: Turn Order Until Pass' => 'オークション',
+  'Betting and Bluffing' => '賭け',
+  'Closed Drafting' => 'ドラフト',
+  'Cooperative Game' => '協力',
+  'Deck Construction' => 'デッキ/バッグビルド',
+  'Deck, Bag, and Pool Building' => 'デッキ/バッグビルド',
+  'Dice Rolling' => 'ダイスロール',
+  'Hidden Roles' => '正体隠匿',
+  'Modular Board' => 'モジュラーボード',
+  'Network and Route Building' => 'ルート構築',
+  'Open Drafting' => 'ドラフト',
+  'Push Your Luck' => 'バースト',
+  'Set Collection' => 'セット収集',
+  'Simultaneous Action Selection' => '同時手番',
+  'Tile Placement' => 'タイル配置',
+  'Variable Player Powers' => 'プレイヤー別能力',
+  'Variable Set-up' => 'プレイヤー別能力',
+  'Worker Placement' => 'ワカプレ',
+  'Worker Placement with Dice Workers' => 'ワカプレ',
+  'Worker Placement, Different Worker Types' => 'ワカプレ'
+}
+```
+
+### BGGのベストプレイ人数から当サイトのカテゴリーへの変換マップ
+
+```ruby
+bgg_best_player_to_site_categories = {
+  '1' => 'ソロ向き',
+  '2' => 'ペア向き',
+  '6' => '多人数向き',
+  '7' => '多人数向き',
+  '8' => '多人数向き',
+  '9' => '多人数向き',
+  '10' => '多人数向き'
+}
+```
+
+### 日本の出版社リストと正規化マッピング
+
+```ruby
+japanese_publisher_mapping = {
+  # ホビージャパン系
+  'hobby japan' => 'ホビージャパン',
+  'hobbyjapan' => 'ホビージャパン',
+  'hobby-japan' => 'ホビージャパン',
+  
+  # アークライト系
+  'arclight' => 'アークライト',
+  'arclightgames' => 'アークライト',
+  'arc light' => 'アークライト',
+  
+  # その他の日本の出版社
+  'グループSNE' => 'グループSNE',
+  'groupsne' => 'グループSNE',
+  'group sne' => 'グループSNE',
+  
+  'カナイ製作所' => 'カナイ製作所',
+  'kanai' => 'カナイ製作所',
+  'カナイファクトリー' => 'カナイ製作所',
+  
+  'ニューゲームズオーダー' => 'ニューゲームズオーダー',
+  'new games order' => 'ニューゲームズオーダー',
+  'ngo' => 'ニューゲームズオーダー',
+  
+  'コロンアーク' => 'コロンアーク',
+  'colon arc' => 'コロンアーク',
+  
+  '数寄ゲームズ' => '数寄ゲームズ',
+  'suki games' => '数寄ゲームズ',
+  
+  'ダイスタワー' => 'ダイスタワー',
+  'dice tower' => 'ダイスタワー',
+  
+  'ボードゲームジャパン' => 'ボードゲームジャパン',
+  'board game japan' => 'ボードゲームジャパン',
+  'bgj' => 'ボードゲームジャパン',
+  
+  'ゲームマーケット' => 'ゲームマーケット',
+  'game market' => 'ゲームマーケット',
+  
+  'ジーピー' => 'ジーピー',
+  'gp' => 'ジーピー',
+  
+  'ハコニワ' => 'ハコニワ',
+  'hakoniwagames' => 'ハコニワ',
+  
+  'テンデイズゲームズ' => 'テンデイズゲームズ',
+  'ten days games' => 'テンデイズゲームズ',
+  'tendaysgames' => 'テンデイズゲームズ',
+  
+  'グラウンディング' => 'グラウンディング',
+  'grounding inc.' => 'グラウンディング',
+  'grounding' => 'グラウンディング',
+  
+  'オインクゲームズ' => 'オインクゲームズ',
+  'oink games' => 'オインクゲームズ',
+  
+  'アズモデージャパン' => 'アズモデージャパン',
+  'asmodee japan' => 'アズモデージャパン',
+  'asmodee' => 'アズモデージャパン',
+  
+  '株式会社ケンビル' => 'ケンビル',
+  'kenbill' => 'ケンビル',
+}
+```
+
+### 変換処理の流れ
+
+1. BGG APIからゲーム情報を取得
+2. BGGのカテゴリーを当サイトのカテゴリーとメカニクスに変換（マッピングにないものは除外）
+3. BGGのメカニクスを当サイトのカテゴリーとメカニクスに変換（マッピングにないものは除外）
+4. BGGのベストプレイ人数から本サイトのカテゴリー「ソロ向き」「ペア向き」「多人数向き」を生成
+5. 変換できなかった項目はログに記録し、必要に応じて変換マップを更新
+6. 当サイトに変換されたカテゴリーとメカニクス情報を使用して初期レビューを作成
+
+### 注意点
+
+1. 変換マップは定期的に更新が必要
+2. BGGの分類体系が変更された場合は、変換マップも更新する必要がある
+3. 未マッピングの項目は `UnmappedBggItem` モデルに記録され、管理画面から確認可能
+4. 当サイトは過多な情報を必要としていないため、マッピングにないカテゴリーやメカニクスは除外するテゴリーやメカニクスは除外する 

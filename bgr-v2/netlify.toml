@@ -1,0 +1,52 @@
+[build]
+  publish = ".next"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+  SECRETS_SCAN_OMIT_KEYS = "NODE_ENV,BGG_API_RATE_LIMIT,NEXT_PUBLIC_APP_URL,NEXT_PUBLIC_APP_NAME,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,BGG_API_BASE_URL"
+
+# Next.js App Router API routes (handled by plugin)
+# No manual redirects needed for API routes when using @netlify/plugin-nextjs
+
+# Catch-all for client-side routing (must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Cache optimization
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/favicon.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# BGG API rate limiting protection
+[[headers]]
+  for = "/api/bgg/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# Function settings
+[functions]
+  directory = "netlify/functions"
+
+# Build plugins
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
