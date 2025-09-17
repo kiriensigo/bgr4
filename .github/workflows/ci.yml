@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
 
 jobs:
   test:
@@ -40,10 +40,10 @@ jobs:
         cd bgr-v2
         npm run lint
         
-    - name: Run tests
+    - name: Run tests (jest:ci)
       run: |
         cd bgr-v2
-        npm test -- --coverage --watchAll=false
+        npm run test:ci
       env:
         CI: true
         
