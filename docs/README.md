@@ -15,6 +15,7 @@ docs/
 │   ├── DEPLOYMENT.md                   ← デプロイ手順
 │   └── bgg_api.mdc                     ← BGG API仕様
 │
+- **[BGG連携登録（API/実装）](027_bgg_registration.md)** - BGG登録の仕様・エラーハンドリング・デバッグ
 ├── 📱 UI/UXデザイン
 │   └── mockups/                        
 │       ├── review-form-visual-mockup.md
