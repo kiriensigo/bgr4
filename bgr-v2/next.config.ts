@@ -22,6 +22,8 @@ const nextConfig: NextConfig = {
     ],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 86400, // 1日キャッシュ
+    deviceSizes: [320, 360, 384, 400, 420, 480, 640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
   },
   
   // 実験的機能 - パフォーマンス重視
