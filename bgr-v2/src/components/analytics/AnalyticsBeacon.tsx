@@ -11,9 +11,15 @@ export default function AnalyticsBeacon() {
   useEffect(() => {
     if (!pathname) return
     const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
-    pageview(url)
+    const idle = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 800))
+    const id = idle(() => pageview(url))
+    const onVisible = () => pageview(url)
+    window.addEventListener('pageshow', onVisible, { once: true })
+    return () => {
+      window.removeEventListener('pageshow', onVisible)
+      if (typeof id === 'number') clearTimeout(id)
+    }
   }, [pathname, searchParams])
 
   return null
 }
-

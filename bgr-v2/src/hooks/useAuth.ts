@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import type { User, Session } from '@supabase/supabase-js'
 import { signInWithGoogle, signInWithTwitter, signOut } from '@/lib/auth'
 import { toast } from '@/hooks/useToast'
@@ -15,9 +15,8 @@ export function useAuth() {
     let mounted = true
 
     // 認証状態変更リスナーを設定
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const supabase = getSupabaseClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔄 Auth state changed:', event, {
         hasSession: !!session,
         hasUser: !!session?.user,
