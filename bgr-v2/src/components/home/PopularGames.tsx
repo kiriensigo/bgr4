@@ -107,7 +107,11 @@ export function PopularGames({ games }: PopularGamesProps) {
                 </div>
               </div>
               
-              <GameCardServer game={convertToGame(game) as any} className="h-full" />
+              <GameCardServer 
+                game={convertToGame(game) as any} 
+                className="h-full"
+                priority={index < 3}
+              />
             </div>
           ))}
         </div>

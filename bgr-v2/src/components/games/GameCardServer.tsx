@@ -6,9 +6,10 @@ import type { Game } from '@/types'
 interface GameCardServerProps {
   game: Game
   className?: string
+  priority?: boolean
 }
 
-export default function GameCardServer({ game, className }: GameCardServerProps) {
+export default function GameCardServer({ game, className, priority = false }: GameCardServerProps) {
   if (!game || !game.id || !game.name) return null
 
   const formatPlayers = () => {
@@ -36,8 +37,10 @@ export default function GameCardServer({ game, className }: GameCardServerProps)
               alt={game.name}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              loading="lazy"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              loading={priority ? undefined : 'lazy'}
+              priority={priority}
+              fetchPriority={priority ? 'high' : 'auto'}
             />
           </div>
         </CardHeader>
@@ -58,4 +61,3 @@ export default function GameCardServer({ game, className }: GameCardServerProps)
     </Card>
   )
 }
-

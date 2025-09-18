@@ -92,6 +92,7 @@ export default function RootLayout({
       <head>
         <WebsiteStructuredData />
         <OrganizationStructuredData />
+        <link rel="preconnect" href="https://cf.geekdo-images.com" crossOrigin="anonymous" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
