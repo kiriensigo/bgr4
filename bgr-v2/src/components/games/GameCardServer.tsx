@@ -41,6 +41,7 @@ export default function GameCardServer({ game, className, priority = false }: Ga
               loading={priority ? undefined : 'lazy'}
               priority={priority}
               fetchPriority={priority ? 'high' : 'auto'}
+              quality={60}
             />
           </div>
         </CardHeader>
