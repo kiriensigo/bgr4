@@ -75,7 +75,13 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         )
       }
-      const mapped: any = convertBggToSiteData(raw)
+      const mapped: any = convertBggToSiteData(
+        (raw as any).categories || [],
+        (raw as any).mechanics || [],
+        (raw as any).publishers || [],
+        [],
+        []
+      )
       bggGameData = {
         id: raw.id,
         name: raw.name,
