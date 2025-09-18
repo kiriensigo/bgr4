@@ -4,19 +4,18 @@ import Script from 'next/script'
 import { GA_TRACKING_ID } from '@/lib/analytics'
 
 export function GoogleAnalytics() {
-  if (!GA_TRACKING_ID) {
-    return null
-  }
+  // Load GA only in production and when an ID is configured
+  if (process.env.NODE_ENV !== 'production' || !GA_TRACKING_ID) return null
 
   return (
     <>
       <Script
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
       />
       <Script
         id="google-analytics"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];

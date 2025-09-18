@@ -7,6 +7,7 @@ const createJestConfig = nextJest({
 
 // Jestのカスタム設定
 const customJestConfig = {
+  setupFiles: ['<rootDir>/jest.polyfills.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   
@@ -20,8 +21,12 @@ const customJestConfig = {
   // 特定のファイルをテストから除外
   testPathIgnorePatterns: [
     '<rootDir>/__tests__/mocks/',
+    '<rootDir>/src/__tests__/mocks/',
     '<rootDir>/node_modules/',
-    '<rootDir>/.next/'
+    '<rootDir>/.next/',
+    '<rootDir>/e2e/',
+    '<rootDir>/tests/',
+    '<rootDir>/src/__tests__/e2e/'
   ],
   
   // カバレッジ収集対象
@@ -70,7 +75,7 @@ const customJestConfig = {
   maxWorkers: 1,
   
   // ワーカープロセスを無効化してエラーを回避
-  runInBand: true,
+  
 }
 
 module.exports = createJestConfig(customJestConfig)

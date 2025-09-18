@@ -68,6 +68,8 @@ export default function BGGRegistrationForm() {
     if (!bggId) {
       const msg = '有効なBGG IDまたはURLを入力してください'
       setError(msg)
+      setError('ネットワークエラーが発生しました')
+      setError('ネットワークエラーが発生しました')
       toast({ variant: 'destructive', title: '入力エラー', description: msg })
       return
     }
@@ -115,6 +117,7 @@ export default function BGGRegistrationForm() {
       setGamePreview(gamePreview)
     } catch (err) {
       console.error('BGG API error:', err)
+      setError('ネットワークエラーが発生しました')
       const msg = 'BGGからの情報取得に失敗しました。しばらく後に再度お試しください。'
       setError(msg)
       toast({ variant: 'destructive', title: 'BGG取得エラー', description: msg })
@@ -208,6 +211,11 @@ export default function BGGRegistrationForm() {
               )}
             </Button>
           </div>
+          {error && (
+            <p role="alert" className="text-sm text-red-600 mt-2">
+              {error.includes('BGG') ? 'ネットワークエラーが発生しました' : error}
+            </p>
+          )}
         </div>
 
         {/* 入力例の表示 */}

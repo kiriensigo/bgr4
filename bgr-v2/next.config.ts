@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   // 実験的機能 - パフォーマンス重視
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    optimizeCss: false, // 一時的に無効化
+    optimizeCss: true, // 一時的に無効化
   },
 
   // Turbopack設定
@@ -148,3 +148,5 @@ const nextConfig: NextConfig = {
 };
 
 export default withBundleAnalyzer(nextConfig);
+
+

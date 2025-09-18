@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id')
     const sortBy = searchParams.get('sortBy') || 'created_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
+    const after = searchParams.get('after')
     
     const filters = {
       page,
@@ -96,12 +97,27 @@ export async function GET(request: NextRequest) {
       profiles: undefined
     }))
     
+    // 差分API: after が指定された場合は、after 以降の新規のみ返却
+    const latestTimestamp = enhancedReviews[0]?.created_at || null
+    if (after) {
+      const afterDate = new Date(after)
+      const diffItems = enhancedReviews.filter((r: any) => {
+        try {
+          return r.created_at && new Date(r.created_at) > afterDate
+        } catch {
+          return false
+        }
+      })
+      return NextResponse.json({ items: diffItems, latestTimestamp })
+    }
+
     return NextResponse.json({
       reviews: enhancedReviews,
       total: result.total,
       page: result.page,
       limit: result.limit,
-      totalPages: result.totalPages
+      totalPages: result.totalPages,
+      latestTimestamp
     })
     
   } catch (error) {

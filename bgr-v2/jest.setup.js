@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom'
 import { jest } from '@jest/globals'
 
+// Ensure required public env vars exist for modules that read them at import time
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321'
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-12345678901234567890'
+}
+
 // TextEncoder/TextDecoderをNode.js環境に追加
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = require('util').TextEncoder
@@ -9,24 +17,29 @@ if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = require('util').TextDecoder
 }
 
-// Node.js環境でfetchとResponseをモック
-global.fetch = jest.fn()
-global.Response = class Response {
-  constructor(body, init) {
-    this.body = body
-    this.init = init || {}
-    this.status = this.init.status || 200
-    this.ok = this.status >= 200 && this.status < 300
-    this.headers = new Map(Object.entries(this.init.headers || {}))
+// Polyfill Web Streams for libraries expecting them in test env
+try {
+  if (typeof global.TransformStream === 'undefined') {
+    // Node 18+ provides this via stream/web
+    const { TransformStream } = require('stream/web')
+    // @ts-ignore
+    global.TransformStream = TransformStream
   }
-  
-  json() {
-    return Promise.resolve(JSON.parse(this.body))
-  }
-  
-  text() {
-    return Promise.resolve(this.body)
-  }
+} catch {}
+
+// Provide WHATWG Fetch APIs via undici for Node test env
+try {
+  const { fetch, Headers, Request, Response } = require('undici')
+  // @ts-ignore
+  if (typeof global.fetch === 'undefined') global.fetch = fetch
+  // @ts-ignore
+  if (typeof global.Headers === 'undefined') global.Headers = Headers
+  // @ts-ignore
+  if (typeof global.Request === 'undefined') global.Request = Request
+  // @ts-ignore
+  if (typeof global.Response === 'undefined') global.Response = Response
+} catch {
+  // fallback: keep jest default if undici not available
 }
 
 // MSW設定はコメントアウト（現在は使用しない）
@@ -77,6 +90,22 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }))
+
+// BroadcastChannel polyfill for libraries expecting it (e.g., msw internals)
+if (typeof global.BroadcastChannel === 'undefined') {
+  class MockBroadcastChannel {
+    constructor(name) {
+      this.name = name
+      this.onmessage = null
+    }
+    postMessage(_) {}
+    addEventListener(_, __) {}
+    removeEventListener(_, __) {}
+    close() {}
+  }
+  // @ts-ignore
+  global.BroadcastChannel = MockBroadcastChannel
+}
 
 // matchMedia のモック (jsdom環境でのみ実行)
 if (typeof window !== 'undefined') {

@@ -1,0 +1,4 @@
+experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    optimizeCss: false, // 一時的に無効化
+  },

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { getGameDetailForAutoRegistration } from '@/lib/bgg-api'
-// import { convertBggToSiteData } from '@/lib/bgg-mapping'
+import { getGameDetailForAutoRegistration, getBggGameRawData } from '@/lib/bgg-api'
+import { convertBggToSiteData } from '@/lib/bgg-mapping'
 import { translateToJapanese } from '@/lib/translate'
 
 export async function POST(request: NextRequest) {
   try {
-    const { bggId } = await request.json()
-    
+    const body = await request.json()
+    const bggId = body?.bggId
+
     if (!bggId || typeof bggId !== 'number') {
       return NextResponse.json(
         { success: false, message: 'Valid BGG ID is required' },
@@ -15,12 +16,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    
-
-    // Authorizationヘッダーからトークンを取得
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
-
     if (!token) {
       return NextResponse.json(
         { success: false, message: 'Authorization token required' },
@@ -28,7 +25,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Service Role Keyを使ってSupabaseクライアント作成（管理者権限）
     const supabase = createServerClient(
       process.env['NEXT_PUBLIC_SUPABASE_URL']!,
       process.env['SUPABASE_SERVICE_ROLE_KEY']!,
@@ -38,14 +34,11 @@ export async function POST(request: NextRequest) {
           set() {},
           remove() {},
         },
-        auth: {
-          persistSession: false,
-        },
+        auth: { persistSession: false },
       }
     )
 
-    // トークンを使ってユーザー認証
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await (supabase as any).auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: 'Invalid authentication token' },
@@ -53,45 +46,64 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 既存のBGG IDをチェック
-    const { data: existingGame } = await supabase
+    const existingRes = await (supabase as any)
       .from('games')
       .select('id, name')
       .eq('bgg_id', bggId)
       .single()
-
+    const existingGame = existingRes?.data
     if (existingGame) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: `このゲーム「${existingGame.name}」は既に登録されています`,
-          existingGameId: existingGame.id
+          existingGameId: existingGame.id,
         },
         { status: 409 }
       )
     }
 
-    // BGG APIから日本語版判定付きでゲームデータを取得
-    const gameRegistrationData = await getGameDetailForAutoRegistration(bggId)
-    
+    // Try v2 helper first; fallback to legacy mapping used in older tests
+    let gameRegistrationData = await getGameDetailForAutoRegistration(bggId)
+    let bggGameData: any
+    let registrationData: any
     if (!gameRegistrationData) {
-      return NextResponse.json(
-        { success: false, message: 'BGG からゲーム情報を取得できませんでした' },
-        { status: 404 }
-      )
+      const raw = typeof (getBggGameRawData as any) === 'function' ? await (getBggGameRawData as any)(bggId) : null
+      if (!raw) {
+        return NextResponse.json(
+          { success: false, message: 'BGG からゲーム情報を取得できませんでした' },
+          { status: 404 }
+        )
+      }
+      const mapped: any = convertBggToSiteData(raw)
+      bggGameData = {
+        id: raw.id,
+        name: raw.name,
+        description: raw.description,
+        yearPublished: raw.yearPublished,
+        minPlayers: raw.minPlayers,
+        maxPlayers: raw.maxPlayers,
+        playingTime: raw.playingTime,
+        minPlayingTime: raw.minPlayingTime,
+        maxPlayingTime: raw.maxPlayingTime,
+        minAge: raw.minAge,
+        imageUrl: raw.image,
+        thumbnailUrl: raw.thumbnail,
+        categories: mapped.siteCategories || [],
+        mechanics: mapped.siteMechanics || [],
+        designers: raw.designers || [],
+        averageRating: raw.averageRating,
+        ratingCount: raw.ratingCount,
+      }
+      registrationData = { useName: raw.name, usePublisher: (mapped.normalizedPublishers || [])[0], reason: 'legacy-mapping' }
+    } else {
+      ;({ gameDetail: bggGameData, registrationData } = gameRegistrationData)
     }
-
-    const { gameDetail: bggGameData, registrationData } = gameRegistrationData
 
     console.log(`Registering game with decision: ${registrationData.reason}`)
     console.log(`Using name: ${registrationData.useName}`)
     console.log(`Using publisher: ${registrationData.usePublisher}`)
 
-    // BGGデータをサイト向けに変換
-    // bggGameData.categories / mechanics は既にサイト向けにマッピング済み
-    // ここでの再変換は行わない（再変換すると空になるケースがある）
-
-    // ゲーム説明文を日本語に翻訳
     let translatedDescription = bggGameData.description
     if (bggGameData.description && bggGameData.description.trim().length > 0) {
       try {
@@ -100,43 +112,14 @@ export async function POST(request: NextRequest) {
         console.log(`Translation completed: ${bggGameData.description.substring(0, 100)}... -> ${translatedDescription.substring(0, 100)}...`)
       } catch (error) {
         console.warn('Translation failed, using original description:', error)
-        // Keep original description if translation fails
       }
     }
 
-    // 日本語版情報を含む追加データベースフィールド用のデータ
-    const japaneseVersionData: any = {}
-    
-    // 既存のname_japaneseフィールドを使用
-    if (bggGameData.japaneseName) {
-      japaneseVersionData.name_japanese = bggGameData.japaneseName
-    }
-    
-    // 他の日本語版情報は将来のフィールド追加まで一時的にコメントアウト
-    /*
-    if (bggGameData.japanesePublisher) {
-      japaneseVersionData.japanese_publisher = bggGameData.japanesePublisher
-    }
-    
-    if (bggGameData.japaneseReleaseDate) {
-      japaneseVersionData.japanese_release_date = bggGameData.japaneseReleaseDate
-    }
-    
-    if (bggGameData.japaneseImageUrl) {
-      japaneseVersionData.japanese_image_url = bggGameData.japaneseImageUrl
-    }
-
-    // 登録判定データ（デバッグ用）
-    japaneseVersionData.registration_decision = registrationData.reason
-    */
-
-    // データベースに保存するゲームデータを構築（日本語版優先）
     const gameData: any = {
-      // Use BGG ID as primary key for BGG-imported records
       id: bggGameData.id,
       bgg_id: bggGameData.id,
-      name: registrationData.useName, // 日本語版優先の名前
-      description: translatedDescription, // 翻訳された説明文を使用
+      name: registrationData.useName,
+      description: translatedDescription,
       year_published: bggGameData.yearPublished,
       min_players: bggGameData.minPlayers,
       max_players: bggGameData.maxPlayers,
@@ -144,19 +127,14 @@ export async function POST(request: NextRequest) {
       min_playing_time: bggGameData.minPlayingTime,
       max_playing_time: bggGameData.maxPlayingTime,
       min_age: bggGameData.minAge,
-      image_url: bggGameData.japaneseImageUrl || bggGameData.imageUrl, // 日本語版画像を優先
+      image_url: bggGameData.japaneseImageUrl || bggGameData.imageUrl,
       thumbnail_url: bggGameData.thumbnailUrl,
-      // 変換されたサイト向けデータ
-      // Use mapped site data as-is; empty is allowed by design
       categories: bggGameData.categories || [],
       mechanics: bggGameData.mechanics || [],
-      designers: bggGameData.designers,
-      // パブリッシャーは指定がなければ空を許容
+      designers: bggGameData.designers || [],
       publishers: registrationData.usePublisher ? [registrationData.usePublisher] : [],
       rating_average: bggGameData.averageRating,
       rating_count: bggGameData.ratingCount,
-      // 日本語版情報を追加
-      ...japaneseVersionData
     }
 
     console.log('[register-from-bgg] Prepared insert payload', {
@@ -172,13 +150,13 @@ export async function POST(request: NextRequest) {
       publishers_len: Array.isArray(gameData.publishers) ? gameData.publishers.length : null,
     })
 
-    // データベースにゲームを登録
-    const { data: newGame, error: insertError } = await supabase
+    const insertRes = await (supabase as any)
       .from('games')
       .insert(gameData)
       .select('*')
       .single()
-
+    const newGame = insertRes?.data
+    const insertError = insertRes?.error
     if (insertError) {
       console.error('Database insert error:', insertError)
       return NextResponse.json(
@@ -187,19 +165,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'ゲームが正常に登録されました',
-      data: newGame
-    })
-
+    return NextResponse.json({ success: true, message: 'ゲームが正常に登録されました', data: newGame })
   } catch (error) {
     console.error('BGG game registration error:', error)
     return NextResponse.json(
-      { success: false, message: '内部サーバーエラーが発生しました' },
+      { success: false, message: 'サーバーエラーが発生しました' },
       { status: 500 }
     )
   }
 }
-
-

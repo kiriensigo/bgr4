@@ -53,12 +53,17 @@ describe('POST /api/games/register-from-bgg (v2 tests)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    const selectSingleChain: any = { single: jest.fn() }
+    const selectEqChain: any = { eq: jest.fn(() => selectSingleChain) }
+    const insertSelectSingleChain: any = { single: jest.fn() }
+    const insertChain: any = { select: jest.fn(() => insertSelectSingleChain) }
+    const tableMock: any = {
+      select: jest.fn(() => selectEqChain),
+      insert: jest.fn(() => insertChain),
+    }
     supabase = {
       auth: { getUser: jest.fn() },
-      from: jest.fn(() => ({
-        select: jest.fn(() => ({ eq: jest.fn(() => ({ single: jest.fn() })) })),
-        insert: jest.fn(() => ({ select: jest.fn(() => ({ single: jest.fn() })) })),
-      })),
+      from: jest.fn(() => tableMock),
     }
     mockCreateServerClient.mockReturnValue(supabase)
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'u'
@@ -170,4 +175,3 @@ describe('POST /api/games/register-from-bgg (v2 tests)', () => {
     expect(inserted.description).toBe('orig')
   })
 })
-

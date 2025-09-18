@@ -102,7 +102,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Run middleware only where auth/role checks are needed.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/profile/:path*',
+    '/reviews/new/:path*',
+    '/admin/:path*',
+    '/login',
+    '/register',
   ],
 }

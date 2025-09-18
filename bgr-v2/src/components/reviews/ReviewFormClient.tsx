@@ -179,6 +179,16 @@ const ReviewFormClient: React.FC<ReviewFormClientProps> = ({
       if (response.ok) {
         setShowTwitterModal(true);
       } else {
+        // 409: 既存レビューへ遷移
+        if (response.status === 409) {
+          const err = await response.json().catch(() => ({} as any))
+          const existingId = err.existingReviewId || err?.details?.existingReviewId
+          const path = err.path || (existingId ? `/reviews/${existingId}` : null)
+          if (path) {
+            router.push(path)
+            return
+          }
+        }
         throw new Error('Failed to submit review');
       }
     } catch (error) {

@@ -1,10 +1,8 @@
-'use client'
-
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TrendingUp, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { GameCard } from '@/components/games/GameCard'
+import GameCardServer from '@/components/games/GameCardServer'
 
 interface PopularGame {
   id: number
@@ -95,7 +93,7 @@ export function PopularGames({ games }: PopularGamesProps) {
           </Button>
         </div>
 
-        {/* Games Grid - GameCardコンポーネントを使用 */}
+        {/* Games Grid - Server-rendered lightweight cards */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {games.slice(0, 8).map((game, index) => (
             <div key={game.id} className="relative">
@@ -109,10 +107,7 @@ export function PopularGames({ games }: PopularGamesProps) {
                 </div>
               </div>
               
-              <GameCard 
-                game={convertToGame(game)} 
-                className="h-full"
-              />
+              <GameCardServer game={convertToGame(game) as any} className="h-full" />
             </div>
           ))}
         </div>

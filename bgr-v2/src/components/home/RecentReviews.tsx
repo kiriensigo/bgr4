@@ -1,6 +1,5 @@
-'use client'
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -86,11 +85,13 @@ export function RecentReviews({ reviews }: RecentReviewsProps) {
                 <div className="flex gap-3">
                   {/* Game Image */}
                   {review.game?.image_url && (
-                    <div className="flex-shrink-0">
-                      <img
+                    <div className="flex-shrink-0 w-16 h-16 relative">
+                      <Image
                         src={review.game.image_url}
                         alt={review.game.japanese_name || review.game.name}
-                        className="w-16 h-16 object-cover rounded-lg shadow-sm"
+                        fill
+                        className="object-cover rounded-lg shadow-sm"
+                        sizes="64px"
                         loading="lazy"
                       />
                     </div>

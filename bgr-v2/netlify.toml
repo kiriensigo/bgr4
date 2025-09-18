@@ -7,14 +7,8 @@
   NPM_FLAGS = "--legacy-peer-deps"
   SECRETS_SCAN_OMIT_KEYS = "NODE_ENV,BGG_API_RATE_LIMIT,NEXT_PUBLIC_APP_URL,NEXT_PUBLIC_APP_NAME,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,BGG_API_BASE_URL"
 
-# Next.js App Router API routes (handled by plugin)
-# No manual redirects needed for API routes when using @netlify/plugin-nextjs
-
-# Catch-all for client-side routing (must be last)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Next.js App Router is handled by @netlify/plugin-nextjs.
+# Remove catch-all SPA redirect to allow SSR/streaming for better LCP/TBT.
 
 # Security Headers
 [[headers]]

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import GameStatsClient from '@/components/games/GameStatsClient'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,6 @@ import Link from 'next/link'
 import CollapsibleDescription from '@/components/ui/CollapsibleDescription'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { SupabaseGameRepository } from '@/infrastructure/repositories/SupabaseGameRepository'
-import GameStatsComponent from '@/components/games/GameStatsComponent'
 import { generateShoppingLinks } from '@/lib/affiliate-links'
 
 interface GameDetailsProps {
@@ -67,6 +67,9 @@ export default async function GameDetailsPage({ params }: GameDetailsProps) {
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 192px"
+                priority
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnPjxyZWN0IHdpZHRoPScxMDAlJyBoZWlnaHQ9JzEwMCUnIGZpbGw9JyNlZWUnIC8+PC9zdmc+"
               />
             </div>
             
@@ -232,7 +235,7 @@ export default async function GameDetailsPage({ params }: GameDetailsProps) {
       )}
 
       {/* 人気統計 */}
-      <GameStatsComponent gameId={parseInt(id)} />
+      <GameStatsClient gameId={parseInt(id)} />
 
       {/* デザイナー・出版社 */}
       {( ((game as any).designers && (game as any).designers.length > 0) || (game.getDisplayPublishers && game.getDisplayPublishers().length > 0) ) && (

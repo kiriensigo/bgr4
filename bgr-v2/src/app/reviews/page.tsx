@@ -1,7 +1,7 @@
 'use client'
 
 // Force recompilation
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Container } from '@/components/layout/Container'
 import { ReviewCard } from '@/components/reviews/ReviewCard'
 import { Button } from '@/components/ui/button'
@@ -57,6 +57,8 @@ export default function ReviewsPage() {
   const [sortBy, setSortBy] = useState('created_at')
   const [sortOrder, setSortOrder] = useState('desc')
   const [limit, setLimit] = useState(12)
+  const [latestTimestamp, setLatestTimestamp] = useState<string | null>(null)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
   
   // フィルタリング状態
   const [searchQuery, setSearchQuery] = useState('')
@@ -109,6 +111,7 @@ export default function ReviewsPage() {
       setReviews(data.reviews)
       setTotalPages(data.totalPages)
       setTotal(data.total)
+      if (data.latestTimestamp) setLatestTimestamp(data.latestTimestamp)
     } catch (error) {
       console.error('Error fetching reviews:', error)
     } finally {
@@ -120,6 +123,34 @@ export default function ReviewsPage() {
     fetchReviews()
   }, [currentPage, sortBy, sortOrder, limit, searchQuery, minRating, maxRating, 
       selectedCategories, selectedMechanics, minPlayers, maxPlayers, hasDetailedRatings])
+
+  // 差分フェッチ（簡易ポーリング）
+  useEffect(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current as unknown as number)
+    }
+    pollingRef.current = setInterval(async () => {
+      try {
+        if (!latestTimestamp) return
+        const res = await fetch(`/api/reviews?after=${encodeURIComponent(latestTimestamp)}`)
+        if (!res.ok) return
+        const diff = await res.json()
+        const items = diff.items || []
+        if (items.length > 0) {
+          // 既存と重複除去して先頭に追加
+          const existingIds = new Set(reviews.map(r => r.id))
+          const merged = [...items.filter((it: any) => !existingIds.has(it.id)), ...reviews]
+          setReviews(merged as any)
+          if (diff.latestTimestamp) setLatestTimestamp(diff.latestTimestamp)
+        }
+      } catch {
+        // no-op
+      }
+    }, 45000) // 45秒
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current as unknown as number)
+    }
+  }, [latestTimestamp, reviews])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)

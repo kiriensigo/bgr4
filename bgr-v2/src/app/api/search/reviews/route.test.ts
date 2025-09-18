@@ -1,22 +1,37 @@
-import { NextRequest } from 'next/server'
-import { GET } from './route'
+jest.mock('next/server', () => ({
+  NextResponse: {
+    json: jest.fn((data: any, options?: any) => ({
+      json: async () => data,
+      status: options?.status || 200,
+      ok: (options?.status || 200) < 400,
+    })),
+  },
+}))
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { GET } = require('./route')
+const makeReq = (url: string) => ({ url } as any)
 
 // Supabaseクライアントのモック
 jest.mock('@/lib/supabase/server', () => ({
-  createServerSupabaseClientForAPI: jest.fn(() => ({
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          or: jest.fn(() => ({
-            then: jest.fn(() => Promise.resolve({
-              data: mockReviewsData,
-              error: null
-            }))
-          }))
-        }))
-      }))
-    }))
-  }))
+  createServerSupabaseClientForAPI: jest.fn(() => {
+    const makeQuery = () => {
+      const q: any = {}
+      q.select = jest.fn(() => q)
+      q.eq = jest.fn(() => q)
+      q.or = jest.fn(() => q)
+      q.gte = jest.fn(() => q)
+      q.lte = jest.fn(() => q)
+      q.then = jest.fn((onFulfilled: any) => {
+        const payload = { data: mockReviewsData, error: null }
+        if (typeof onFulfilled === 'function') onFulfilled(payload)
+        return Promise.resolve(payload)
+      })
+      return q
+    }
+    return {
+      from: jest.fn(() => makeQuery())
+    }
+  })
 }))
 
 // モックデータ
@@ -141,7 +156,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('基本的な検索APIが動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews')
+    const request = makeReq('http://localhost:3001/api/search/reviews')
     const response = await GET(request)
     const data = await response.json()
 
@@ -152,7 +167,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('総合得点フィルタリングが動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?overallScoreMin=7&overallScoreMax=9')
+    const request = makeReq('http://localhost:3001/api/search/reviews?overallScoreMin=7&overallScoreMax=9')
     const response = await GET(request)
     const data = await response.json()
 
@@ -170,7 +185,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('メカニクスフィルタリングが動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?mechanics=エリア支配&mechanics=ダイスロール')
+    const request = makeReq('http://localhost:3001/api/search/reviews?mechanics=エリア支配&mechanics=ダイスロール')
     const response = await GET(request)
     const data = await response.json()
 
@@ -187,7 +202,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('プレイ人数フィルタリングが動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?gamePlayerCounts=3')
+    const request = makeReq('http://localhost:3001/api/search/reviews?gamePlayerCounts=3')
     const response = await GET(request)
     const data = await response.json()
 
@@ -197,7 +212,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('ページネーションが動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?page=1&limit=10')
+    const request = makeReq('http://localhost:3001/api/search/reviews?page=1&limit=10')
     const response = await GET(request)
     const data = await response.json()
 
@@ -211,7 +226,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('ソート機能が動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?sortBy=overall_score&sortOrder=desc')
+    const request = makeReq('http://localhost:3001/api/search/reviews?sortBy=overall_score&sortOrder=desc')
     const response = await GET(request)
     const data = await response.json()
 
@@ -222,7 +237,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('複数フィルターの組み合わせが動作する', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?overallScoreMin=7&mechanics=エリア支配&categories=ウォーゲーム&playTimeMin=60&playTimeMax=120')
+    const request = makeReq('http://localhost:3001/api/search/reviews?overallScoreMin=7&mechanics=エリア支配&categories=ウォーゲーム&playTimeMin=60&playTimeMax=120')
     const response = await GET(request)
     const data = await response.json()
 
@@ -232,7 +247,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('無効なパラメータでエラーが返される', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?overallScoreMin=invalid')
+    const request = makeReq('http://localhost:3001/api/search/reviews?overallScoreMin=invalid')
     const response = await GET(request)
     const data = await response.json()
 
@@ -242,7 +257,7 @@ describe('/api/search/reviews', () => {
 
   test('空の結果が正しく処理される', async () => {
     // 条件に合致しないフィルターをセット
-    const request = new NextRequest('http://localhost:3001/api/search/reviews?overallScoreMin=15') // 不可能な条件
+    const request = makeReq('http://localhost:3001/api/search/reviews?overallScoreMin=15') // 不可能な条件
     const response = await GET(request)
     const data = await response.json()
 
@@ -253,7 +268,7 @@ describe('/api/search/reviews', () => {
   })
 
   test('レスポンス構造が正しい', async () => {
-    const request = new NextRequest('http://localhost:3001/api/search/reviews')
+    const request = makeReq('http://localhost:3001/api/search/reviews')
     const response = await GET(request)
     const data = await response.json()
 
@@ -273,3 +288,6 @@ describe('/api/search/reviews', () => {
     expect(data.pagination).toHaveProperty('hasPrev')
   })
 })
+/**
+ * @jest-environment node
+ */

@@ -1,6 +1,4 @@
 import { renderHook, waitFor } from '@testing-library/react'
-import { rest } from 'msw'
-import { setupServer } from 'msw/node'
 import { useGameStats } from '@/hooks/useGameStats'
 
 // SWR用のテストラッパー
@@ -8,61 +6,64 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   return <div>{children}</div>
 }
 
-const server = setupServer(
-  rest.get('/api/games/:id/stats', (req, res, ctx) => {
-    const { id } = req.params
-    
-    if (id === '30549') {
-      return res(
-        ctx.json({
-          mechanics: [
-            {
-              name: 'セット収集',
-              reviewVotes: 0,
-              bggVotes: 10,
-              totalVotes: 10,
-              totalReviews: 11,
-              percentage: 90.9,
-              displayPriority: 'highlight'
-            }
-          ],
-          categories: [],
-          playerCounts: [
-            {
-              name: '2人',
-              reviewVotes: 1,
-              bggVotes: 10,
-              totalVotes: 11,
-              totalReviews: 11,
-              percentage: 100,
-              displayPriority: 'highlight'
-            }
-          ],
-          metadata: {
-            generatedAt: new Date().toISOString(),
-            gameId: parseInt(id as string),
-            totalItems: 2,
-            cacheKey: `game-stats-${id}`,
-            version: '1.0'
-          }
-        })
-      )
-    }
-    
-    if (id === '999') {
-      return res(ctx.status(500), ctx.json({ error: 'Internal Server Error' }))
-    }
-    
-    return res(ctx.status(404))
+// Simple fetch mock helper for tests
+const setFetchMock = (impl: (url: string) => { status: number; body?: any } | Error) => {
+  // @ts-ignore
+  global.fetch = jest.fn(async (input: any) => {
+    const url = typeof input === 'string' ? input : input?.url || ''
+    const res = impl(url)
+    if (res instanceof Error) throw res
+    return {
+      ok: res.status >= 200 && res.status < 300,
+      status: res.status,
+      json: async () => res.body,
+    } as any
   })
-)
-
-beforeAll(() => server.listen())
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
+}
 
 describe('useGameStats', () => {
   test('正常にゲーム統計データを取得できる', async () => {
+    setFetchMock((url) => {
+      if (url.includes('/api/games/30549/stats')) {
+        return {
+          status: 200,
+          body: {
+            mechanics: [
+              {
+                name: 'セットコレクション',
+                reviewVotes: 0,
+                bggVotes: 10,
+                totalVotes: 10,
+                totalReviews: 11,
+                percentage: 90.9,
+                displayPriority: 'highlight',
+              },
+            ],
+            categories: [],
+            playerCounts: [
+              {
+                name: '2人',
+                reviewVotes: 1,
+                bggVotes: 10,
+                totalVotes: 11,
+                totalReviews: 11,
+                percentage: 100,
+                displayPriority: 'highlight',
+              },
+            ],
+            metadata: {
+              generatedAt: new Date().toISOString(),
+              gameId: 30549,
+              totalItems: 2,
+              cacheKey: 'game-stats-30549',
+              version: '1.0',
+            },
+          },
+        }
+      }
+      return { status: 404, body: {} }
+    })
+
     const { result } = renderHook(() => useGameStats(30549), {
       wrapper: TestWrapper
     })
@@ -80,7 +81,7 @@ describe('useGameStats', () => {
     // 取得されたデータの確認
     expect(result.current.stats).not.toBe(null)
     expect(result.current.stats?.mechanics).toHaveLength(1)
-    expect(result.current.stats?.mechanics[0].name).toBe('セット収集')
+    expect(result.current.stats?.mechanics[0].name).toBe('セットコレクション')
     expect(result.current.stats?.mechanics[0].percentage).toBe(90.9)
     expect(result.current.stats?.mechanics[0].displayPriority).toBe('highlight')
     
@@ -90,6 +91,13 @@ describe('useGameStats', () => {
   })
 
   test('APIエラー時にエラー状態になる', async () => {
+    setFetchMock((url) => {
+      if (url.includes('/api/games/999/stats')) {
+        return { status: 500, body: { error: 'Internal Server Error' } }
+      }
+      return { status: 404, body: {} }
+    })
+
     const { result } = renderHook(() => useGameStats(999), {
       wrapper: TestWrapper
     })
@@ -102,7 +110,7 @@ describe('useGameStats', () => {
     expect(result.current.stats).toBe(null)
   })
 
-  test('無効なgameIdの場合はリクエストしない', () => {
+  test('不正なgameIdの場合はリクエストしない', () => {
     const { result } = renderHook(() => useGameStats(NaN), {
       wrapper: TestWrapper
     })
@@ -128,3 +136,6 @@ describe('useGameStats', () => {
     expect(result.current.stats).not.toBe(null)
   })
 })
+/**
+ * @jest-environment node
+ */

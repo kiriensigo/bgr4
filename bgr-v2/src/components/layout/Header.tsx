@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
-import { UserMenu } from '@/components/auth/UserMenu'
-import { MobileNavigation } from './MobileNavigation'
 import { Home, BookOpen, Search, Gamepad2, Menu } from 'lucide-react'
 import { useState } from 'react'
+
+const UserMenu = dynamic(() => import('@/components/auth/UserMenu').then(m => m.UserMenu), { ssr: false })
+const MobileNavigation = dynamic(() => import('./MobileNavigation').then(m => m.MobileNavigation), { ssr: false })
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)

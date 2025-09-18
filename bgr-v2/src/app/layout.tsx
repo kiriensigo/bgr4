@@ -4,7 +4,7 @@ import "./globals.css";
 import { WebsiteStructuredData, OrganizationStructuredData } from "@/components/seo/StructuredData";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
+import AnalyticsBeacon from "@/components/analytics/AnalyticsBeacon";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
@@ -97,18 +97,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <GoogleAnalytics />
-        <AnalyticsProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-1">
-              <ErrorBoundary>
-                {children}
-              </ErrorBoundary>
-            </main>
-            <Footer />
-          </div>
-          <Toaster />
-        </AnalyticsProvider>
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-1">
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+          </main>
+          <Footer />
+        </div>
+        <Toaster />
+        {process.env.NODE_ENV === 'production' && <AnalyticsBeacon />}
       </body>
     </html>
   );
