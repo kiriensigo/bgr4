@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import AnalyticsBeacon from "@/components/analytics/AnalyticsBeacon";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import IdleToaster from "@/components/ui/IdleToaster";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -92,6 +92,7 @@ export default function RootLayout({
       <head>
         <WebsiteStructuredData />
         <OrganizationStructuredData />
+        <link rel="preconnect" href="https://cf.geekdo-images.com" crossOrigin="anonymous" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -106,7 +107,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
-        <IdleToaster />
+        <Toaster />
         {process.env.NODE_ENV === 'production' && <AnalyticsBeacon />}
       </body>
     </html>

@@ -37,7 +37,7 @@ export default function GameCardServer({ game, className, priority = false }: Ga
               alt={game.name}
               fill
               className="object-cover"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               loading={priority ? undefined : 'lazy'}
               priority={priority}
               fetchPriority={priority ? 'high' : 'auto'}
