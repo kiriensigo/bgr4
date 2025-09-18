@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import Link from 'next/link'
 
 export default function DevPasswordLoginPage() {
@@ -14,6 +14,7 @@ export default function DevPasswordLoginPage() {
     try {
       setLoading(true)
       setStatus('ログイン中...')
+      const supabase = getSupabaseClient()
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       setStatus('ログイン成功')
@@ -66,4 +67,3 @@ export default function DevPasswordLoginPage() {
     </div>
   )
 }
-

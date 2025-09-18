@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import { EnhancedReviewForm } from '@/components/reviews/EnhancedReviewForm'
 
 type InitialData = {
@@ -27,6 +27,7 @@ export default function ReviewCrudDevPage() {
   const [status, setStatus] = useState<string>('')
 
   useEffect(() => {
+    const supabase = getSupabaseClient()
     supabase.auth.getUser().then(({ data }) => setSessionUserId(data.user?.id || null))
   }, [])
 
@@ -34,6 +35,7 @@ export default function ReviewCrudDevPage() {
     try {
       setLoading(true)
       setStatus('loading latest...')
+      const supabase = getSupabaseClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
 
@@ -76,6 +78,7 @@ export default function ReviewCrudDevPage() {
     try {
       setLoading(true)
       setStatus('deleting...')
+      const supabase = getSupabaseClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
       if (!foundReviewId) throw new Error('No review loaded')
@@ -141,4 +144,3 @@ export default function ReviewCrudDevPage() {
     </div>
   )
 }
-

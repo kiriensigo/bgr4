@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
 import { EnhancedReviewForm } from "@/components/reviews/EnhancedReviewForm";
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/hooks/useAuth'
 import type { EnhancedGame } from '@/types/enhanced-review'
 
@@ -39,6 +39,7 @@ export default function ReviewPage({ params }: PageProps) {
     if (gameId && user) {
       const fetchGame = async () => {
         try {
+          const supabase = getSupabaseClient()
           const { data, error } = await supabase
             .from('games')
             .select('*')

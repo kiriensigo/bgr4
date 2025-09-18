@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/useToast'
 import Image from 'next/image'
 
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 interface BGGGamePreview {
   id: number

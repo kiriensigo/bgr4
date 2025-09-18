@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Star, Save, Loader2, Info, Users, Dice6, Timer, MessageSquare } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 import {
   MECHANICS,
@@ -446,6 +446,7 @@ export function EnhancedReviewForm({
       console.log('🎯 フォーム送信開始:', data)
       
       // クライアント側で現在のセッションを取得
+      const supabase = getSupabaseClient()
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       console.log('🔐 セッション確認:', { session: !!session, error: sessionError })

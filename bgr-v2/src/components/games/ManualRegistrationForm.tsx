@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/useToast'
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle2, Circle } from 'lucide-react'
@@ -255,7 +255,8 @@ export default function ManualRegistrationForm() {
     
     try {
       // 認証トークンを取得
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const supabase = getSupabaseClient()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError || !session) {
         throw new Error('認証が必要です。ログインしてください。')

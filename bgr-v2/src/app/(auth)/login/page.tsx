@@ -6,7 +6,7 @@ import { AuthButton } from '@/components/auth/AuthButton'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Gamepad2, LogIn, AlertCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase-client'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import { useAuth } from '@/hooks/useAuth'
 // import { toast } from '@/hooks/useToast'
 import Link from 'next/link'
@@ -66,6 +66,7 @@ function LoginPageContent() {
           try {
             window.history.replaceState(null, '', window.location.pathname)
             console.log('🔐 Starting code exchange for session...')
+            const supabase = getSupabaseClient()
             const { data, error } = await supabase.auth.exchangeCodeForSession(code)
             
             if (error) {
