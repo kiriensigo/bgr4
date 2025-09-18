@@ -38,14 +38,12 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // Tree shaking最適化を一時的に無効化
-  // modularizeImports: {
-  //   'lucide-react': {
-  //     transform: 'lucide-react/dist/esm/icons/{{kebabCase member}}'
-  //   }
-  // },
-
-  // TypeScript設定
+    modularizeImports: {
+     'lucide-react': { 
+      transform:  'lucide-react/dist/esm/icons/{{kebabCase member}}' 
+    }
+  },
+// TypeScript設定
   typescript: {
     // TypeScriptエラーを再有効化してエラー詳細を確認
     ignoreBuildErrors: false,
@@ -148,5 +146,7 @@ const nextConfig: NextConfig = {
 };
 
 export default withBundleAnalyzer(nextConfig);
+
+
 
 

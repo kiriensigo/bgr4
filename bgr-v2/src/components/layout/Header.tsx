@@ -4,13 +4,19 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Home, BookOpen, Search, Gamepad2, Menu } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const UserMenu = dynamic(() => import('@/components/auth/UserMenu').then(m => m.UserMenu), { ssr: false })
 const MobileNavigation = dynamic(() => import('./MobileNavigation').then(m => m.MobileNavigation), { ssr: false })
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [deferUI, setDeferUI] = useState(true)
+
+  useEffect(() => {
+    const idle = (window as any).requestIdleCallback || ((cb: any) => setTimeout(cb, 1200))
+    idle(() => setDeferUI(false))
+  }, [])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -55,14 +61,21 @@ export function Header() {
             </nav>
           </div>
           
-          {/* Desktop User Menu */}
+          {/* Desktop User Menu (deferred) */}
           <div className="hidden md:flex items-center">
-            <UserMenu />
+            {deferUI ? (
+              <div className="flex gap-2">
+                <Link href="/login"><Button variant="ghost">ログイン</Button></Link>
+                <Link href="/register"><Button>新規登録</Button></Link>
+              </div>
+            ) : (
+              <UserMenu />
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
-            <UserMenu />
+            {deferUI ? null : <UserMenu />}
             <Button
               variant="ghost"
               size="sm"
@@ -75,10 +88,12 @@ export function Header() {
         </div>
 
         {/* Mobile Navigation */}
-        <MobileNavigation 
-          isOpen={isMobileMenuOpen} 
-          onClose={() => setIsMobileMenuOpen(false)} 
-        />
+        {!deferUI && (
+          <MobileNavigation 
+            isOpen={isMobileMenuOpen} 
+            onClose={() => setIsMobileMenuOpen(false)} 
+          />
+        )}
       </div>
     </header>
   )

@@ -7,7 +7,7 @@ export default async function PopularGamesServer() {
     await registerServices()
     const gameUseCase = await getGameUseCase()
     const popular = await gameUseCase.searchGames({
-      filters: { page: 1, limit: 8, sortBy: 'rating_average', sortOrder: 'desc' }
+      filters: { page: 1, limit: 6, sortBy: 'rating_average', sortOrder: 'desc' }
     })
     const games = popular.data.map((g: any) => PresentationAdapter.gameToPopularGameResponse(g))
     return <PopularGames games={games} />
