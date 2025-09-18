@@ -226,14 +226,14 @@ export async function GET(request: NextRequest) {
       
       // メカニクス集計（boolean列から）
       Object.entries(mechanicsMapping).forEach(([japaneseName, columnName]) => {
-        if (review[columnName]) {
+        if ((review as any)[columnName]) {
           stats.mechanics.add(japaneseName)
         }
       })
       
       // カテゴリー集計（boolean列から）
       Object.entries(categoriesMapping).forEach(([japaneseName, columnName]) => {
-        if (review[columnName]) {
+        if ((review as any)[columnName]) {
           stats.categories.add(japaneseName)
         }
       })
@@ -249,13 +249,13 @@ export async function GET(request: NextRequest) {
     // 各ゲームの統計を計算してフィルタリング
     const filteredGames = []
     
-    for (const [gameId, stats] of gameStats) {
+    for (const stats of gameStats.values()) {
       // 平均値計算（配列が空の場合の対策）
-      const avgOverallScore = stats.overallScores.length > 0 ? stats.overallScores.reduce((a, b) => a + b, 0) / stats.overallScores.length : 0
-      const avgRuleComplexity = stats.ruleComplexity.length > 0 ? stats.ruleComplexity.reduce((a, b) => a + b, 0) / stats.ruleComplexity.length : 0
-      const avgLuckFactor = stats.luckFactor.length > 0 ? stats.luckFactor.reduce((a, b) => a + b, 0) / stats.luckFactor.length : 0
-      const avgInteraction = stats.interaction.length > 0 ? stats.interaction.reduce((a, b) => a + b, 0) / stats.interaction.length : 0
-      const avgDowntime = stats.downtime.length > 0 ? stats.downtime.reduce((a, b) => a + b, 0) / stats.downtime.length : 0
+      const avgOverallScore = stats.overallScores.length > 0 ? stats.overallScores.reduce((a: number, b: number) => a + b, 0) / stats.overallScores.length : 0
+      const avgRuleComplexity = stats.ruleComplexity.length > 0 ? stats.ruleComplexity.reduce((a: number, b: number) => a + b, 0) / stats.ruleComplexity.length : 0
+      const avgLuckFactor = stats.luckFactor.length > 0 ? stats.luckFactor.reduce((a: number, b: number) => a + b, 0) / stats.luckFactor.length : 0
+      const avgInteraction = stats.interaction.length > 0 ? stats.interaction.reduce((a: number, b: number) => a + b, 0) / stats.interaction.length : 0
+      const avgDowntime = stats.downtime.length > 0 ? stats.downtime.reduce((a: number, b: number) => a + b, 0) / stats.downtime.length : 0
 
       // 5軸評価フィルター適用（値が0の場合はスキップ）
       if (filters.overallScoreMin && avgOverallScore > 0 && avgOverallScore < filters.overallScoreMin) continue
