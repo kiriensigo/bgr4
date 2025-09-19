@@ -25,14 +25,41 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await gameUseCase.searchGames({ filters })
-    
-    return NextResponse.json({
-      games: result.data.map(game => game.toPlainObject()),
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages
+
+    // minimize payload for list view
+    const games = result.data.map((game: any) => {
+      const p = game.toPlainObject ? game.toPlainObject() : game
+      return {
+        id: p.id,
+        name: p.name,
+        japanese_name: p.japanese_name ?? p.name_jp ?? p.nameJp,
+        image_url: p.image_url ?? p.imageUrl ?? p.thumbnail_url ?? p.thumbnailUrl,
+        thumbnail_url: p.thumbnail_url ?? p.thumbnailUrl ?? p.image_url ?? p.imageUrl,
+        year_published: p.year_published ?? p.yearPublished,
+        min_players: p.min_players ?? p.minPlayers,
+        max_players: p.max_players ?? p.maxPlayers,
+        playing_time: p.playing_time ?? p.playingTime,
+        min_playing_time: p.min_playing_time ?? p.minPlayingTime,
+        max_playing_time: p.max_playing_time ?? p.maxPlayingTime,
+        rating_average: p.rating_average ?? p.ratingAverage,
+        rating_count: p.rating_count ?? p.ratingCount,
+      }
     })
+
+    return NextResponse.json(
+      {
+        games,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    )
     
   } catch (error) {
     return ErrorHandler.handleApiError(error)
@@ -75,4 +102,3 @@ export async function POST(request: NextRequest) {
     return ErrorHandler.handleApiError(error)
   }
 }
-
