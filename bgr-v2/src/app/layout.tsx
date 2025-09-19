@@ -25,10 +25,10 @@ export const metadata: Metadata = {
     default: 'BGR - Board Game Review | ボードゲームレビューサイト',
     template: '%s | BGR'
   },
-  description: 'ボードゲームのレビューと情報を共有するコミュニティサイト。BGG APIと連携した豊富なゲーム情報とユーザーレビューでお気に入りのボードゲームを見つけよう。',
+  description: 'ボードゲームのレビューと評価を集めるコミュニティサイト。詳細な評価指標やBGG連携で、あなたに合うボードゲームが見つかります。',
   keywords: [
-    'ボードゲーム', 'レビュー', 'BGG', 'Board Game Geek', 'アナログゲーム', 
-    'テーブルゲーム', 'ボドゲ', 'ゲームレビュー', 'ボードゲーム情報'
+    'ボードゲーム', 'レビュー', 'BGG', 'Board Game Geek', 'アナログゲーム',
+    'テーブルゲーム', 'ボドゲ', 'ゲームレビュー', 'ボードゲーム評価'
   ],
   authors: [{ name: 'BGR Team' }],
   creator: 'BGR Team',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     url: 'https://bgrq.netlify.app',
     siteName: 'BGR - Board Game Review',
     title: 'BGR - Board Game Review | ボードゲームレビューサイト',
-    description: 'ボードゲームのレビューと情報を共有するコミュニティサイト',
+    description: 'ボードゲームのレビューと評価を集めるコミュニティサイト',
     images: [
       {
         url: '/images/og-image.jpg',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     site: '@BGR_BoardGame',
     creator: '@BGR_BoardGame',
     title: 'BGR - Board Game Review | ボードゲームレビューサイト',
-    description: 'ボードゲームのレビューと情報を共有するコミュニティサイト',
+    description: 'ボードゲームのレビューと評価を集めるコミュニティサイト',
     images: ['/images/twitter-image.jpg']
   },
   robots: {
@@ -113,3 +113,4 @@ export default function RootLayout({
     </html>
   );
 }
+

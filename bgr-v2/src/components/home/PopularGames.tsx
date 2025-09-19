@@ -86,7 +86,7 @@ export function PopularGames({ games }: PopularGamesProps) {
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link href="/search?sortBy=popularity&sortOrder=desc" className="hidden sm:flex items-center gap-2">
+            <Link href="/search?sortBy=popularity&sortOrder=desc" className="hidden sm:flex items-center gap-2" aria-label="人気のボードゲームをもっと見る">
               ランキングを見る
               <ArrowRight className="w-4 h-4" />
             </Link>
