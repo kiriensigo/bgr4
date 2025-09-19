@@ -210,8 +210,11 @@ export function RecentReviews({ reviews }: RecentReviewsProps) {
                 {/* Footer */}
                 <div className="flex items-center justify-between">
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/reviews/${review.id}`}>
-                      続きを読む
+                    <Link 
+                      href={`/reviews/${review.id}`}
+                      aria-label={`レビュー「${review.title}」の詳細を読む`}
+                    >
+                      続きを読む <span className="sr-only">: {review.title}</span>
                     </Link>
                   </Button>
                   
