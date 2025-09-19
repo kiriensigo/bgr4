@@ -15,8 +15,11 @@ export function HeroSection({ stats }: HeroSectionProps) {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
       <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-      <div className="relative container mx-auto px-4 py-16 lg:py-24">
-        <div className="text-center max-w-4xl mx-auto mb-12">
+      <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-[55vh] flex items-center">
+        <div className="text-center max-w-4xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-gray-900 dark:text-white">
+            Board Game Review をはじめよう
+          </h1>
           <form method="GET" action="/search" className="max-w-2xl mx-auto mb-8">
             <div className="flex gap-2">
               <div className="flex-1">
@@ -31,7 +34,7 @@ export function HeroSection({ stats }: HeroSectionProps) {
             </div>
           </form>
 
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <div className="flex flex-wrap justify-center gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href="/search?mechanics=エリアベース">エリアベース</Link>
             </Button>
@@ -59,4 +62,3 @@ export function HeroSection({ stats }: HeroSectionProps) {
     </div>
   )
 }
-

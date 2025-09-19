@@ -110,7 +110,6 @@ export function PopularGames({ games }: PopularGamesProps) {
               <GameCardServer 
                 game={convertToGame(game) as any} 
                 className="h-full"
-                priority={index < 3}
               />
             </div>
           ))}
