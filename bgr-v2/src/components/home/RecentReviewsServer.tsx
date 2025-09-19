@@ -8,7 +8,7 @@ export default async function RecentReviewsServer() {
     const reviewUseCase = await getReviewUseCase()
     const reviews = await reviewUseCase.getRecentReviews(6)
     const transformed = reviews.map((r: any) => PresentationAdapter.reviewToResponse(r))
-    return <RecentReviews reviews={transformed} />
+    return <RecentReviews reviews={transformed as any} />
   } catch (e) {
     console.warn('RecentReviewsServer failed, returning empty list')
     return <RecentReviews reviews={[]} />

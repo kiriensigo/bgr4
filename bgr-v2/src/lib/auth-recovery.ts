@@ -1,4 +1,5 @@
-import { supabase } from './supabase-client'
+import { getSupabaseClient } from './supabase-client'
+const supabase = getSupabaseClient()
 
 /**
  * ローカルストレージから既存の認証セッションを復元する

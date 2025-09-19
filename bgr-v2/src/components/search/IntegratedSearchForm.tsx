@@ -73,7 +73,7 @@ export default function IntegratedSearchForm({
         ? prev.selectedGamePlayerCounts.filter(c => c !== count)
         : [...prev.selectedGamePlayerCounts, count]
     }))
-  })
+  }, [])
 
   const togglePlayerCount = useCallback((count: number) => {
     setFilters(prev => ({
@@ -82,7 +82,7 @@ export default function IntegratedSearchForm({
         ? prev.selectedPlayerCounts.filter(c => c !== count)
         : [...prev.selectedPlayerCounts, count]
     }))
-  })
+  }, [])
 
   const toggleMechanic = useCallback((mechanic: string) => {
     setFilters(prev => {
@@ -96,7 +96,7 @@ export default function IntegratedSearchForm({
         selectedMechanics: newMechanics
       }
     })
-  })
+  }, [])
 
   const toggleCategory = useCallback((category: string) => {
     setFilters(prev => ({
@@ -105,7 +105,7 @@ export default function IntegratedSearchForm({
         ? prev.selectedCategories.filter(c => c !== category)
         : [...prev.selectedCategories, category]
     }))
-  })
+  }, [])
 
   const resetFilters = useCallback(() => {
     setFilters({

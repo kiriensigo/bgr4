@@ -1,7 +1,7 @@
 'use client'
 
 import { useGameStats, GameStatItem } from '@/hooks/useGameStats'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertCircle, BarChart3 } from 'lucide-react'
 import StatisticItem from './StatisticItem'

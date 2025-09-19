@@ -221,7 +221,7 @@ export function ReviewCard({
         {showGameInfo && (
           <div className="mb-3">
             <Link 
-              href={`/games/${gameData?.id || gameData?.bgg_id || ''}`}
+              href={`/games/${(gameData as any)?.id || gameData?.bgg_id || ''}`}
               className="hover:text-blue-600 transition-colors"
             >
               <h3 className="font-semibold text-lg line-clamp-1">
@@ -230,7 +230,7 @@ export function ReviewCard({
             </Link>
             
             {/* Game Description - Collapsible */}
-            {gameData?.description && (
+            {(gameData as any)?.description && (
               <div className="mt-2">
                 <button
                   onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
@@ -245,17 +245,17 @@ export function ReviewCard({
                 </button>
                 {isDescriptionExpanded && (
                   <div className="mt-2 text-xs text-gray-700 bg-gray-50 rounded-lg p-3">
-                    <p className="line-clamp-4">{gameData.description}</p>
-                    {gameData.year_published && (
+                    <p className="line-clamp-4">{(gameData as any).description}</p>
+                    {(gameData as any)?.year_published && (
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         <span className="text-gray-500">
-                          発売年: {gameData.year_published}
-                          {gameData.min_players && gameData.max_players && (
-                            <> | プレイ人数: {gameData.min_players}
-                            {gameData.min_players !== gameData.max_players && `-${gameData.max_players}`}人</>
+                          発売年: {(gameData as any).year_published}
+                          {(gameData as any).min_players && (gameData as any).max_players && (
+                            <> | プレイ人数: {(gameData as any).min_players}
+                            {(gameData as any).min_players !== (gameData as any).max_players && `-${(gameData as any).max_players}`}人</>
                           )}
-                          {gameData.playing_time && (
-                            <> | プレイ時間: {gameData.playing_time}分</>
+                          {(gameData as any).playing_time && (
+                            <> | プレイ時間: {(gameData as any).playing_time}分</>
                           )}
                         </span>
                       </div>

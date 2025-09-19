@@ -28,15 +28,15 @@ export default function GameCardServer({ game, className, priority = false }: Ga
   }
 
   return (
-    <Card className={`overflow-hidden border ${className || ''}`}>
-      <Link href={`/games/${game.id}`} className="block">
+    <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 border-2 hover:border-blue-200 ${className || ''}`}>
+      <Link href={`/games/${game.id}`} className="group block">
         <CardHeader className="p-0">
           <div className="relative aspect-square">
             <Image
               src={(game as any).image_url || (game as any).thumbnail_url || '/placeholder-game.jpg'}
               alt={game.name}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-110"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               loading={priority ? undefined : 'lazy'}
               priority={priority}

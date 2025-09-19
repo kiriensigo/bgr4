@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import '@/styles/slider.css'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -123,92 +123,35 @@ export function EnhancedReviewForm({
   }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragValue, setDragValue] = useState<number | null>(null);
-    const pointerIdRef = useRef<number | null>(null);
-    const sliderRef = useRef<HTMLDivElement>(null);
+    // const pointerIdRef = useRef<number | null>(null);
+    // const sliderRef = useRef<HTMLDivElement>(null);
 
     // 位置から値を計算
-    const calculateValueFromPosition = useCallback((clientX: number) => {
-      if (!sliderRef.current) return value;
-      
-      const rect = sliderRef.current.getBoundingClientRect();
-      const percentage = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const rawValue = min + (max - min) * percentage;
-      return Math.round(rawValue / step) * step;
-    }, [min, max, step, value]);
+    // const calculateValueFromPosition = useCallback((clientX: number) => {
+    //   if (!sliderRef.current) return value;
+    //   const rect = sliderRef.current.getBoundingClientRect();
+    //   const percentage = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    //   const rawValue = min + (max - min) * percentage;
+    //   return Math.round(rawValue / step) * step;
+    // }, [min, max, step, value]);
 
-    // マウスムーブハンドラー
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const newValue = calculateValueFromPosition(e.clientX);
-      onChange(newValue);
-    }, [isDragging, calculateValueFromPosition, onChange]);
-
-    // マウスアップハンドラー
-    const handleMouseUp = useCallback(() => {
-      setIsDragging(false);
-      document.body.style.cursor = 'default';
-    }, []);
-
-    // タッチムーブハンドラー
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const touch = e.touches[0];
-      if (!touch) return;
-      const newValue = calculateValueFromPosition(touch.clientX);
-      onChange(newValue);
-    }, [isDragging, calculateValueFromPosition, onChange]);
-
-    // タッチエンドハンドラー
-    const handleTouchEnd = useCallback(() => {
-      setIsDragging(false);
-    }, []);
+    // (unused handlers removed)
 
     // ドラッグ中のイベントリスナー管理
     useEffect(() => { return () => {}; }, []);
 
     // ドラッグ開始（マウス）
-    const handleMouseDown = (e: React.MouseEvent) => {
-      e.preventDefault();
-      setIsDragging(true);
-      document.body.style.cursor = 'grabbing';
-      const newValue = calculateValueFromPosition(e.clientX);
-      onChange(newValue);
-    };
+    // const handleMouseDown = (e: React.MouseEvent) => {}
 
     // ドラッグ開始（タッチ）
-    const handleTouchStart = (e: React.TouchEvent) => {
-      e.preventDefault();
-      setIsDragging(true);
-      const touch = e.touches[0];
-      if (!touch) return;
-      const newValue = calculateValueFromPosition(touch.clientX);
-      onChange(newValue);
-    };
+    // const handleTouchStart = (e: React.TouchEvent) => {}
 
     // Pointer events (unified for mouse/touch/pen)
-    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(true);
-      pointerIdRef.current = e.pointerId;
-      try { (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId) } catch {}
-      document.body.style.cursor = 'grabbing';
-      onChange(calculateValueFromPosition(e.clientX));
-    };
+    // const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {}
 
-    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      onChange(calculateValueFromPosition(e.clientX));
-    };
+    // const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {}
 
-    const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-      setIsDragging(false);
-      document.body.style.cursor = 'default';
-      try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId) } catch {}
-      pointerIdRef.current = null;
-    };
+    // const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {}
 
     const effectiveValue = dragValue ?? value;
     const percentage = ((effectiveValue - min) / (max - min)) * 100;
@@ -231,9 +174,7 @@ export function EnhancedReviewForm({
 
     // エラーハンドリング
     try {
-      if (!sliderRef.current) {
-        console.warn('🔧 SliderRef is not ready yet')
-      }
+      // no-op: slider ref checks removed
     } catch (error) {
       console.error('🚨 RatingSlider Error:', error)
       return (
@@ -270,7 +211,7 @@ export function EnhancedReviewForm({
           
           {/* カスタムスライダートラック */}
           <div 
-            ref={sliderRef}
+            // ref={sliderRef}
             className="relative h-6 cursor-pointer select-none mx-3"
             style={{ userSelect: 'none', touchAction: 'none' }}
           >

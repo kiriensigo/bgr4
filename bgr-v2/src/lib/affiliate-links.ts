@@ -21,20 +21,20 @@ export interface AffiliateConfig {
 // アフィリエイト設定
 const affiliateConfig: AffiliateConfig = {
   amazon: {
-    affiliateId: process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_ID || '',
+    affiliateId: process.env['NEXT_PUBLIC_AMAZON_AFFILIATE_ID'] || '',
     baseUrl: 'https://www.amazon.co.jp'
   },
   rakuten: {
-    applicationId: process.env.NEXT_PUBLIC_RAKUTEN_APP_ID || '',
-    affiliateId: process.env.NEXT_PUBLIC_RAKUTEN_AFFILIATE_ID || '',
+    applicationId: process.env['NEXT_PUBLIC_RAKUTEN_APP_ID'] || '',
+    affiliateId: process.env['NEXT_PUBLIC_RAKUTEN_AFFILIATE_ID'] || '',
     baseUrl: 'https://search.rakuten.co.jp'
   },
   yahoo: {
-    valueCommerId: process.env.NEXT_PUBLIC_YAHOO_VALUE_COMMERCE_ID || '',
+    valueCommerId: process.env['NEXT_PUBLIC_YAHOO_VALUE_COMMERCE_ID'] || '',
     baseUrl: 'https://shopping.yahoo.co.jp'
   },
   suruga: {
-    affiliateId: process.env.NEXT_PUBLIC_SURUGA_AFFILIATE_ID,
+    affiliateId: process.env['NEXT_PUBLIC_SURUGA_AFFILIATE_ID'],
     baseUrl: 'https://www.suruga-ya.jp'
   }
 };

@@ -4,10 +4,9 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Search, Filter, Loader2 } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 
 import IntegratedSearchForm from '@/components/search/IntegratedSearchForm'
-import { SearchResultsList } from '@/components/search/SearchResultsList'
 import { type SearchFilters, type SearchResult } from '@/types/search'
 import { type EnhancedReview } from '@/types/enhanced-review'
 
@@ -32,8 +31,6 @@ function SearchPageContent() {
   const [searchResults, setSearchResults] = useState<any | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
-  const [searchMode, setSearchMode] = useState<'review' | 'traditional'>('review')
 
   // レビューベース検索実行
   const performReviewBasedSearch = useCallback(async (filters: ReviewSearchFilters) => {
@@ -176,6 +173,7 @@ function SearchPageContent() {
     const newUrl = params.toString() ? `/search?${params.toString()}` : '/search'
     router.push(newUrl)
   }, [router])
+  void updateURL
 
   // 検索実行
   const performSearch = useCallback(async (filters: SearchFilters) => {
@@ -240,19 +238,9 @@ function SearchPageContent() {
     }
   }, [])
 
-  // 検索フィルターの変更ハンドラ
-  const handleSearch = useCallback((filters: SearchFilters) => {
-    // ページを1にリセット（新しい検索時）
-    const searchFilters = { ...filters, page: 1 }
-    updateURL(searchFilters)
-    performSearch(searchFilters)
-  }, [updateURL, performSearch])
+  // 検索フィルターの変更ハンドラ（未使用のため削除）
 
-  // フィルター変更ハンドラ（ページネーションなど）
-  const handleFiltersChange = useCallback((filters: SearchFilters) => {
-    updateURL(filters)
-    performSearch(filters)
-  }, [updateURL, performSearch])
+  // フィルター変更ハンドラ（未使用のため削除）
 
   // 初期検索（ページロード時・URLパラメータ変更時）
   useEffect(() => {
@@ -264,7 +252,7 @@ function SearchPageContent() {
     }
   }, [getInitialFilters, performSearch])
 
-  const initialFilters = getInitialFilters()
+  // const initialFilters = getInitialFilters() // unused
 
   return (
     <div className="min-h-screen bg-background">
@@ -500,4 +488,3 @@ export default function SearchPage() {
     </Suspense>
   )
 }
-

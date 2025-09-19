@@ -47,7 +47,7 @@ export function ManualGameRegistrationForm({
   loading = false,
   initialData 
 }: ManualGameRegistrationFormProps) {
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  // const [submitError, setSubmitError] = useState<string | null>(null)
   const [designerInput, setDesignerInput] = useState('')
   const [publisherInput, setPublisherInput] = useState('')
   
@@ -81,7 +81,7 @@ export function ManualGameRegistrationForm({
 
   const handleFormSubmit = async (data: ManualGameFormData) => {
     try {
-      setSubmitError(null)
+      // setSubmitError(null)
       
       // プレイ人数の妥当性チェック
       if (data.max_players < data.min_players) {
@@ -98,15 +98,30 @@ export function ManualGameRegistrationForm({
         toast({ variant: 'success', title: '登録完了', description: 'ゲームを登録しました。' })
       } else {
         // デフォルトのServer Actions統合
-        await createManualGame(data)
+        const payload: any = {
+          nameEnglish: data.name,
+          nameJapanese: data.name_jp || '',
+          description: data.description,
+          yearPublished: data.year_published ? data.year_published.toString() : undefined,
+          minPlayers: data.min_players.toString(),
+          maxPlayers: data.max_players.toString(),
+          minPlayingTime: (data.min_playing_time ?? data.max_playing_time ?? 0).toString(),
+          maxPlayingTime: (data.max_playing_time ?? data.min_playing_time ?? 0).toString(),
+          imageUrl: data.image_url || '',
+          designers: (data.designers || []).join(', '),
+          publishers: (data.publishers || []).join(', '),
+        }
+        await createManualGame(payload)
         toast({ variant: 'success', title: '登録完了', description: 'ゲームを登録しました。' })
       }
     } catch (error) {
-      setSubmitError(
-        error instanceof Error 
-          ? error.message 
+      /*
+      // setSubmitError(
+        // error instanceof Error 
+          // ? error.message 
           : 'ゲームの登録に失敗しました'
       )
+      */
       const __msg = error instanceof Error ? error.message : 'ゲームの登録に失敗しました'
       toast({ variant: 'destructive', title: '登録エラー', description: __msg })
     }

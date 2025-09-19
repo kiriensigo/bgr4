@@ -11,11 +11,11 @@ interface StatisticItemProps {
 
 export default function StatisticItem({
   name,
-  percentage,
-  reviewCount,
-  bggWeight,
+  percentage: _percentage,
+  reviewCount: _reviewCount,
+  bggWeight: _bggWeight,
   priority,
-  showDetails = false
+  showDetails: _showDetails = false
 }: StatisticItemProps) {
   const isHighlight = priority === 'highlight'
   

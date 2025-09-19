@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getSupabaseClient } from '@/lib/supabase-client'
 import { EnhancedReviewForm } from '@/components/reviews/EnhancedReviewForm'
 
@@ -59,12 +59,12 @@ export default function ReviewCrudDevPage() {
       setFoundReviewId(data.id)
       setInitialData({
         id: data.id,
-        overall_score: data.overall_score ?? data.rating ?? 7.5,
-        complexity_score: data.complexity_score ?? 3,
-        luck_factor: data.luck_factor ?? 3,
-        interaction_score: data.interaction_score ?? 3,
-        downtime_score: data.downtime_score ?? 3,
-        content: data.content ?? ''
+        overall_score: (data as any).overall_score ?? (data as any).rating ?? 7.5,
+        complexity_score: (data as any).rule_complexity ?? (data as any).complexity_score ?? 3,
+        luck_factor: (data as any).luck_factor ?? 3,
+        interaction_score: (data as any).interaction_score ?? 3,
+        downtime_score: (data as any).downtime_score ?? 3,
+        content: (data as any).content ?? ''
       })
       setStatus('loaded')
     } catch (e: any) {
@@ -139,7 +139,7 @@ export default function ReviewCrudDevPage() {
         mode={isEdit ? 'edit' : 'create'}
         gameId={gameId}
         gameName={undefined}
-        initialData={initialData}
+        initialData={initialData as any}
       />
     </div>
   )

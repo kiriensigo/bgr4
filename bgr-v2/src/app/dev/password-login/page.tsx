@@ -15,7 +15,7 @@ export default function DevPasswordLoginPage() {
       setLoading(true)
       setStatus('ログイン中...')
       const supabase = getSupabaseClient()
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
       setStatus('ログイン成功')
     } catch (e: any) {

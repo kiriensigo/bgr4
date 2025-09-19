@@ -4,7 +4,7 @@ let translateClient: deepl.Translator | null = null
 
 function getTranslateClient(): deepl.Translator {
   if (!translateClient) {
-    const apiKey = process.env.DEEPL_API_KEY
+    const apiKey = process.env['DEEPL_API_KEY']
 
     if (!apiKey) {
       throw new Error('DEEPL_API_KEY environment variable is required')

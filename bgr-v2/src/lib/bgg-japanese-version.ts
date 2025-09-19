@@ -36,7 +36,7 @@ export function containsKanjiOnly(text: string): boolean {
 // 中国語の簡体字・繁体字の特徴的な文字を検出
 export function containsChineseChars(text: string): boolean {
   // 中国語特有の簡体字・繁体字パターン
-  const chineseOnlyChars = /[\u4E00-\u4FFF\u5000-\u5FFF\u6000-\u6FFF\u7000-\u7FFF\u8000-\u8FFF\u9000-\u9FFF]/
+  // const chineseOnlyChars = /[\u4E00-\u4FFF\u5000-\u5FFF\u6000-\u6FFF\u7000-\u7FFF\u8000-\u8FFF\u9000-\u9FFF]/
   const traditionalChars = /[們們個們動們動們們動們動]/  // 繁体字の特徴的文字
   const simplifiedChars = /[们个动]/  // 简体字の特徴的文字
   
@@ -194,7 +194,7 @@ export async function extractJapaneseVersionInfo(
     }
 
     const xmlData = await response.text()
-    const parsed = await parseXML(xmlData)
+    const parsed: any = await parseXML(xmlData)
 
     if (!parsed.items?.item?.[0]) {
       console.log('No game data found')

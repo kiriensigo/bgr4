@@ -46,6 +46,7 @@ interface ReviewsResponse {
   page: number
   limit: number
   totalPages: number
+  latestTimestamp?: string
 }
 
 export default function ReviewsPage() {

@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/useToast'
 import Image from 'next/image'
-
 import { getSupabaseClient } from '@/lib/supabase-client'
+
 
 interface BGGGamePreview {
   id: number
@@ -36,7 +36,8 @@ export default function BGGRegistrationForm() {
   const [isRegistering, setIsRegistering] = useState(false)
   const [gamePreview, setGamePreview] = useState<BGGGamePreview | null>(null)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const supabase = getSupabaseClient()
+  // const [success, setSuccess] = useState('')
 
   // BGG URLからIDを抽出する関数
   const extractBGGId = (input: string): number | null => {
@@ -53,7 +54,7 @@ export default function BGGRegistrationForm() {
     
     for (const pattern of patterns) {
       const match = input.match(pattern)
-      if (match) return parseInt(match[1])
+      if (match) return parseInt(match[1]!)
     }
     
     return null
@@ -62,7 +63,7 @@ export default function BGGRegistrationForm() {
   const handleSearch = async () => {
     setError('')
     setGamePreview(null)
-    setSuccess('')
+    // setSuccess('')
     
     const bggId = extractBGGId(input)
     if (!bggId) {
@@ -162,7 +163,7 @@ export default function BGGRegistrationForm() {
 
       const result = await response.json()
       
-      setSuccess('ゲームが正常に登録されました！ゲーム詳細ページに移動します...')
+      // setSuccess('ゲームが正常に登録されました！ゲーム詳細ページに移動します...')
       toast({ variant: 'success', title: '登録完了', description: 'ゲームを登録しました。詳細ページへ移動します。' })
       setTimeout(() => {
         window.location.href = `/games/${result.data.id}`

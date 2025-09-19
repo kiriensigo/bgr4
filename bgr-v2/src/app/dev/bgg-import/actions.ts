@@ -9,11 +9,11 @@ export async function importFromBGGAction(formData: FormData) {
   const gameUseCase = await getGameUseCase()
 
   try {
-    const game = await gameUseCase.createGameFromBGG({ bggId, autoRegister: true })
+    // Dev tool action: use a system user for auditing
+    const game = await gameUseCase.createGameFromBGG({ bggId, autoRegister: true, userId: 'system' })
     const plain = game.toPlainObject()
     return { ok: true, data: plain }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'unknown error' }
   }
 }
-

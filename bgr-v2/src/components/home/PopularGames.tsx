@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card'
+// import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TrendingUp, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
@@ -93,8 +93,8 @@ export function PopularGames({ games }: PopularGamesProps) {
           </Button>
         </div>
 
-        {/* Games Grid - Server-rendered lightweight cards */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Games Grid - align sizing with /games list */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {games.slice(0, 8).map((game, index) => (
             <div key={game.id} className="relative">
               {/* Ranking Badge */}

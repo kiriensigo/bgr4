@@ -6,7 +6,6 @@ import { Star, MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { SupabaseReviewRepository } from '@/infrastructure/repositories/SupabaseReviewRepository'
-import { SupabaseGameRepository } from '@/infrastructure/repositories/SupabaseGameRepository'
 
 interface GameReviewsProps {
   params: Promise<{ id: string }>

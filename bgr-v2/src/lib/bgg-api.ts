@@ -259,8 +259,6 @@ function parseBGGGameItem(item: BGGGameItem): BGGGameDetail {
     minPlayers: item.minplayers?.[0] ? parseInt(item.minplayers[0].$.value) : undefined,
     maxPlayers: item.maxplayers?.[0] ? parseInt(item.maxplayers[0].$.value) : undefined,
     playingTime: item.playingtime?.[0] ? parseInt(item.playingtime[0].$.value) : undefined,
-    minPlayingTime: (item as any).minplaytime?.[0]?.$.value ? parseInt((item as any).minplaytime[0].$.value) : undefined,
-    maxPlayingTime: (item as any).maxplaytime?.[0]?.$.value ? parseInt((item as any).maxplaytime[0].$.value) : undefined,
     minPlayingTime: item.minplaytime?.[0]?.$.value ? parseInt(item.minplaytime[0].$.value) : undefined,
     maxPlayingTime: item.maxplaytime?.[0]?.$.value ? parseInt(item.maxplaytime[0].$.value) : undefined,
     minAge: item.minage?.[0] ? parseInt(item.minage[0].$.value) : undefined,

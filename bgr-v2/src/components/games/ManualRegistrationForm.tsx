@@ -12,7 +12,6 @@ import { getSupabaseClient } from '@/lib/supabase-client'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { CheckCircle2, Circle } from 'lucide-react'
-import Image from 'next/image'
 
 interface ManualGameData {
   nameEnglish: string
@@ -109,8 +108,8 @@ const mechanicLabels = {
 export default function ManualRegistrationForm() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [_error, setError] = useState('')
+  const [_success, setSuccess] = useState('')
   
   const [formData, setFormData] = useState<ManualGameData>({
     nameEnglish: '',

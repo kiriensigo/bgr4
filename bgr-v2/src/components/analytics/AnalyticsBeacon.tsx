@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { pageview } from '@/lib/analytics'
 
-export default function AnalyticsBeacon() {
+function AnalyticsBeaconContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -22,4 +22,12 @@ export default function AnalyticsBeacon() {
   }, [pathname, searchParams])
 
   return null
+}
+
+export default function AnalyticsBeacon() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsBeaconContent />
+    </Suspense>
+  )
 }
