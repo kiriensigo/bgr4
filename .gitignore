@@ -54,3 +54,6 @@ temp/
 CODEX*.md
 CLAUDE*.md
 *.local.md
+
+# Generated sitemaps
+bgr-v2/public/sitemap*.xml
