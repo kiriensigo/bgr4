@@ -92,7 +92,7 @@ export default function RootLayout({
       <head>
         <WebsiteStructuredData />
         <OrganizationStructuredData />
-        <link rel="preconnect" href="https://cf.geekdo-images.com" crossOrigin="anonymous" />
+        {/* preconnect to third-party removed to avoid render-blocking on first paint */}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -113,4 +113,3 @@ export default function RootLayout({
     </html>
   );
 }
-
