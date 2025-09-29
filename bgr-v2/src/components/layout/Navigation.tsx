@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { UserMenu } from '@/components/auth/UserMenu'
-import { Home, BookOpen, Gamepad2, TestTube, Search, Plus } from 'lucide-react'
+import { Home, BookOpen, Gamepad2, List, TestTube, Search, Plus } from 'lucide-react'
 
 export function Navigation() {
   return (
@@ -19,6 +19,13 @@ export function Navigation() {
                 <Link href="/" className="flex items-center gap-2">
                   <Home className="w-4 h-4" />
                   ホーム
+                </Link>
+              </Button>
+              
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/games" className="flex items-center gap-2">
+                  <List className="w-4 h-4" />
+                  ゲーム一覧
                 </Link>
               </Button>
               
