@@ -55,7 +55,7 @@ export default async function GameDetailsPage({ params }: GameDetailsProps) {
   const shoppingLinks = generateShoppingLinks(game.name)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-6">
       {/* ゲーム基本情報 */}
       <Card>
         <CardHeader>
@@ -194,42 +194,6 @@ export default async function GameDetailsPage({ params }: GameDetailsProps) {
               content={game.description}
               maxLines={3}
             />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* メカニクス・カテゴリー */}
-      {( (game.getDisplayMechanics && game.getDisplayMechanics().length > 0) || (game.getDisplayCategories && game.getDisplayCategories().length > 0) ) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>ゲーム特徴</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {game.getDisplayMechanics && game.getDisplayMechanics().length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">メカニクス</h4>
-                <div className="flex flex-wrap gap-2">
-                  {game.getDisplayMechanics().map((mechanic: any, index: number) => (
-                    <Badge key={index} className="bg-blue-100 text-blue-800">
-                      {mechanic}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {game.getDisplayCategories && game.getDisplayCategories().length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">カテゴリー</h4>
-                <div className="flex flex-wrap gap-2">
-                  {game.getDisplayCategories().map((category: any, index: number) => (
-                    <Badge key={index} className="bg-green-100 text-green-800">
-                      {category}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

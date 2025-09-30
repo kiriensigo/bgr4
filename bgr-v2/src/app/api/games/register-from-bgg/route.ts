@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { getGameDetailForAutoRegistration, getBggGameRawData } from '@/lib/bgg-api'
+import { getBggGameDetails } from '@/lib/bgg'
 import { convertBggToSiteData } from '@/lib/bgg-mapping'
 import { translateToJapanese } from '@/lib/translate'
 
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
     let gameRegistrationData = await getGameDetailForAutoRegistration(bggId)
     let bggGameData: any
     let registrationData: any
+    let playerCountDetail: Awaited<ReturnType<typeof getBggGameDetails>> | null = null
     if (!gameRegistrationData) {
       const raw = typeof (getBggGameRawData as any) === 'function' ? await (getBggGameRawData as any)(bggId) : null
       if (!raw) {
@@ -75,12 +77,20 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         )
       }
+      try {
+        playerCountDetail = await getBggGameDetails(bggId)
+      } catch (error) {
+        console.warn('Failed to fetch BGG player count details (fallback path):', error)
+      }
+      const fallbackBestCounts = playerCountDetail?.bestPlayerCounts ?? []
+      const fallbackRecommendedCountsRaw = playerCountDetail?.recommendedPlayerCounts ?? []
+      const fallbackRecommendedCounts = fallbackRecommendedCountsRaw.filter((count) => !fallbackBestCounts.includes(count))
       const mapped: any = convertBggToSiteData(
         (raw as any).categories || [],
         (raw as any).mechanics || [],
         (raw as any).publishers || [],
-        [],
-        []
+        fallbackBestCounts,
+        fallbackRecommendedCounts
       )
       bggGameData = {
         id: raw.id,
@@ -100,6 +110,8 @@ export async function POST(request: NextRequest) {
         designers: raw.designers || [],
         averageRating: raw.averageRating,
         ratingCount: raw.ratingCount,
+        bestPlayerCounts: fallbackBestCounts,
+        recommendedPlayerCounts: fallbackRecommendedCounts,
       }
       registrationData = { useName: raw.name, usePublisher: (mapped.normalizedPublishers || [])[0], reason: 'legacy-mapping' }
     } else {
@@ -121,6 +133,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const normalizeCounts = (counts: any): number[] => {
+      if (!Array.isArray(counts)) return []
+      const normalized: number[] = []
+      for (const value of counts) {
+        const parsed = typeof value === 'number' ? value : parseInt(String(value), 10)
+        if (!Number.isNaN(parsed)) {
+          normalized.push(parsed)
+        }
+      }
+      return Array.from(new Set(normalized))
+    }
+
+    if (!playerCountDetail) {
+      try {
+        playerCountDetail = await getBggGameDetails(bggId)
+      } catch (error) {
+        console.warn('Failed to fetch BGG player count details:', error)
+      }
+    }
+
+    let bestPlayerCounts = normalizeCounts(bggGameData.bestPlayerCounts)
+    let recommendedPlayerCounts = normalizeCounts(bggGameData.recommendedPlayerCounts)
+
+    if (bestPlayerCounts.length === 0 && playerCountDetail?.bestPlayerCounts) {
+      bestPlayerCounts = normalizeCounts(playerCountDetail.bestPlayerCounts)
+    }
+    if (recommendedPlayerCounts.length === 0 && playerCountDetail?.recommendedPlayerCounts) {
+      recommendedPlayerCounts = normalizeCounts(playerCountDetail.recommendedPlayerCounts)
+    }
+
+    recommendedPlayerCounts = recommendedPlayerCounts.filter((count) => !bestPlayerCounts.includes(count))
+    const bestPlayerStrings = bestPlayerCounts.map((count) => count.toString())
+    const recommendedPlayerStrings = recommendedPlayerCounts.map((count) => count.toString())
+
+    bggGameData.bestPlayerCounts = bestPlayerCounts
+    bggGameData.recommendedPlayerCounts = recommendedPlayerCounts
+
     const gameData: any = {
       id: bggGameData.id,
       bgg_id: bggGameData.id,
@@ -141,6 +190,8 @@ export async function POST(request: NextRequest) {
       publishers: registrationData.usePublisher ? [registrationData.usePublisher] : [],
       rating_average: bggGameData.averageRating,
       rating_count: bggGameData.ratingCount,
+      bgg_best_players: bestPlayerStrings,
+      bgg_recommended_players: recommendedPlayerStrings,
     }
 
     console.log('[register-from-bgg] Prepared insert payload', {
@@ -154,6 +205,8 @@ export async function POST(request: NextRequest) {
       categories_len: Array.isArray(gameData.categories) ? gameData.categories.length : null,
       mechanics_len: Array.isArray(gameData.mechanics) ? gameData.mechanics.length : null,
       publishers_len: Array.isArray(gameData.publishers) ? gameData.publishers.length : null,
+      bgg_best_players_len: Array.isArray(gameData.bgg_best_players) ? gameData.bgg_best_players.length : null,
+      bgg_recommended_players_len: Array.isArray(gameData.bgg_recommended_players) ? gameData.bgg_recommended_players.length : null,
     })
 
     const insertRes = await (supabase as any)

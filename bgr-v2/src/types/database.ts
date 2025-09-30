@@ -65,6 +65,8 @@ export interface Database {
           categories: string[] | null
           designers: string[] | null
           publishers: string[] | null
+          bgg_best_players: string[] | null
+          bgg_recommended_players: string[] | null
           rating_average: number | null
           rating_count: number | null
           created_at: string | null
@@ -86,6 +88,8 @@ export interface Database {
           categories?: string[]
           designers?: string[]
           publishers?: string[]
+          bgg_best_players?: string[]
+          bgg_recommended_players?: string[]
           rating_average?: number | null
           rating_count?: number
           created_at?: string
@@ -107,6 +111,8 @@ export interface Database {
           categories?: string[]
           designers?: string[]
           publishers?: string[]
+          bgg_best_players?: string[]
+          bgg_recommended_players?: string[]
           rating_average?: number | null
           rating_count?: number
           created_at?: string

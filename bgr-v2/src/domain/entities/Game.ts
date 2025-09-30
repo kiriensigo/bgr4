@@ -26,6 +26,8 @@ export interface GameProps {
   readonly siteCategories: readonly string[]
   readonly siteMechanics: readonly string[]
   readonly sitePublishers: readonly string[]
+  readonly bggBestPlayers?: readonly number[]
+  readonly bggRecommendedPlayers?: readonly number[]
   readonly designers: readonly string[]
   readonly ratingAverage?: number
   readonly ratingCount?: number
@@ -58,6 +60,8 @@ export class Game {
   private readonly _siteCategories: readonly string[]
   private readonly _siteMechanics: readonly string[]
   private readonly _sitePublishers: readonly string[]
+  private readonly _bggBestPlayers: readonly number[]
+  private readonly _bggRecommendedPlayers: readonly number[]
   private readonly _designers: readonly string[]
   private readonly _ratingAverage?: number
   private readonly _ratingCount?: number
@@ -91,6 +95,8 @@ export class Game {
     this._siteCategories = [...props.siteCategories]
     this._siteMechanics = [...props.siteMechanics]
     this._sitePublishers = [...props.sitePublishers]
+    this._bggBestPlayers = props.bggBestPlayers ? [...props.bggBestPlayers] : []
+    this._bggRecommendedPlayers = props.bggRecommendedPlayers ? [...props.bggRecommendedPlayers] : []
     this._designers = [...props.designers]
     this._ratingAverage = props.ratingAverage
     this._ratingCount = props.ratingCount
@@ -151,6 +157,8 @@ export class Game {
   get bggCategories(): readonly string[] { return this._bggCategories }
   get bggMechanics(): readonly string[] { return this._bggMechanics }
   get bggPublishers(): readonly string[] { return this._bggPublishers }
+  get bggBestPlayers(): readonly number[] { return this._bggBestPlayers }
+  get bggRecommendedPlayers(): readonly number[] { return this._bggRecommendedPlayers }
   get siteCategories(): readonly string[] { return this._siteCategories }
   get siteMechanics(): readonly string[] { return this._siteMechanics }
   get sitePublishers(): readonly string[] { return this._sitePublishers }
@@ -286,6 +294,8 @@ export class Game {
       bgg_categories: [...this._bggCategories],
       bgg_mechanics: [...this._bggMechanics],
       bgg_publishers: [...this._bggPublishers],
+      bgg_best_players: [...this._bggBestPlayers],
+      bgg_recommended_players: [...this._bggRecommendedPlayers],
       site_categories: [...this._siteCategories],
       site_mechanics: [...this._siteMechanics],
       site_publishers: [...this._sitePublishers],
@@ -320,6 +330,8 @@ export class Game {
       bggCategories: data.bgg_categories || [],
       bggMechanics: data.bgg_mechanics || [],
       bggPublishers: data.bgg_publishers || [],
+      bggBestPlayers: data.bgg_best_players || [],
+      bggRecommendedPlayers: data.bgg_recommended_players || [],
       siteCategories: data.site_categories || [],
       siteMechanics: data.site_mechanics || [],
       sitePublishers: data.site_publishers || [],
@@ -379,6 +391,8 @@ export class Game {
       siteCategories: updates.siteCategories ?? this._siteCategories,
       siteMechanics: updates.siteMechanics ?? this._siteMechanics,
       sitePublishers: updates.sitePublishers ?? this._sitePublishers,
+      bggBestPlayers: updates.bggBestPlayers ?? this._bggBestPlayers,
+      bggRecommendedPlayers: updates.bggRecommendedPlayers ?? this._bggRecommendedPlayers,
       designers: updates.designers ?? this._designers,
       ratingAverage: updates.ratingAverage ?? this._ratingAverage,
       ratingCount: updates.ratingCount ?? this._ratingCount,
@@ -407,6 +421,8 @@ export interface GamePlainObject {
   bgg_categories: string[]
   bgg_mechanics: string[]
   bgg_publishers: string[]
+  bgg_best_players?: number[]
+  bgg_recommended_players?: number[]
   site_categories: string[]
   site_mechanics: string[]
   site_publishers: string[]

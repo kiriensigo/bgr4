@@ -223,6 +223,19 @@ export class SupabaseGameRepository implements GameRepository {
     const averageOverallScore = reviewCount > 0 
       ? reviewStats.reduce((sum: number, review: any) => sum + (review.overall_score || 0), 0) / reviewCount
       : null
+    const normalizePlayerCounts = (values: any): number[] => {
+      if (!Array.isArray(values)) return []
+      const parsed: number[] = []
+      for (const value of values) {
+        const parsedValue = typeof value === 'number' ? value : parseInt(String(value), 10)
+        if (!Number.isNaN(parsedValue)) {
+          parsed.push(parsedValue)
+        }
+      }
+      return Array.from(new Set(parsed))
+    }
+    const bggBestPlayers = normalizePlayerCounts((row as any).bgg_best_players)
+    const bggRecommendedPlayers = normalizePlayerCounts((row as any).bgg_recommended_players)
 
     const plainObject: GamePlainObject = {
       id: row.id,
@@ -244,6 +257,8 @@ export class SupabaseGameRepository implements GameRepository {
       bgg_categories: [],
       bgg_mechanics: [],
       bgg_publishers: [],
+      bgg_best_players: bggBestPlayers,
+      bgg_recommended_players: bggRecommendedPlayers,
       site_categories: row.categories ?? [],
       site_mechanics: row.mechanics ?? [],
       site_publishers: row.publishers ?? [],
@@ -301,7 +316,9 @@ export class SupabaseGameRepository implements GameRepository {
     const withExtendedFields = {
       ...baseInsert,
       ...(plainObject.min_playing_time !== undefined ? { min_playing_time: plainObject.min_playing_time } : {}),
-      ...(plainObject.max_playing_time !== undefined ? { max_playing_time: plainObject.max_playing_time } : {})
+      ...(plainObject.max_playing_time !== undefined ? { max_playing_time: plainObject.max_playing_time } : {}),
+      bgg_best_players: (plainObject.bgg_best_players ?? []).map((value) => value.toString()),
+      bgg_recommended_players: (plainObject.bgg_recommended_players ?? []).map((value) => value.toString())
     } as any
 
     return withExtendedFields

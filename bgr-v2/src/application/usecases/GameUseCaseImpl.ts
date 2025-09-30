@@ -43,14 +43,17 @@ export class GameUseCaseImpl implements GameUseCase {
     try {
       // Fetch from BGG API
       const bggGame = await getBggGameDetails(bggId)
-      
+      const bestPlayerCounts = Array.isArray(bggGame.bestPlayerCounts) ? bggGame.bestPlayerCounts : []
+      const recommendedPlayerCountsRaw = Array.isArray(bggGame.recommendedPlayerCounts) ? bggGame.recommendedPlayerCounts : []
+      const recommendedPlayerCounts = Array.from(new Set(recommendedPlayerCountsRaw.filter(count => !bestPlayerCounts.includes(count))))
+
       // Map BGG data to site data
       const mappingResult = this.mappingService.mapBGGToSiteData(
         bggGame.categories || [],
         bggGame.mechanics || [],
         bggGame.publishers || [],
-        [], // bestPlayerCounts - to be implemented
-        []  // recommendedPlayerCounts - to be implemented
+        bestPlayerCounts,
+        recommendedPlayerCounts
       )
 
       // Create game entity; keep site-specific ID (auto or JP range) and store BGG ID separately
@@ -73,6 +76,8 @@ export class GameUseCaseImpl implements GameUseCase {
         bggCategories: bggGame.categories || [],
         bggMechanics: bggGame.mechanics || [],
         bggPublishers: bggGame.publishers || [],
+        bggBestPlayers: bestPlayerCounts,
+        bggRecommendedPlayers: recommendedPlayerCounts,
         
         // Site-specific mapped data
         siteCategories: mappingResult.siteCategories,
