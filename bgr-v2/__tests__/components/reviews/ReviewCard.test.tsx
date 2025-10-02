@@ -1,113 +1,149 @@
 import { render, screen } from '@testing-library/react'
-import { ReviewCard } from '@/components/reviews/ReviewCard'
+import { formatDistanceToNow } from 'date-fns'
+import { ReviewCard, type ReviewCardProps } from '@/components/reviews/ReviewCard'
 
-const mockReview = {
-  id: 1,
+jest.mock('date-fns', () => {
+  const actual = jest.requireActual('date-fns')
+  return {
+    ...actual,
+    formatDistanceToNow: jest.fn(() => '1日前'),
+  }
+})
+
+const formatDistanceToNowMock = formatDistanceToNow as jest.MockedFunction<typeof formatDistanceToNow>
+
+const baseReview: ReviewCardProps['review'] = {
+  id: '1',
   title: 'Amazing Game!',
-  content: 'This is one of the best board games I have ever played. The mechanics are innovative and the artwork is stunning.',
+  content:
+    'This is one of the best board games I have ever played. The mechanics are innovative and the artwork is stunning.',
   rating: 9,
-  gameId: 1,
-  userId: 'user-123',
-  isPublished: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
+  rule_complexity: 4,
+  luck_factor: 2,
+  interaction: 5,
+  downtime: 2,
   pros: ['Great mechanics', 'Beautiful artwork'],
   cons: ['Long setup time'],
+  categories: ['Strategy'],
+  mechanics: ['Deck Building'],
+  recommended_player_counts: [2, 3, 4],
+  created_at: '2024-01-01T00:00:00Z',
+  user: {
+    username: 'boardgamer',
+    full_name: 'Board Gamer',
+    avatar_url: 'https://example.com/avatar.jpg',
+  },
   game: {
-    id: 1,
     name: 'Gloomhaven',
-    imageUrl: 'https://example.com/gloomhaven.jpg'
+    japanese_name: null,
+    image_url: 'https://example.com/gloomhaven.jpg',
+    bgg_id: '224517',
+    id: 1,
+    description: 'Epic dungeon crawling game',
+    year_published: 2017,
+    min_players: 1,
+    max_players: 4,
+    playing_time: 120,
+  },
+  profiles: undefined,
+  games: undefined,
+}
+
+const createReview = (
+  overrides: Partial<ReviewCardProps['review']> = {},
+): ReviewCardProps['review'] => ({
+  ...baseReview,
+  ...overrides,
+  game: {
+    ...baseReview.game,
+    ...(overrides.game ?? {}),
   },
   user: {
-    id: 'user-123',
-    username: 'boardgamer',
-    fullName: 'John Doe',
-    avatarUrl: 'https://example.com/avatar.jpg'
-  }
+    ...baseReview.user,
+    ...(overrides.user ?? {}),
+  },
+})
+
+const renderReviewCard = (
+  reviewOverrides?: Partial<ReviewCardProps['review']>,
+  componentOverrides?: Partial<Omit<ReviewCardProps, 'review'>>,
+) => {
+  const review = createReview(reviewOverrides)
+  return render(<ReviewCard review={review} {...componentOverrides} />)
 }
 
 describe('ReviewCard', () => {
-  it('renders review information correctly', () => {
-    render(<ReviewCard review={mockReview} />)
-    
+  beforeEach(() => {
+    jest.clearAllMocks()
+    formatDistanceToNowMock.mockReturnValue('1日前')
+  })
+
+  it('renders core review information', () => {
+    renderReviewCard()
+
     expect(screen.getByText('Amazing Game!')).toBeInTheDocument()
-    expect(screen.getByText(/This is one of the best board games/)).toBeInTheDocument()
-    expect(screen.getByText('9')).toBeInTheDocument()
-    expect(screen.getByText('boardgamer')).toBeInTheDocument()
+    expect(screen.getByText(/one of the best board games/i)).toBeInTheDocument()
+    expect(screen.getByText('9.0')).toBeInTheDocument()
+    expect(screen.getByText('Board Gamer')).toBeInTheDocument()
   })
 
-  it('displays star rating', () => {
-    render(<ReviewCard review={mockReview} />)
-    
-    const stars = screen.getAllByTestId('star-icon')
-    expect(stars).toHaveLength(10) // 10 stars total
-    
-    // Check filled stars (rating 9 = 9 filled stars)
-    const filledStars = stars.filter(star => 
-      star.classList.contains('fill-yellow-400')
-    )
-    expect(filledStars).toHaveLength(9)
+  it('renders star rating with filled icons', () => {
+    renderReviewCard()
+
+    const ratingValue = screen.getByText('9.0')
+    const starContainer = ratingValue.previousElementSibling as HTMLElement | null
+
+    expect(starContainer).not.toBeNull()
+
+    const starIcons = starContainer!.querySelectorAll('svg')
+    expect(starIcons).toHaveLength(5)
+    starIcons.forEach((icon) => {
+      expect(icon.classList.contains('fill-yellow-400')).toBe(true)
+    })
   })
 
-  it('shows pros and cons when available', () => {
-    render(<ReviewCard review={mockReview} />)
-    
+  it('shows pros and cons for detailed variant', () => {
+    renderReviewCard(undefined, { variant: 'detailed' })
+
     expect(screen.getByText('Great mechanics')).toBeInTheDocument()
     expect(screen.getByText('Beautiful artwork')).toBeInTheDocument()
     expect(screen.getByText('Long setup time')).toBeInTheDocument()
   })
 
-  it('handles review without pros/cons', () => {
-    const reviewWithoutProsCons = {
-      ...mockReview,
-      pros: null,
-      cons: null
-    }
-    
-    render(<ReviewCard review={reviewWithoutProsCons} />)
-    
-    expect(screen.getByText('Amazing Game!')).toBeInTheDocument()
-    expect(screen.queryByText('良い点')).not.toBeInTheDocument()
-    expect(screen.queryByText('気になる点')).not.toBeInTheDocument()
+  it('omits pros and cons when not provided', () => {
+    renderReviewCard({ pros: null, cons: null }, { variant: 'detailed' })
+
+    expect(screen.queryByText('Great mechanics')).not.toBeInTheDocument()
+    expect(screen.queryByText('Long setup time')).not.toBeInTheDocument()
   })
 
-  it('truncates long content with read more button', () => {
-    const reviewWithLongContent = {
-      ...mockReview,
-      content: 'A'.repeat(300) + ' This is a very long review content that should be truncated.'
-    }
-    
-    render(<ReviewCard review={reviewWithLongContent} />)
-    
-    expect(screen.getByText(/A+\.\.\./)).toBeInTheDocument()
-    expect(screen.getByText('続きを読む')).toBeInTheDocument()
+  it('applies maxContentLines styling', () => {
+    renderReviewCard(undefined, { maxContentLines: 2 })
+
+    const contentElement = screen.getByText(/one of the best board games/i)
+    expect(contentElement).toHaveClass('line-clamp-2')
+    expect(contentElement).toHaveStyle({ WebkitLineClamp: '2' })
   })
 
-  it('displays formatted date', () => {
-    render(<ReviewCard review={mockReview} />)
-    
-    expect(screen.getByText('2024年1月1日')).toBeInTheDocument()
+  it('displays formatted relative created date', () => {
+    renderReviewCard()
+
+    expect(formatDistanceToNowMock).toHaveBeenCalled()
+    const callArgs = formatDistanceToNowMock.mock.calls[0]
+    expect(callArgs[0]).toEqual(new Date(baseReview.created_at))
+    expect(callArgs[1]).toMatchObject({ addSuffix: true })
+    expect(screen.getByText('1日前')).toBeInTheDocument()
   })
 
   it('shows game information when provided', () => {
-    render(<ReviewCard review={mockReview} />)
-    
+    renderReviewCard()
+
     expect(screen.getByText('Gloomhaven')).toBeInTheDocument()
   })
 
-  it('handles missing user avatar', () => {
-    const reviewWithoutAvatar = {
-      ...mockReview,
-      user: {
-        ...mockReview.user,
-        avatarUrl: null
-      }
-    }
-    
-    render(<ReviewCard review={reviewWithoutAvatar} />)
-    
-    expect(screen.getByText('boardgamer')).toBeInTheDocument()
-    // Should show fallback initials
-    expect(screen.getByText('JD')).toBeInTheDocument()
+  it('uses fallback initial when avatar is missing', () => {
+    renderReviewCard({ user: { avatar_url: undefined } })
+
+    expect(screen.getByText(/^B$/)).toBeInTheDocument()
   })
 })

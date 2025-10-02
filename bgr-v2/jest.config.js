@@ -53,6 +53,9 @@ const customJestConfig = {
   // モジュールエイリアス設定の修正
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^lucide-react$': '<rootDir>/__mocks__/lucide-react.js',
+    '^lucide-react/dist/esm/icons/(.*)$': '<rootDir>/__mocks__/lucide-icon.js',
+    '^lucide-react/dist/esm/(.*)$': '<rootDir>/__mocks__/lucide-icon.js',
   },
   
   // ESMモジュール変換設定
