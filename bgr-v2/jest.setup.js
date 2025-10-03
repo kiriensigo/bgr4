@@ -68,6 +68,20 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
+
+// Mock lucide-react icons to simple SVG components for Jest
+jest.mock('lucide-react', () => {
+  const React = require('react')
+  return new Proxy({}, {
+    get: (_, iconName) => {
+      const LucideIcon = ({ children, ...props }) =>
+        React.createElement('svg', { ...props, 'data-icon': iconName }, children)
+      LucideIcon.displayName = `MockLucideIcon(${String(iconName)})`
+      return LucideIcon
+    },
+  })
+})
+
 // Next.js Image コンポーネントのモック
 jest.mock('next/image', () => ({
   __esModule: true,

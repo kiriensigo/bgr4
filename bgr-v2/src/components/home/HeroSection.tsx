@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 
@@ -22,11 +23,14 @@ export function HeroSection({ stats: _stats }: HeroSectionProps) {
           </h1>
           <form method="GET" action="/search" className="max-w-2xl mx-auto mb-8">
             <div className="flex gap-2">
-              <div className="flex-1">
+                            <div className="flex-1">
+                <Label htmlFor="home-search-input" className="sr-only">�Q�[���L�[�h</Label>
                 <Input
+                  id="home-search-input"
                   type="text"
                   name="query"
-                  placeholder="ゲーム名、デザイナー、メカニクスで検索..."
+                  placeholder="�Q�[�����A�f�U�C�i�[�A���J�j�N�X�Ō���..."
+                  aria-label="�Q�[���L�[�h"
                   className="h-12 text-base"
                 />
               </div>
@@ -64,3 +68,7 @@ export function HeroSection({ stats: _stats }: HeroSectionProps) {
     </div>
   )
 }
+
+
+
+

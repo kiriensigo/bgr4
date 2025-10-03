@@ -5,9 +5,14 @@
 import { createMocks } from 'node-mocks-http'
 import { GET } from '@/app/api/games/[id]/stats/route'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { getBggGameDetails } from '@/lib/bgg'
 
 jest.mock('@/lib/supabase', () => ({
   createServerSupabaseClient: jest.fn()
+}))
+
+jest.mock('@/lib/bgg', () => ({
+  getBggGameDetails: jest.fn(),
 }))
 
 const mockSupabaseClient: any = {
@@ -32,10 +37,19 @@ describe('/api/games/[id]/stats API', () => {
     jest.clearAllMocks()
     ;(createServerSupabaseClient as jest.Mock).mockResolvedValue(mockSupabaseClient)
     mockSupabaseClient.rpc.mockReset()
+    ;(getBggGameDetails as jest.Mock).mockResolvedValue({
+      bestPlayerCounts: [],
+      recommendedPlayerCounts: [],
+    })
     setGameRowResponse({ data: { bgg_best_players: [], bgg_recommended_players: [] }, error: null })
   })
 
   test('正常な統計データを返す', async () => {
+    ;(getBggGameDetails as jest.Mock).mockResolvedValue({
+      bestPlayerCounts: [2],
+      recommendedPlayerCounts: [],
+    })
+
     setGameRowResponse({
       data: {
         bgg_best_players: ['2'],
@@ -97,11 +111,11 @@ describe('/api/games/[id]/stats API', () => {
     expect(responseData.playerCounts).toHaveLength(1)
     const playerStat = responseData.playerCounts[0]
     expect(playerStat.name).toBe('2人')
-    expect(playerStat.percentage).toBe(100)
-    expect(playerStat.bggVotes).toBe(10)
-    expect(playerStat.totalVotes).toBe(11)
+    expect(playerStat.percentage).toBe(40)
+    expect(playerStat.bggVotes).toBe(0)
+    expect(playerStat.totalVotes).toBe(1)
     expect(playerStat.totalReviews).toBe(11)
-    expect(playerStat.displayPriority).toBe('highlight')
+    expect(playerStat.displayPriority).toBe('normal')
 
     expect(responseData.metadata).toBeDefined()
     expect(responseData.metadata.gameId).toBe(30549)

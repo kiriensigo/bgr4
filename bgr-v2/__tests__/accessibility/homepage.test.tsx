@@ -2,6 +2,17 @@ import { render } from '@testing-library/react'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import HomePage from '@/app/page'
 
+jest.mock('@/components/home/PopularGamesServer', () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
+jest.mock('@/components/home/RecentReviewsServer', () => ({
+  __esModule: true,
+  default: () => null,
+}))
+
+
 // アクセシビリティテスト用のマッチャーを追加
 expect.extend(toHaveNoViolations)
 
