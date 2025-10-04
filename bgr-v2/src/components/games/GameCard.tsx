@@ -116,6 +116,11 @@ export function GameCard({ game, className, priority = false }: GameCardProps) {
             </p>
           )}
 
+          {game.description && (
+            <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+              {game.description}
+            </p>
+          )}
 
           <div className="flex flex-wrap gap-2 mb-3">
             <div className="flex items-center gap-1 text-sm text-gray-600">
