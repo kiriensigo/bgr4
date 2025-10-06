@@ -1,6 +1,4 @@
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 
 interface HeroSectionProps {
@@ -14,61 +12,50 @@ interface HeroSectionProps {
 
 export function HeroSection({ stats: _stats }: HeroSectionProps) {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
-      <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-      <div className="relative container mx-auto px-4 py-16 lg:py-24 min-h-[55vh] flex items-center">
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-gray-900 dark:text-white">
-            ボードゲームレビュー
+    <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
+      <div className="container relative mx-auto flex min-h-[55vh] items-center px-4 py-16 lg:py-24">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-5xl lg:text-6xl">
+            ボードゲームの今がわかるレビューコミュニティ
           </h1>
-          <form method="GET" action="/search" className="max-w-2xl mx-auto mb-8">
-            <div className="flex gap-2">
-                            <div className="flex-1">
-                <Label htmlFor="home-search-input" className="sr-only">�Q�[���L�[�h</Label>
-                <Input
-                  id="home-search-input"
-                  type="text"
-                  name="query"
-                  placeholder="�Q�[�����A�f�U�C�i�[�A���J�j�N�X�Ō���..."
-                  aria-label="�Q�[���L�[�h"
-                  className="h-12 text-base"
-                />
-              </div>
-              <Button type="submit" size="lg" className="h-12">
-                検索
-              </Button>
-            </div>
-          </form>
+          <p className="mt-6 text-lg text-gray-700 dark:text-gray-200">
+            話題作から名作まで、実際に遊んだプレイヤーの声をもとに次の一本を見つけましょう。
+          </p>
 
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button size="lg" asChild>
+              <Link href="/games">ゲーム一覧を見る</Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <Link href="/reviews">最新レビューをチェック</Link>
+            </Button>
+          </div>
+
+          <div className="mt-12 flex flex-wrap justify-center gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href="/search?mechanics=エリアベース">エリアベース</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search?mechanics=協力ゲーム">協力ゲーム</Link>
+              <Link href="/search?mechanics=協力型">協力型</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search?mechanics=デッキ">デッキ</Link>
+              <Link href="/search?mechanics=デッキ">デッキ構築</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search?categories=戦略ゲーム">戦略ゲーム</Link>
+              <Link href="/search?categories=戦略">戦略ゲーム</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search?minPlayers=2&maxPlayers=2">2人</Link>
+              <Link href="/search?minPlayers=2&maxPlayers=2">2人プレイ</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search?minPlayers=3&maxPlayers=4">3-4人</Link>
+              <Link href="/search?minPlayers=3&maxPlayers=4">3〜4人</Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search?minPlayers=5">5人以上</Link>
+              <Link href="/search?minPlayers=5">大人数向け</Link>
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
-
-
-
-
