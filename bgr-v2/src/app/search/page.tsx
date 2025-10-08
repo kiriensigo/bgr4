@@ -169,10 +169,10 @@ function SearchPageContent() {
             initialValues={filters}
             onSubmit={handleSearch}
             loading={loading}
-            className="shadow-lg shadow-blue-100/40"
+            className="shadow-lg shadow-blue-100/40 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto"
           />
 
-          <div className="space-y-6">
+          <div className="space-y-6 lg:pl-2 xl:pl-4">
             {loading && (
               <Card>
                 <CardContent className="flex items-center justify-center gap-2 py-10 text-slate-600">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, RotateCcw, Filter } from 'lucide-react'
+import { Search, RotateCcw, Filter, ChevronDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   REVIEW_MECHANIC_OPTIONS,
   REVIEW_CATEGORY_OPTIONS,
@@ -21,6 +21,7 @@ import {
   mergeWithDefaultReviewFilters,
   getActiveReviewFilterCount
 } from '@/lib/search/review-filters'
+import { cn } from '@/lib/utils'
 
 interface IntegratedSearchFormProps {
   initialValues?: Partial<ReviewSearchFormValues>
@@ -42,10 +43,39 @@ export default function IntegratedSearchForm({
   const [filters, setFilters] = useState<ReviewSearchFormValues>(
     mergeWithDefaultReviewFilters(initialValues)
   )
+  const [mechanicsOpen, setMechanicsOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
 
   useEffect(() => {
     setFilters(mergeWithDefaultReviewFilters(initialValues))
   }, [initialValues])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+
+    const applyState = (matches: boolean) => {
+      setMechanicsOpen(matches)
+      setCategoriesOpen(matches)
+    }
+
+    applyState(mediaQuery.matches)
+
+    const handler = (event: MediaQueryListEvent) => {
+      applyState(event.matches)
+    }
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handler)
+      return () => mediaQuery.removeEventListener('change', handler)
+    }
+
+    mediaQuery.addListener(handler)
+    return () => mediaQuery.removeListener(handler)
+  }, [])
 
   const activeFilterCount = useMemo(() => getActiveReviewFilterCount(filters), [filters])
 
@@ -290,57 +320,123 @@ export default function IntegratedSearchForm({
           </ToggleGroup>
         </section>
 
-        <section className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-base font-semibold text-muted-foreground">メカニクス</h3>
-            <p className="text-xs text-muted-foreground">ゲーム詳細ページの統計ラベルと同じ名称で指定できます。</p>
-          </div>
-          <ToggleGroup
-            type="multiple"
-            value={filters.selectedMechanics}
-            onValueChange={(values) =>
-              setFilters((prev) => ({ ...prev, selectedMechanics: values }))
-            }
-            className="flex flex-wrap gap-2"
-          >
-            {REVIEW_MECHANIC_OPTIONS.map((option) => (
-              <ToggleGroupItem
-                key={option.label}
-                value={option.label}
-                variant="outline"
-                className="min-w-[120px]"
+        <Collapsible
+          open={mechanicsOpen}
+          onOpenChange={setMechanicsOpen}
+          className="space-y-3"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-muted-foreground">メカニクス</h3>
+              <p className="text-xs text-muted-foreground">ゲーム詳細ページの統計ラベルと同じ名称で指定できます。</p>
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                aria-label="メカニクスのフィルタを開閉"
               >
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </section>
+                {filters.selectedMechanics.length > 0 ? (
+                  <Badge variant="secondary" className="pointer-events-none">
+                    {filters.selectedMechanics.length}件選択中
+                  </Badge>
+                ) : (
+                  <span>未選択</span>
+                )}
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    mechanicsOpen ? '-rotate-180' : 'rotate-0'
+                  )}
+                  aria-hidden
+                />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="space-y-3">
+            <div className="max-h-48 overflow-y-auto pr-1">
+              <ToggleGroup
+                type="multiple"
+                value={filters.selectedMechanics}
+                onValueChange={(values) =>
+                  setFilters((prev) => ({ ...prev, selectedMechanics: values }))
+                }
+                className="flex flex-wrap gap-2"
+              >
+                {REVIEW_MECHANIC_OPTIONS.map((option) => (
+                  <ToggleGroupItem
+                    key={option.label}
+                    value={option.label}
+                    variant="outline"
+                    className="min-w-[120px]"
+                  >
+                    {option.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-        <section className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-base font-semibold text-muted-foreground">カテゴリー</h3>
-            <p className="text-xs text-muted-foreground">レビューで人気のカテゴリーから AND 条件で絞り込めます。</p>
-          </div>
-          <ToggleGroup
-            type="multiple"
-            value={filters.selectedCategories}
-            onValueChange={(values) =>
-              setFilters((prev) => ({ ...prev, selectedCategories: values }))
-            }
-            className="flex flex-wrap gap-2"
-          >
-            {REVIEW_CATEGORY_OPTIONS.map((option) => (
-              <ToggleGroupItem
-                key={option.label}
-                value={option.label}
-                variant="outline"
-                className="min-w-[120px]"
+        <Collapsible
+          open={categoriesOpen}
+          onOpenChange={setCategoriesOpen}
+          className="space-y-3"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-muted-foreground">カテゴリー</h3>
+              <p className="text-xs text-muted-foreground">レビューで人気のカテゴリーから AND 条件で絞り込めます。</p>
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                aria-label="カテゴリーのフィルタを開閉"
               >
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </section>
+                {filters.selectedCategories.length > 0 ? (
+                  <Badge variant="secondary" className="pointer-events-none">
+                    {filters.selectedCategories.length}件選択中
+                  </Badge>
+                ) : (
+                  <span>未選択</span>
+                )}
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    categoriesOpen ? '-rotate-180' : 'rotate-0'
+                  )}
+                  aria-hidden
+                />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="space-y-3">
+            <div className="max-h-48 overflow-y-auto pr-1">
+              <ToggleGroup
+                type="multiple"
+                value={filters.selectedCategories}
+                onValueChange={(values) =>
+                  setFilters((prev) => ({ ...prev, selectedCategories: values }))
+                }
+                className="flex flex-wrap gap-2"
+              >
+                {REVIEW_CATEGORY_OPTIONS.map((option) => (
+                  <ToggleGroupItem
+                    key={option.label}
+                    value={option.label}
+                    variant="outline"
+                    className="min-w-[120px]"
+                  >
+                    {option.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   )
