@@ -1,453 +1,392 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, AlertTriangle } from 'lucide-react'
 
 import IntegratedSearchForm from '@/components/search/IntegratedSearchForm'
-import { type SearchFilters, type SearchResult } from '@/types/search'
-import { type EnhancedReview } from '@/types/enhanced-review'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  ReviewSearchFormValues,
+  mergeWithDefaultReviewFilters,
+  buildReviewSearchParams,
+  parseReviewSearchParams,
+  hasActiveReviewFilters,
+  formatRecommendedPlayerLabel
+} from '@/lib/search/review-filters'
+import {
+  REVIEW_MECHANIC_OPTIONS,
+  REVIEW_CATEGORY_OPTIONS
+} from '@/shared/constants/review-search'
 
-// レビューベース検索フィルター型定義
-interface ReviewSearchFilters {
-  query: string
-  overallScore: [number, number]
-  ruleComplexity: [number, number]
-  luckFactor: [number, number]
-  interaction: [number, number]
-  downtime: [number, number]
-  selectedPlayerCounts: number[]
-  selectedGamePlayerCounts: number[]
-  playTimeRange: [number, number]
-  selectedMechanics: string[]
-  selectedCategories: string[]
+interface ReviewStats {
+  review_count: number
+  avg_overall_score: number
+  avg_rule_complexity: number
+  avg_luck_factor: number
+  avg_interaction: number
+  avg_downtime: number
+  avg_actual_play_time: number | null
+  popular_mechanics: string[]
+  popular_categories: string[]
+  popular_player_counts: number[]
 }
+
+interface ReviewSearchGame {
+  id: number
+  name: string
+  japanese_name?: string | null
+  image_url?: string | null
+  min_players?: number | null
+  max_players?: number | null
+  playing_time?: number | null
+  review_stats?: ReviewStats
+}
+
+interface ReviewSearchResponse {
+  success: boolean
+  data: ReviewSearchGame[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasNext: boolean
+    hasPrev: boolean
+  }
+  filters: {
+    mechanics?: string[]
+    categories?: string[]
+    recommendedPlayerCounts?: number[]
+    gamePlayerCounts?: number[]
+  }
+  facets?: {
+    total_games?: number
+    avg_overall_score?: number
+  }
+  message?: string
+}
+
+const mechanicsOptionSet = new Set(REVIEW_MECHANIC_OPTIONS.map((option) => option.label))
+const categoriesOptionSet = new Set(REVIEW_CATEGORY_OPTIONS.map((option) => option.label))
 
 function SearchPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [searchResults, setSearchResults] = useState<any | null>(null)
+  const [filters, setFilters] = useState<ReviewSearchFormValues>(mergeWithDefaultReviewFilters())
+  const [searchResults, setSearchResults] = useState<ReviewSearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const lastQueryRef = useRef<string>('')
 
-  // レビューベース検索実行
-  const performReviewBasedSearch = useCallback(async (filters: ReviewSearchFilters) => {
+  const searchParamsString = useMemo(() => searchParams?.toString() ?? '', [searchParams])
+
+  const performSearch = useCallback(async (values: ReviewSearchFormValues) => {
     setLoading(true)
     setError(null)
-    
+
     try {
-      const params = new URLSearchParams()
-      
-      if (filters.query) params.set('query', filters.query)
-      
-      // 5軸評価パラメータ
-      if (filters.overallScore[0] !== 1 || filters.overallScore[1] !== 10) {
-        params.set('overallScoreMin', filters.overallScore[0].toString())
-        params.set('overallScoreMax', filters.overallScore[1].toString())
+      const params = buildReviewSearchParams(values)
+      const queryString = params.toString()
+      lastQueryRef.current = queryString
+
+      const response = await fetch(`/api/search/reviews?${queryString}`)
+      if (!response.ok) {
+        throw new Error('検索 API へのリクエストに失敗しました')
       }
-      if (filters.ruleComplexity[0] !== 1 || filters.ruleComplexity[1] !== 5) {
-        params.set('ruleComplexityMin', filters.ruleComplexity[0].toString())
-        params.set('ruleComplexityMax', filters.ruleComplexity[1].toString())
-      }
-      if (filters.luckFactor[0] !== 1 || filters.luckFactor[1] !== 5) {
-        params.set('luckFactorMin', filters.luckFactor[0].toString())
-        params.set('luckFactorMax', filters.luckFactor[1].toString())
-      }
-      if (filters.interaction[0] !== 1 || filters.interaction[1] !== 5) {
-        params.set('interactionMin', filters.interaction[0].toString())
-        params.set('interactionMax', filters.interaction[1].toString())
-      }
-      if (filters.downtime[0] !== 1 || filters.downtime[1] !== 5) {
-        params.set('downtimeMin', filters.downtime[0].toString())
-        params.set('downtimeMax', filters.downtime[1].toString())
-      }
-      
-      // プレイ時間
-      if (filters.playTimeRange[0] !== 15 || filters.playTimeRange[1] !== 180) {
-        params.set('playTimeMin', filters.playTimeRange[0].toString())
-        params.set('playTimeMax', filters.playTimeRange[1].toString())
-      }
-      
-      // プレイ人数
-      filters.selectedGamePlayerCounts.forEach(count => 
-        params.append('gamePlayerCounts', count.toString())
-      )
-      filters.selectedPlayerCounts.forEach(count => 
-        params.append('recommendedPlayerCounts', count.toString())
-      )
-      
-      // メカニクス・カテゴリー
-      filters.selectedMechanics.forEach(mechanic => 
-        params.append('mechanics', mechanic)
-      )
-      filters.selectedCategories.forEach(category => 
-        params.append('categories', category)
-      )
-      
-      const response = await fetch(`/api/search/reviews?${params.toString()}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setSearchResults(data)
-      } else {
-        setError(data.message || '検索に失敗しました')
-      }
-    } catch (err) {
-      console.error('Search error:', err)
-      setError('検索中にエラーが発生しました')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
-  // URLパラメータから初期フィルターを構築
-  const getInitialFilters = useCallback((): SearchFilters => {
-    const filters: SearchFilters = {}
-    
-    if (searchParams.get('query')) filters.query = searchParams.get('query')!
-    if (searchParams.get('minRating')) filters.minRating = parseFloat(searchParams.get('minRating')!)
-    if (searchParams.get('maxRating')) filters.maxRating = parseFloat(searchParams.get('maxRating')!)
-    if (searchParams.get('minPlayers')) filters.minPlayers = parseInt(searchParams.get('minPlayers')!)
-    if (searchParams.get('maxPlayers')) filters.maxPlayers = parseInt(searchParams.get('maxPlayers')!)
-    if (searchParams.get('yearFrom')) filters.yearFrom = parseInt(searchParams.get('yearFrom')!)
-    if (searchParams.get('yearTo')) filters.yearTo = parseInt(searchParams.get('yearTo')!)
-    if (searchParams.get('sortBy')) filters.sortBy = searchParams.get('sortBy') as any
-    if (searchParams.get('sortOrder')) filters.sortOrder = searchParams.get('sortOrder') as any
-    if (searchParams.get('page')) filters.page = parseInt(searchParams.get('page')!)
-    
-    // 配列パラメータ
-    const mechanics = searchParams.getAll('mechanics').filter(Boolean)
-    if (mechanics.length > 0) filters.mechanics = mechanics
-    
-    const categories = searchParams.getAll('categories').filter(Boolean)
-    if (categories.length > 0) filters.categories = categories
-    
-    const publishers = searchParams.getAll('publishers').filter(Boolean)
-    if (publishers.length > 0) filters.publishers = publishers
-
-    const ruleComplexity = searchParams.getAll('ruleComplexity').map(Number).filter(Boolean)
-    if (ruleComplexity.length > 0) filters.ruleComplexity = ruleComplexity
-
-    const luckFactor = searchParams.getAll('luckFactor').map(Number).filter(Boolean)
-    if (luckFactor.length > 0) filters.luckFactor = luckFactor
-
-    const interaction = searchParams.getAll('interaction').map(Number).filter(Boolean)
-    if (interaction.length > 0) filters.interaction = interaction
-
-    const downtime = searchParams.getAll('downtime').map(Number).filter(Boolean)
-    if (downtime.length > 0) filters.downtime = downtime
-
-    const playingTime = searchParams.getAll('playingTime').map(Number).filter(Boolean)
-    if (playingTime.length > 0) filters.playingTime = playingTime
-    
-    return filters
-  }, [searchParams])
-
-  // URLの更新
-  const updateURL = useCallback((filters: SearchFilters) => {
-    const params = new URLSearchParams()
-    
-    if (filters.query) params.set('query', filters.query)
-    if (filters.minRating) params.set('minRating', filters.minRating.toString())
-    if (filters.maxRating) params.set('maxRating', filters.maxRating.toString())
-    if (filters.minPlayers) params.set('minPlayers', filters.minPlayers.toString())
-    if (filters.maxPlayers) params.set('maxPlayers', filters.maxPlayers.toString())
-    if (filters.yearFrom) params.set('yearFrom', filters.yearFrom.toString())
-    if (filters.yearTo) params.set('yearTo', filters.yearTo.toString())
-    if (filters.sortBy) params.set('sortBy', filters.sortBy)
-    if (filters.sortOrder) params.set('sortOrder', filters.sortOrder)
-    if (filters.page && filters.page > 1) params.set('page', filters.page.toString())
-    
-    // 配列パラメータ
-    filters.mechanics?.forEach(mechanic => params.append('mechanics', mechanic))
-    filters.categories?.forEach(category => params.append('categories', category))
-    filters.publishers?.forEach(publisher => params.append('publishers', publisher))
-    filters.ruleComplexity?.forEach(complexity => params.append('ruleComplexity', complexity.toString()))
-    filters.luckFactor?.forEach(luck => params.append('luckFactor', luck.toString()))
-    filters.interaction?.forEach(inter => params.append('interaction', inter.toString()))
-    filters.downtime?.forEach(down => params.append('downtime', down.toString()))
-    filters.playingTime?.forEach(time => params.append('playingTime', time.toString()))
-    
-    const newUrl = params.toString() ? `/search?${params.toString()}` : '/search'
-    router.push(newUrl)
-  }, [router])
-  void updateURL
-
-  // 検索実行
-  const performSearch = useCallback(async (filters: SearchFilters) => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const params = new URLSearchParams()
-      
-      // フィルターをURLSearchParamsに変換
-      if (filters.query) params.set('query', filters.query)
-      if (filters.minRating) params.set('minRating', filters.minRating.toString())
-      if (filters.maxRating) params.set('maxRating', filters.maxRating.toString())
-      if (filters.minPlayers) params.set('minPlayers', filters.minPlayers.toString())
-      if (filters.maxPlayers) params.set('maxPlayers', filters.maxPlayers.toString())
-      if (filters.yearFrom) params.set('yearFrom', filters.yearFrom.toString())
-      if (filters.yearTo) params.set('yearTo', filters.yearTo.toString())
-      if (filters.sortBy) params.set('sortBy', filters.sortBy)
-      if (filters.sortOrder) params.set('sortOrder', filters.sortOrder)
-      if (filters.page) params.set('page', filters.page.toString())
-      if (filters.limit) params.set('limit', filters.limit.toString())
-      
-      // 配列パラメータ
-      filters.mechanics?.forEach(mechanic => params.append('mechanics', mechanic))
-      filters.categories?.forEach(category => params.append('categories', category))
-      filters.publishers?.forEach(publisher => params.append('publishers', publisher))
-      filters.ruleComplexity?.forEach(complexity => params.append('ruleComplexity', complexity.toString()))
-      filters.luckFactor?.forEach(luck => params.append('luckFactor', luck.toString()))
-      filters.interaction?.forEach(inter => params.append('interaction', inter.toString()))
-      filters.downtime?.forEach(down => params.append('downtime', down.toString()))
-      filters.playingTime?.forEach(time => params.append('playingTime', time.toString()))
-
-      const response = await fetch(`/api/search?${params.toString()}`)
-      const data = await response.json()
-
+      const data = (await response.json()) as ReviewSearchResponse
       if (!data.success) {
-        throw new Error(data.message || 'Search failed')
+        throw new Error(data.message || '検索に失敗しました')
       }
 
-      // API応答から SearchResult 形式にマッピング
-      const searchResult: SearchResult<EnhancedReview> = {
-        data: data.data || [],
-        pagination: data.pagination || {
-          page: 1,
-          limit: 20,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false
-        },
-        filters: data.filters || filters,
-        facets: data.facets
-      }
-
-      setSearchResults(searchResult)
-      
+      setSearchResults(data)
     } catch (err) {
-      console.error('Search error:', err)
+      console.error('Review search error:', err)
       setError(err instanceof Error ? err.message : '検索中にエラーが発生しました')
+      setSearchResults(null)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // 検索フィルターの変更ハンドラ（未使用のため削除）
+  const handleSearch = useCallback(
+    (nextFilters: ReviewSearchFormValues) => {
+      setFilters(nextFilters)
+      const params = buildReviewSearchParams(nextFilters)
+      const query = params.toString()
+      lastQueryRef.current = query
+      const target = query ? `/search?${query}` : '/search'
+      router.replace(target, { scroll: true })
+      void performSearch(nextFilters)
+    },
+    [performSearch, router]
+  )
 
-  // フィルター変更ハンドラ（未使用のため削除）
-
-  // 初期検索（ページロード時・URLパラメータ変更時）
   useEffect(() => {
-    const initialFilters = getInitialFilters()
-    
-    // URLにパラメータがある場合は検索実行
-    if (Object.keys(initialFilters).length > 0) {
-      performSearch(initialFilters)
+    if (searchParamsString === lastQueryRef.current) {
+      return
     }
-  }, [getInitialFilters, performSearch])
 
-  // const initialFilters = getInitialFilters() // unused
+    if (!searchParamsString) {
+      const defaults = mergeWithDefaultReviewFilters()
+      setFilters(defaults)
+      setSearchResults(null)
+      setError(null)
+      lastQueryRef.current = ''
+      return
+    }
+
+    const parsed = parseReviewSearchParams(new URLSearchParams(searchParamsString))
+    setFilters(parsed)
+    lastQueryRef.current = searchParamsString
+    void performSearch(parsed)
+  }, [performSearch, searchParamsString])
+
+  const activeMechanics = new Set(searchResults?.filters?.mechanics ?? [])
+  const activeCategories = new Set(searchResults?.filters?.categories ?? [])
+  const activeRecommendedCounts = new Set(searchResults?.filters?.recommendedPlayerCounts ?? [])
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Search className="w-8 h-8" />
-            <h1 className="text-3xl font-bold">ボードゲーム検索</h1>
-          </div>
-          <p className="text-muted-foreground">
-            詳細な検索とフィルターでお気に入りのボードゲームレビューを見つけましょう
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="container mx-auto px-4 py-10 sm:py-14 lg:py-16">
+        <div className="max-w-3xl space-y-4">
+          <Badge variant="outline" className="w-fit bg-white/80 backdrop-blur">
+            レビュー統計ドリブン検索
+          </Badge>
+          <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+            今の気分にぴったりのボードゲームをレビュー統計から探そう
+          </h1>
+          <p className="text-base text-slate-600 sm:text-lg">
+            総合スコアやルール難度、インタラクションといったレビューで集計した指標に加え、
+            おすすめプレイ人数・メカニクス・カテゴリーのスイッチを組み合わせて目的のゲームに最短アクセスできます。
           </p>
         </div>
 
-        <div className="space-y-8">
-          {/* Review-Based Search Form */}
+        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr] lg:items-start">
           <IntegratedSearchForm
-            onSearch={performReviewBasedSearch}
+            initialValues={filters}
+            onSubmit={handleSearch}
             loading={loading}
+            className="shadow-lg shadow-blue-100/40"
           />
 
-          {/* Error Display */}
-          {error && (
-            <Card className="border-destructive">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-destructive">
-                  <span className="font-medium">エラー:</span>
-                  <span>{error}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <div className="space-y-6">
+            {loading && (
+              <Card>
+                <CardContent className="flex items-center justify-center gap-2 py-10 text-slate-600">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>レビュー統計を集計中です…</span>
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Loading State */}
-          {loading && (
-            <Card>
-              <CardContent className="py-8">
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>検索中...</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {error && !loading && (
+              <Card className="border-destructive/40 bg-destructive/5">
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <CardTitle className="text-base text-destructive">検索に失敗しました</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-destructive">
+                  {error}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Search Results */}
-          {searchResults && !loading && (
-            <>
-              <Separator />
+            {searchResults && !loading && !error && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">
-                    検索結果: {searchResults.pagination?.total || 0}件
-                  </h2>
-                </div>
-                
-                {searchResults.data && searchResults.data.length > 0 ? (
+                <Card className="border-0 bg-white shadow-lg shadow-blue-100/40">
+                  <CardContent className="flex flex-col gap-3 py-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-slate-900">
+                        {searchResults.pagination.total.toLocaleString()}件ヒットしました
+                      </h2>
+                      {searchResults.facets?.avg_overall_score && (
+                        <p className="text-sm text-slate-600">
+                          平均総合スコア: {searchResults.facets.avg_overall_score.toFixed(1)} / 10
+                        </p>
+                      )}
+                    </div>
+                    {hasActiveReviewFilters(filters) && (
+                      <Badge variant="secondary" className="w-fit">
+                        フィルタ適用中
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {searchResults.data.length === 0 ? (
+                  <Card className="border-dashed bg-white/70">
+                    <CardContent className="py-12 text-center text-slate-600">
+                      条件に一致するゲームが見つかりませんでした。フィルタを緩めて再検索してみてください。
+                    </CardContent>
+                  </Card>
+                ) : (
                   <div className="grid gap-4">
-                    {searchResults.data.map((game: any) => (
-                      <Card key={game.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-6">
-                          <div className="flex gap-4">
-                            <div className="flex-shrink-0">
-                              {game.image_url && (
-                                <img 
-                                  src={game.image_url} 
+                    {searchResults.data.map((game) => {
+                      const stats = game.review_stats
+                      const playerCounts = stats?.popular_player_counts ?? []
+                      const mechanics = (stats?.popular_mechanics ?? []).filter((mechanic) =>
+                        mechanicsOptionSet.has(mechanic)
+                      )
+                      const categories = (stats?.popular_categories ?? []).filter((category) =>
+                        categoriesOptionSet.has(category)
+                      )
+
+                      return (
+                        <Card key={`${game.id}-${game.name}`} className="border-0 bg-white shadow-md shadow-blue-50/60">
+                          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row">
+                            {game.image_url && (
+                              <div className="mx-auto w-28 flex-shrink-0 overflow-hidden rounded-lg border bg-slate-100 sm:mx-0 sm:w-32">
+                                <img
+                                  src={game.image_url}
                                   alt={game.name}
-                                  className="w-16 h-16 rounded object-cover"
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
                                 />
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-start justify-between">
+                              </div>
+                            )}
+
+                            <div className="flex-1 space-y-4">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                  <h3 className="text-lg font-semibold hover:text-blue-600 cursor-pointer">
+                                  <h3 className="text-lg font-semibold text-slate-900">
                                     {game.name}
                                   </h3>
                                   {game.japanese_name && (
-                                    <p className="text-sm text-gray-600">{game.japanese_name}</p>
+                                    <p className="text-sm text-slate-600">{game.japanese_name}</p>
                                   )}
-                                </div>
-                                
-                                {game.review_stats && (
-                                  <div className="text-right">
-                                    <div className="flex items-center gap-1">
-                                      <div className="flex">
-                                        {Array.from({ length: 5 }, (_, i) => {
-                                          const filled = i < Math.floor(game.review_stats.avg_overall_score / 2)
-                                          return (
-                                            <span key={i} className={filled ? 'text-yellow-400' : 'text-gray-300'}>
-                                              ★
-                                            </span>
-                                          )
-                                        })}
-                                      </div>
-                                      <span className="font-semibold">
-                                        {game.review_stats.avg_overall_score}点
+                                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                                    {typeof game.min_players === 'number' && typeof game.max_players === 'number' && (
+                                      <span>
+                                        プレイ人数 {game.min_players}〜{game.max_players}人
                                       </span>
+                                    )}
+                                    {stats?.avg_actual_play_time && (
+                                      <span>実測プレイ時間 約 {stats.avg_actual_play_time}分</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {stats && (
+                                  <div className="rounded-lg bg-blue-50 px-3 py-2 text-right text-sm text-blue-700">
+                                    <div className="font-semibold">
+                                      総合 {stats.avg_overall_score.toFixed(1)} / 10
                                     </div>
-                                    <p className="text-sm text-gray-600">
-                                      ({game.review_stats.review_count}件のレビュー)
-                                    </p>
+                                    <div className="text-xs text-blue-600/80">
+                                      レビュー {stats.review_count.toLocaleString()}件
+                                    </div>
                                   </div>
                                 )}
                               </div>
-                              
-                              <div className="flex gap-4 text-sm text-gray-600">
-                                <span>プレイ人数: {game.min_players}-{game.max_players}人</span>
-                                {game.review_stats?.avg_actual_play_time && (
-                                  <span>実プレイ時間: {game.review_stats.avg_actual_play_time}分</span>
-                                )}
-                              </div>
-                              
-                              {game.review_stats && (
-                                <div className="grid grid-cols-4 gap-2 text-sm">
-                                  <div className="text-center">
-                                    <span className="text-gray-500">ルール:</span>
-                                    <span className="font-medium ml-1">
-                                      {game.review_stats.avg_rule_complexity}
-                                    </span>
+
+                              {stats && (
+                                <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-3">
+                                  <div>
+                                    <span className="text-xs text-slate-500">ルール難度</span>
+                                    <div className="font-medium text-slate-800">{stats.avg_rule_complexity.toFixed(1)} / 5</div>
                                   </div>
-                                  <div className="text-center">
-                                    <span className="text-gray-500">運要素:</span>
-                                    <span className="font-medium ml-1">
-                                      {game.review_stats.avg_luck_factor}
-                                    </span>
+                                  <div>
+                                    <span className="text-xs text-slate-500">運要素</span>
+                                    <div className="font-medium text-slate-800">{stats.avg_luck_factor.toFixed(1)} / 5</div>
                                   </div>
-                                  <div className="text-center">
-                                    <span className="text-gray-500">相互作用:</span>
-                                    <span className="font-medium ml-1">
-                                      {game.review_stats.avg_interaction}
-                                    </span>
+                                  <div>
+                                    <span className="text-xs text-slate-500">インタラクション</span>
+                                    <div className="font-medium text-slate-800">{stats.avg_interaction.toFixed(1)} / 5</div>
                                   </div>
-                                  <div className="text-center">
-                                    <span className="text-gray-500">ダウンタイム:</span>
-                                    <span className="font-medium ml-1">
-                                      {game.review_stats.avg_downtime}
-                                    </span>
+                                  <div>
+                                    <span className="text-xs text-slate-500">ダウンタイム</span>
+                                    <div className="font-medium text-slate-800">{stats.avg_downtime.toFixed(1)} / 5</div>
                                   </div>
                                 </div>
                               )}
-                              
-                              <div className="flex gap-2 flex-wrap">
-                                {game.review_stats?.popular_mechanics?.slice(0, 3).map((mechanic: string) => (
-                                  <span key={mechanic} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                    {mechanic}
-                                  </span>
-                                ))}
-                                {game.review_stats?.popular_categories?.slice(0, 2).map((category: string) => (
-                                  <span key={category} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                                    {category}
-                                  </span>
-                                ))}
+
+                              <div className="space-y-3">
+                                {playerCounts.length > 0 && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-semibold text-slate-500">おすすめプレイ人数</span>
+                                    <div className="flex flex-wrap gap-2">
+                                      {playerCounts.map((count) => {
+                                        const active = activeRecommendedCounts.has(count)
+                                        return (
+                                          <Badge
+                                            key={`${game.id}-player-${count}`}
+                                            variant={active ? 'default' : 'outline'}
+                                            className="rounded-full px-3 py-1 text-xs"
+                                          >
+                                            {formatRecommendedPlayerLabel(count)}
+                                          </Badge>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {mechanics.length > 0 && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-semibold text-slate-500">人気のメカニクス</span>
+                                    <div className="flex flex-wrap gap-2">
+                                      {mechanics.map((mechanic) => {
+                                        const active = activeMechanics.has(mechanic)
+                                        return (
+                                          <Badge
+                                            key={`${game.id}-mechanic-${mechanic}`}
+                                            variant={active ? 'default' : 'outline'}
+                                            className="rounded-full px-3 py-1 text-xs"
+                                          >
+                                            {mechanic}
+                                          </Badge>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {categories.length > 0 && (
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-semibold text-slate-500">人気のカテゴリー</span>
+                                    <div className="flex flex-wrap gap-2">
+                                      {categories.map((category) => {
+                                        const active = activeCategories.has(category)
+                                        return (
+                                          <Badge
+                                            key={`${game.id}-category-${category}`}
+                                            variant={active ? 'default' : 'outline'}
+                                            className="rounded-full px-3 py-1 text-xs"
+                                          >
+                                            {category}
+                                          </Badge>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
-                ) : (
-                  <Card className="text-center py-8">
-                    <CardContent>
-                      <p className="text-gray-500">検索条件に一致するゲームが見つかりませんでした。</p>
-                    </CardContent>
-                  </Card>
                 )}
               </div>
-            </>
-          )}
+            )}
 
-          {/* Welcome State - No search performed */}
-          {!searchResults && !loading && !error && (
-            <Card className="text-center py-16">
-              <CardContent>
-                <div className="space-y-4">
-                  <Search className="w-16 h-16 mx-auto text-muted-foreground" />
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">レビューベース検索</h3>
-                    <p className="text-muted-foreground">
-                      5軸評価とプレイ特性で、あなたにぴったりのボードゲームを見つけましょう
+            {!searchResults && !loading && !error && (
+              <Card className="border-dashed bg-white/80">
+                <CardContent className="space-y-4 py-12 text-center text-slate-600">
+                  <Search className="mx-auto h-10 w-10 text-blue-400" />
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-slate-900">レビュー基準検索を始めましょう</h3>
+                    <p className="text-sm">
+                      スイッチ式フィルタを組み合わせると、いま遊びたいボードゲームに素早くたどり着けます。
                     </p>
                   </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>• <strong>5軸評価:</strong> 総合得点、ルール難度、運要素、相互作用、ダウンタイム</p>
-                    <p>• <strong>プレイ特性:</strong> おすすめプレイ人数、メカニクス、カテゴリー</p>
-                    <p>• <strong>実データベース:</strong> 実際のレビューから統計を計算</p>
-                    <p>• <strong>高精度検索:</strong> レビュアーの評価に基づく正確な検索結果</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -456,25 +395,19 @@ function SearchPageContent() {
 
 function SearchPageSkeleton() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="container mx-auto px-4 py-12">
+        <div className="space-y-6">
+          <div className="h-6 w-32 rounded bg-slate-200/70" />
+          <div className="h-10 w-3/4 rounded bg-slate-200/70" />
+          <div className="h-4 w-2/3 rounded bg-slate-200/60" />
+        </div>
+        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr]">
+          <div className="h-[540px] rounded-2xl bg-slate-200/60" />
           <div className="space-y-4">
-            <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="h-4 bg-muted rounded w-2/3"></div>
+            <div className="h-32 rounded-2xl bg-slate-200/50" />
+            <div className="h-48 rounded-2xl bg-slate-200/40" />
           </div>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="h-10 bg-muted rounded"></div>
-                <div className="grid gap-4">
-                  <div className="h-20 bg-muted rounded"></div>
-                  <div className="h-20 bg-muted rounded"></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

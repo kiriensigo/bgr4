@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClientForAPI } from '@/lib/supabase/server'
+import { REVIEW_MECHANIC_OPTIONS, REVIEW_CATEGORY_OPTIONS } from '@/shared/constants/review-search'
 
 interface ReviewSearchFilters {
   // テキスト検索
@@ -155,45 +156,15 @@ export async function GET(request: NextRequest) {
     }
 
     // メカニクス・カテゴリーマッピング
-    const mechanicsMapping = {
-      'エリア支配': 'mech_area_control',
-      'オークション': 'mech_auction', 
-      '賭け': 'mech_betting',
-      'ドラフト': 'mech_drafting',
-      '協力': 'mech_cooperative',
-      'デッキ/バッグビルド': 'mech_deck_building',
-      'ダイスロール': 'mech_dice_rolling',
-      '正体隠匿': 'mech_hidden_roles',
-      'モジュラーボード': 'mech_modular_board',
-      'ルート構築': 'mech_route_building',
-      'バースト': 'mech_push_luck',
-      'セット収集': 'mech_set_collection',
-      '同時手番': 'mech_simultaneous',
-      'タイル配置': 'mech_tile_placement',
-      'プレイヤー別能力': 'mech_variable_powers',
-      'ワカプレ': 'mech_worker_placement'
-    }
-    
-    const categoriesMapping = {
-      '動物': 'cat_animals',
-      'ブラフ': 'cat_bluffing',
-      'カードゲーム': 'cat_card_game',
-      '子供向け': 'cat_childrens',
-      '推理': 'cat_deduction',
-      '記憶': 'cat_memory',
-      '交渉': 'cat_negotiation',
-      'パーティー': 'cat_party',
-      'パズル': 'cat_puzzle',
-      'ウォーゲーム': 'cat_wargame',
-      'ワードゲーム': 'cat_word_game',
-      '演技': 'cat_acting',
-      'レガシー・キャンペーン': 'cat_legacy_campaign',
-      '紙ペン': 'cat_paper_pencil',
-      'ソロ向き': 'cat_solo',
-      'トリテ': 'cat_trick_taking',
-      'ペア向き': 'cat_pair',
-      '多人数向き': 'cat_large_group'
-    }
+        const mechanicsMapping = Object.fromEntries(
+      REVIEW_MECHANIC_OPTIONS.map(({ label, value }) => [label, value])
+    )
+
+    const categoriesMapping = Object.fromEntries(
+      REVIEW_CATEGORY_OPTIONS.map(({ label, value }) => [label, value])
+    )
+
+
 
     // ゲームIDごとにレビューを集計
     const gameStats = new Map()
