@@ -88,3 +88,4 @@
 - レビュー統計 API (`/api/search/reviews`) の安定運用。
 - ゲーム詳細ページ統計の用語統一タスク（ある場合）。
 - Playwright テスト基盤（`bgr-v2/e2e`）の最新化。
+- [ ] UIでスライダーの視認性が失われた場合は `src/components/ui/slider.tsx` のトラック色／レンジ色を確認する。トラックはグレー系 (`bg-slate-200`)、レンジはブランドカラー (`bg-blue-500`) を維持する。

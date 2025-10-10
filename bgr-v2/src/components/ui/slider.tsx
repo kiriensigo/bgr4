@@ -44,15 +44,15 @@ const Slider = React.forwardRef<
         }}
         {...props}
       >
-        <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
-          <SliderPrimitive.Range className="absolute h-full bg-primary" />
+        <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+          <SliderPrimitive.Range className="absolute h-full bg-blue-500 dark:bg-blue-400" />
         </SliderPrimitive.Track>
         
         {/* Marks */}
         {marks && marks.map((mark) => (
           <div
             key={mark.value}
-            className="absolute top-0 h-2 w-0.5 bg-muted-foreground/30"
+            className="absolute top-0 h-2 w-0.5 bg-slate-300 dark:bg-slate-600"
             style={{
               left: `${((mark.value - (props.min || 0)) / ((props.max || 100) - (props.min || 0))) * 100}%`,
             }}
@@ -101,3 +101,6 @@ const Slider = React.forwardRef<
 Slider.displayName = SliderPrimitive.Root.displayName
 
 export { Slider }
+
+
+

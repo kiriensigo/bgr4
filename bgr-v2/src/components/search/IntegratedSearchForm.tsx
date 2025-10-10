@@ -68,8 +68,8 @@ export default function IntegratedSearchForm({
   const [filters, setFilters] = useState<ReviewSearchFormValues>(
     mergeWithDefaultReviewFilters(initialValues)
   )
-  const [sectionsOpen, setSectionsOpen] = useState<Record<AdvancedFilterSection, boolean>>(
-    () => createSectionState(false)
+  const [sectionsOpen, setSectionsOpen] = useState<Record<AdvancedFilterSection, boolean>>(() =>
+    createSectionState(true)
   )
 
   useEffect(() => {
@@ -185,12 +185,12 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.scores}
           onOpenChange={setSectionOpen('scores')}
-          className="space-y-3"
+          className="space-y-3 rounded-lg border border-border/40 bg-background/80 shadow-sm"
         >
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-start justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-left transition hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex w-full items-start justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span className="space-y-1">
                 <span className="block text-base font-semibold text-muted-foreground">5段階指標で絞り込む</span>
@@ -210,7 +210,7 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-6">
+          <CollapsibleContent className="space-y-6 border-t border-border/30 px-4 pb-4 pt-2">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-3">
                 <div className="text-sm font-medium text-foreground">
@@ -333,12 +333,12 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.recommendedPlayers}
           onOpenChange={setSectionOpen('recommendedPlayers')}
-          className="space-y-3"
+          className="space-y-3 rounded-lg border border-border/40 bg-background/80 shadow-sm"
         >
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-left transition hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span className="text-base font-semibold text-muted-foreground">おすすめプレイ人数</span>
               <span className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="border-t border-border/30 px-4 pb-4 pt-2">
             <ToggleGroup
               type="multiple"
               value={filters.selectedRecommendedCounts.map(String)}
@@ -390,12 +390,12 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.gamePlayers}
           onOpenChange={setSectionOpen('gamePlayers')}
-          className="space-y-3"
+          className="space-y-3 rounded-lg border border-border/40 bg-background/80 shadow-sm"
         >
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-left transition hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span className="text-base font-semibold text-muted-foreground">対応プレイ人数</span>
               <span className="flex items-center gap-2">
@@ -416,7 +416,7 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="border-t border-border/30 px-4 pb-4 pt-2">
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
                 ゲームの推奨プレイ人数ではなく、ルール上プレイ可能な人数で絞り込めます。
@@ -452,12 +452,12 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.mechanics}
           onOpenChange={setSectionOpen('mechanics')}
-          className="space-y-3"
+          className="space-y-3 rounded-lg border border-border/40 bg-background/80 shadow-sm"
         >
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-start justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-left transition hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex w-full items-start justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span className="space-y-1">
                 <span className="block text-base font-semibold text-muted-foreground">メカニクス</span>
@@ -481,7 +481,7 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="border-t border-border/30 px-4 pb-4 pt-2">
             <div className="max-h-48 overflow-y-auto pr-1">
               <ToggleGroup
                 type="multiple"
@@ -509,12 +509,12 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.categories}
           onOpenChange={setSectionOpen('categories')}
-          className="space-y-3"
+          className="space-y-3 rounded-lg border border-border/40 bg-background/80 shadow-sm"
         >
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-start justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-left transition hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex w-full items-start justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span className="space-y-1">
                 <span className="block text-base font-semibold text-muted-foreground">カテゴリー</span>
@@ -538,7 +538,7 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="border-t border-border/30 px-4 pb-4 pt-2">
             <div className="max-h-48 overflow-y-auto pr-1">
               <ToggleGroup
                 type="multiple"
