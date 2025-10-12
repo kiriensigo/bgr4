@@ -383,7 +383,7 @@ export default function IntegratedSearchForm({
                   key={option.value}
                   value={option.value.toString()}
                   variant="outline"
-                  className="min-w-[72px]"
+                  className="min-w-[72px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                 >
                   {option.label}
                 </ToggleGroupItem>
@@ -444,7 +444,7 @@ export default function IntegratedSearchForm({
                     key={option.value}
                     value={option.value.toString()}
                     variant="outline"
-                    className="min-w-[72px]"
+                    className="min-w-[72px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
                     {option.label}
                   </ToggleGroupItem>
@@ -501,7 +501,7 @@ export default function IntegratedSearchForm({
                     key={option.label}
                     value={option.label}
                     variant="outline"
-                    className="min-w-[120px]"
+                    className="min-w-[120px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
                     {option.label}
                   </ToggleGroupItem>
@@ -558,7 +558,7 @@ export default function IntegratedSearchForm({
                     key={option.label}
                     value={option.label}
                     variant="outline"
-                    className="min-w-[120px]"
+                    className="min-w-[120px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
                     {option.label}
                   </ToggleGroupItem>
