@@ -14,13 +14,13 @@ import {
   REVIEW_MECHANIC_OPTIONS,
   REVIEW_CATEGORY_OPTIONS,
   REVIEW_RECOMMENDED_PLAYER_COUNTS,
-  REVIEW_GAME_PLAYER_COUNTS
+  REVIEW_GAME_PLAYER_COUNTS,
 } from '@/shared/constants/review-search'
 import {
   ReviewSearchFormValues,
   mergeWithDefaultReviewFilters,
   getActiveReviewFilterCount,
-  REVIEW_DEFAULT_FORM_VALUES
+  REVIEW_DEFAULT_FORM_VALUES,
 } from '@/lib/search/review-filters'
 import { cn } from '@/lib/utils'
 
@@ -38,24 +38,30 @@ type AdvancedFilterSection =
   | 'mechanics'
   | 'categories'
 
-const FILTER_SECTION_WRAPPER = "rounded-lg border border-border/40 bg-background/80 shadow-sm w-full"
-const FILTER_TRIGGER_DEFAULT = "flex w-full items-start justify-between px-5 py-4 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-const FILTER_TRIGGER_COMPACT = "flex w-full items-center justify-between px-5 py-4 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-const FILTER_CONTENT_CLASSES = "border-t border-border/30 px-5 pb-6 pt-5 space-y-4"
+const FILTER_SECTION_WRAPPER =
+  'rounded-lg border border-border/40 bg-background/80 shadow-sm w-full'
+const FILTER_TRIGGER_DEFAULT =
+  'flex w-full items-start justify-between px-5 py-4 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+const FILTER_TRIGGER_COMPACT =
+  'flex w-full items-center justify-between px-5 py-4 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+const FILTER_CONTENT_CLASSES = 'border-t border-border/30 px-5 pb-6 pt-5 space-y-4'
 
 const SECTION_KEYS: AdvancedFilterSection[] = [
   'scores',
   'recommendedPlayers',
   'gamePlayers',
   'mechanics',
-  'categories'
+  'categories',
 ]
 
 const createSectionState = (defaultOpen: boolean): Record<AdvancedFilterSection, boolean> =>
-  SECTION_KEYS.reduce((acc, key) => {
-    acc[key] = defaultOpen
-    return acc
-  }, {} as Record<AdvancedFilterSection, boolean>)
+  SECTION_KEYS.reduce(
+    (acc, key) => {
+      acc[key] = defaultOpen
+      return acc
+    },
+    {} as Record<AdvancedFilterSection, boolean>
+  )
 
 const formatRangeLabel = (label: string, range: [number, number], suffix = '点') => {
   return `${label}: ${range[0].toFixed(1)}${suffix}〜${range[1].toFixed(1)}${suffix}`
@@ -68,13 +74,13 @@ export default function IntegratedSearchForm({
   initialValues,
   onSubmit,
   loading = false,
-  className = ''
+  className = '',
 }: IntegratedSearchFormProps) {
   const [filters, setFilters] = useState<ReviewSearchFormValues>(
     mergeWithDefaultReviewFilters(initialValues)
   )
   const [sectionsOpen, setSectionsOpen] = useState<Record<AdvancedFilterSection, boolean>>(() =>
-    createSectionState(true)
+    createSectionState(false)
   )
 
   useEffect(() => {
@@ -88,14 +94,14 @@ export default function IntegratedSearchForm({
 
     const mediaQuery = window.matchMedia('(min-width: 1024px)')
 
-    const applyState = (matches: boolean) => {
-      setSectionsOpen(createSectionState(matches))
+    const applyState = () => {
+      setSectionsOpen(createSectionState(false))
     }
 
-    applyState(mediaQuery.matches)
+    applyState()
 
-    const handler = (event: MediaQueryListEvent) => {
-      applyState(event.matches)
+    const handler = () => {
+      applyState()
     }
 
     if (typeof mediaQuery.addEventListener === 'function') {
@@ -108,7 +114,7 @@ export default function IntegratedSearchForm({
   }, [])
 
   const setSectionOpen = (key: AdvancedFilterSection) => (open: boolean) => {
-    setSectionsOpen((prev) => ({ ...prev, [key]: open }))
+    setSectionsOpen(prev => ({ ...prev, [key]: open }))
   }
 
   const activeFilterCount = useMemo(() => getActiveReviewFilterCount(filters), [filters])
@@ -160,8 +166,8 @@ export default function IntegratedSearchForm({
           <Input
             placeholder="ゲーム名やキーワードで検索"
             value={filters.query}
-            onChange={(event) => setFilters((prev) => ({ ...prev, query: event.target.value }))}
-            onKeyDown={(event) => {
+            onChange={event => setFilters(prev => ({ ...prev, query: event.target.value }))}
+            onKeyDown={event => {
               if (event.key === 'Enter') {
                 event.preventDefault()
                 handleSubmit()
@@ -180,8 +186,13 @@ export default function IntegratedSearchForm({
               <RotateCcw className="mr-1 h-4 w-4" />
               リセット
             </Button>
-            <Button onClick={handleSubmit} disabled={loading}>
-              <Search className="mr-2 h-4 w-4" />
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 min-w-[120px]"
+            >
+              <Search className="mr-2 h-5 w-5" />
               検索
             </Button>
           </div>
@@ -193,17 +204,20 @@ export default function IntegratedSearchForm({
           className={FILTER_SECTION_WRAPPER}
         >
           <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={FILTER_TRIGGER_DEFAULT}
-            >
+            <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
-                <span className="block text-base font-semibold text-muted-foreground">5段階指標で絞り込む</span>
-                <span className="block text-xs text-muted-foreground">レビューで集計した各指標のレンジを設定できます。</span>
+                <span className="block text-base font-semibold text-muted-foreground">
+                  5段階指標で絞り込む
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  レビューで集計した各指標のレンジを設定できます。
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 {hasScoreFilters && (
-                  <Badge variant="secondary" className="pointer-events-none">調整中</Badge>
+                  <Badge variant="secondary" className="pointer-events-none">
+                    調整中
+                  </Badge>
                 )}
                 <ChevronDown
                   className={cn(
@@ -226,8 +240,8 @@ export default function IntegratedSearchForm({
                   max={10}
                   step={0.1}
                   value={filters.overallScore}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, overallScore: value as [number, number] }))
+                  onValueChange={value =>
+                    setFilters(prev => ({ ...prev, overallScore: value as [number, number] }))
                   }
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -245,8 +259,8 @@ export default function IntegratedSearchForm({
                   max={5}
                   step={0.1}
                   value={filters.ruleComplexity}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, ruleComplexity: value as [number, number] }))
+                  onValueChange={value =>
+                    setFilters(prev => ({ ...prev, ruleComplexity: value as [number, number] }))
                   }
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -264,8 +278,8 @@ export default function IntegratedSearchForm({
                   max={5}
                   step={0.1}
                   value={filters.luckFactor}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, luckFactor: value as [number, number] }))
+                  onValueChange={value =>
+                    setFilters(prev => ({ ...prev, luckFactor: value as [number, number] }))
                   }
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -283,8 +297,8 @@ export default function IntegratedSearchForm({
                   max={5}
                   step={0.1}
                   value={filters.interaction}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, interaction: value as [number, number] }))
+                  onValueChange={value =>
+                    setFilters(prev => ({ ...prev, interaction: value as [number, number] }))
                   }
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -302,8 +316,8 @@ export default function IntegratedSearchForm({
                   max={5}
                   step={0.1}
                   value={filters.downtime}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, downtime: value as [number, number] }))
+                  onValueChange={value =>
+                    setFilters(prev => ({ ...prev, downtime: value as [number, number] }))
                   }
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -322,8 +336,8 @@ export default function IntegratedSearchForm({
                   max={180}
                   step={15}
                   value={filters.playTimeRange}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, playTimeRange: value as [number, number] }))
+                  onValueChange={value =>
+                    setFilters(prev => ({ ...prev, playTimeRange: value as [number, number] }))
                   }
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -341,11 +355,10 @@ export default function IntegratedSearchForm({
           className={FILTER_SECTION_WRAPPER}
         >
           <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={FILTER_TRIGGER_COMPACT}
-            >
-              <span className="text-base font-semibold text-muted-foreground">おすすめプレイ人数</span>
+            <button type="button" className={FILTER_TRIGGER_COMPACT}>
+              <span className="text-base font-semibold text-muted-foreground">
+                おすすめプレイ人数
+              </span>
               <span className="flex items-center gap-2">
                 {recommendedCount > 0 ? (
                   <Badge variant="secondary" className="pointer-events-none">
@@ -368,17 +381,17 @@ export default function IntegratedSearchForm({
             <ToggleGroup
               type="multiple"
               value={filters.selectedRecommendedCounts.map(String)}
-              onValueChange={(values) =>
-                setFilters((prev) => ({
+              onValueChange={values =>
+                setFilters(prev => ({
                   ...prev,
                   selectedRecommendedCounts: values
-                    .map((value) => Number(value))
-                    .filter((value) => !Number.isNaN(value))
+                    .map(value => Number(value))
+                    .filter(value => !Number.isNaN(value)),
                 }))
               }
               className="flex flex-wrap gap-3"
             >
-              {REVIEW_RECOMMENDED_PLAYER_COUNTS.map((option) => (
+              {REVIEW_RECOMMENDED_PLAYER_COUNTS.map(option => (
                 <ToggleGroupItem
                   key={option.value}
                   value={option.value.toString()}
@@ -398,10 +411,7 @@ export default function IntegratedSearchForm({
           className={FILTER_SECTION_WRAPPER}
         >
           <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={FILTER_TRIGGER_COMPACT}
-            >
+            <button type="button" className={FILTER_TRIGGER_COMPACT}>
               <span className="text-base font-semibold text-muted-foreground">対応プレイ人数</span>
               <span className="flex items-center gap-2">
                 {gameCount > 0 ? (
@@ -429,17 +439,17 @@ export default function IntegratedSearchForm({
               <ToggleGroup
                 type="multiple"
                 value={filters.selectedGameCounts.map(String)}
-                onValueChange={(values) =>
-                  setFilters((prev) => ({
+                onValueChange={values =>
+                  setFilters(prev => ({
                     ...prev,
                     selectedGameCounts: values
-                      .map((value) => Number(value))
-                      .filter((value) => !Number.isNaN(value))
+                      .map(value => Number(value))
+                      .filter(value => !Number.isNaN(value)),
                   }))
                 }
-                className="flex flex-wrap gap-3"
+                className="flex flex-wrap gap-3 w-full"
               >
-                {REVIEW_GAME_PLAYER_COUNTS.map((option) => (
+                {REVIEW_GAME_PLAYER_COUNTS.map(option => (
                   <ToggleGroupItem
                     key={option.value}
                     value={option.value.toString()}
@@ -460,13 +470,14 @@ export default function IntegratedSearchForm({
           className={FILTER_SECTION_WRAPPER}
         >
           <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={FILTER_TRIGGER_DEFAULT}
-            >
+            <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
-                <span className="block text-base font-semibold text-muted-foreground">メカニクス</span>
-                <span className="block text-xs text-muted-foreground">ゲーム詳細ページの統計ラベルと同じ名称で指定できます。</span>
+                <span className="block text-base font-semibold text-muted-foreground">
+                  メカニクス
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  ゲーム詳細ページの統計ラベルと同じ名称で指定できます。
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 {mechanicsCount > 0 ? (
@@ -486,17 +497,17 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES, 'max-h-96 overflow-y-auto')}>
-            <div className="pr-1 space-y-3">
+          <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES)}>
+            <div className="space-y-3">
               <ToggleGroup
                 type="multiple"
                 value={filters.selectedMechanics}
-                onValueChange={(values) =>
-                  setFilters((prev) => ({ ...prev, selectedMechanics: values }))
+                onValueChange={values =>
+                  setFilters(prev => ({ ...prev, selectedMechanics: values }))
                 }
-                className="flex flex-wrap gap-3"
+                className="flex flex-wrap gap-3 w-full"
               >
-                {REVIEW_MECHANIC_OPTIONS.map((option) => (
+                {REVIEW_MECHANIC_OPTIONS.map(option => (
                   <ToggleGroupItem
                     key={option.label}
                     value={option.label}
@@ -517,13 +528,14 @@ export default function IntegratedSearchForm({
           className={FILTER_SECTION_WRAPPER}
         >
           <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={FILTER_TRIGGER_DEFAULT}
-            >
+            <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
-                <span className="block text-base font-semibold text-muted-foreground">カテゴリー</span>
-                <span className="block text-xs text-muted-foreground">レビューで人気のカテゴリーから AND 条件で絞り込めます。</span>
+                <span className="block text-base font-semibold text-muted-foreground">
+                  カテゴリー
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  レビューで人気のカテゴリーから AND 条件で絞り込めます。
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 {categoriesCount > 0 ? (
@@ -543,17 +555,17 @@ export default function IntegratedSearchForm({
               </span>
             </button>
           </CollapsibleTrigger>
-          <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES, 'max-h-96 overflow-y-auto')}>
-            <div className="pr-1 space-y-3">
+          <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES)}>
+            <div className="space-y-3">
               <ToggleGroup
                 type="multiple"
                 value={filters.selectedCategories}
-                onValueChange={(values) =>
-                  setFilters((prev) => ({ ...prev, selectedCategories: values }))
+                onValueChange={values =>
+                  setFilters(prev => ({ ...prev, selectedCategories: values }))
                 }
-                className="flex flex-wrap gap-3"
+                className="flex flex-wrap gap-3 w-full"
               >
-                {REVIEW_CATEGORY_OPTIONS.map((option) => (
+                {REVIEW_CATEGORY_OPTIONS.map(option => (
                   <ToggleGroupItem
                     key={option.label}
                     value={option.label}
