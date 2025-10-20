@@ -38,13 +38,11 @@ type AdvancedFilterSection =
   | 'mechanics'
   | 'categories'
 
-const FILTER_SECTION_WRAPPER =
-  'rounded-lg border border-border/40 bg-background/80 shadow-sm w-full'
 const FILTER_TRIGGER_DEFAULT =
-  'flex w-full items-start justify-between px-5 py-4 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+  'flex w-full items-start justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg hover:bg-muted/50'
 const FILTER_TRIGGER_COMPACT =
-  'flex w-full items-center justify-between px-5 py-4 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-const FILTER_CONTENT_CLASSES = 'border-t border-border/30 px-5 pb-6 pt-5 space-y-4'
+  'flex w-full items-center justify-between px-4 py-3 text-left transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg hover:bg-muted/50'
+const FILTER_CONTENT_CLASSES = 'border-t border-border/30 px-4 pb-4 pt-4 space-y-4'
 
 const SECTION_KEYS: AdvancedFilterSection[] = [
   'scores',
@@ -198,11 +196,7 @@ export default function IntegratedSearchForm({
           </div>
         </div>
 
-        <Collapsible
-          open={sectionsOpen.scores}
-          onOpenChange={setSectionOpen('scores')}
-          className={FILTER_SECTION_WRAPPER}
-        >
+        <Collapsible open={sectionsOpen.scores} onOpenChange={setSectionOpen('scores')}>
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
@@ -352,7 +346,6 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.recommendedPlayers}
           onOpenChange={setSectionOpen('recommendedPlayers')}
-          className={FILTER_SECTION_WRAPPER}
         >
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_COMPACT}>
@@ -389,14 +382,14 @@ export default function IntegratedSearchForm({
                     .filter(value => !Number.isNaN(value)),
                 }))
               }
-              className="flex flex-wrap gap-3"
+              className="flex flex-wrap gap-2 w-full"
             >
               {REVIEW_RECOMMENDED_PLAYER_COUNTS.map(option => (
                 <ToggleGroupItem
                   key={option.value}
                   value={option.value.toString()}
                   variant="outline"
-                  className="min-w-[72px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
+                  className="min-w-[60px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                 >
                   {option.label}
                 </ToggleGroupItem>
@@ -405,11 +398,7 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible
-          open={sectionsOpen.gamePlayers}
-          onOpenChange={setSectionOpen('gamePlayers')}
-          className={FILTER_SECTION_WRAPPER}
-        >
+        <Collapsible open={sectionsOpen.gamePlayers} onOpenChange={setSectionOpen('gamePlayers')}>
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_COMPACT}>
               <span className="text-base font-semibold text-muted-foreground">対応プレイ人数</span>
@@ -447,14 +436,14 @@ export default function IntegratedSearchForm({
                       .filter(value => !Number.isNaN(value)),
                   }))
                 }
-                className="flex flex-wrap gap-3 w-full"
+                className="flex flex-wrap gap-2 w-full"
               >
                 {REVIEW_GAME_PLAYER_COUNTS.map(option => (
                   <ToggleGroupItem
                     key={option.value}
                     value={option.value.toString()}
                     variant="outline"
-                    className="min-w-[72px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
+                    className="min-w-[60px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
                     {option.label}
                   </ToggleGroupItem>
@@ -464,11 +453,7 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible
-          open={sectionsOpen.mechanics}
-          onOpenChange={setSectionOpen('mechanics')}
-          className={FILTER_SECTION_WRAPPER}
-        >
+        <Collapsible open={sectionsOpen.mechanics} onOpenChange={setSectionOpen('mechanics')}>
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
@@ -505,14 +490,14 @@ export default function IntegratedSearchForm({
                 onValueChange={values =>
                   setFilters(prev => ({ ...prev, selectedMechanics: values }))
                 }
-                className="flex flex-wrap gap-3 w-full"
+                className="flex flex-wrap gap-2 w-full"
               >
                 {REVIEW_MECHANIC_OPTIONS.map(option => (
                   <ToggleGroupItem
                     key={option.label}
                     value={option.label}
                     variant="outline"
-                    className="min-w-[120px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
+                    className="min-w-[100px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
                     {option.label}
                   </ToggleGroupItem>
@@ -522,11 +507,7 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible
-          open={sectionsOpen.categories}
-          onOpenChange={setSectionOpen('categories')}
-          className={FILTER_SECTION_WRAPPER}
-        >
+        <Collapsible open={sectionsOpen.categories} onOpenChange={setSectionOpen('categories')}>
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
@@ -563,14 +544,14 @@ export default function IntegratedSearchForm({
                 onValueChange={values =>
                   setFilters(prev => ({ ...prev, selectedCategories: values }))
                 }
-                className="flex flex-wrap gap-3 w-full"
+                className="flex flex-wrap gap-2 w-full"
               >
                 {REVIEW_CATEGORY_OPTIONS.map(option => (
                   <ToggleGroupItem
                     key={option.label}
                     value={option.label}
                     variant="outline"
-                    className="min-w-[120px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
+                    className="min-w-[100px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
                     {option.label}
                   </ToggleGroupItem>
