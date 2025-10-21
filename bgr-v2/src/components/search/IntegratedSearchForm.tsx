@@ -159,8 +159,8 @@ export default function IntegratedSearchForm({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <CardContent className="space-y-0">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center mb-6">
           <Input
             placeholder="ゲーム名やキーワードで検索"
             value={filters.query}
@@ -196,7 +196,11 @@ export default function IntegratedSearchForm({
           </div>
         </div>
 
-        <Collapsible open={sectionsOpen.scores} onOpenChange={setSectionOpen('scores')}>
+        <Collapsible
+          open={sectionsOpen.scores}
+          onOpenChange={setSectionOpen('scores')}
+          className="mb-6"
+        >
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
@@ -346,6 +350,7 @@ export default function IntegratedSearchForm({
         <Collapsible
           open={sectionsOpen.recommendedPlayers}
           onOpenChange={setSectionOpen('recommendedPlayers')}
+          className="mb-6"
         >
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_COMPACT}>
@@ -398,7 +403,11 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible open={sectionsOpen.gamePlayers} onOpenChange={setSectionOpen('gamePlayers')}>
+        <Collapsible
+          open={sectionsOpen.gamePlayers}
+          onOpenChange={setSectionOpen('gamePlayers')}
+          className="mb-6"
+        >
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_COMPACT}>
               <span className="text-base font-semibold text-muted-foreground">対応プレイ人数</span>
@@ -453,7 +462,11 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible open={sectionsOpen.mechanics} onOpenChange={setSectionOpen('mechanics')}>
+        <Collapsible
+          open={sectionsOpen.mechanics}
+          onOpenChange={setSectionOpen('mechanics')}
+          className="mb-6"
+        >
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
@@ -507,7 +520,11 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible open={sectionsOpen.categories} onOpenChange={setSectionOpen('categories')}>
+        <Collapsible
+          open={sectionsOpen.categories}
+          onOpenChange={setSectionOpen('categories')}
+          className="mb-0"
+        >
           <CollapsibleTrigger asChild>
             <button type="button" className={FILTER_TRIGGER_DEFAULT}>
               <span className="space-y-1">
