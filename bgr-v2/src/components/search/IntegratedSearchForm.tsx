@@ -157,7 +157,7 @@ export default function IntegratedSearchForm({
   const categoriesCount = filters.selectedCategories.length
 
   return (
-    <Card className={className}>
+    <Card className={cn(className, 'overflow-visible')}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
@@ -172,7 +172,7 @@ export default function IntegratedSearchForm({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 overflow-visible relative">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <Input
             placeholder="ゲーム名やキーワードで検索"
@@ -466,134 +466,90 @@ export default function IntegratedSearchForm({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* メカニクスセクション */}
-        <div className="relative">
-          <Collapsible open={sectionsOpen.mechanics} onOpenChange={setSectionOpen('mechanics')}>
-            <CollapsibleTrigger asChild>
-              <button type="button" className={FILTER_TRIGGER_DEFAULT}>
-                <span className="space-y-1">
-                  <span className="block text-base font-semibold text-muted-foreground">
-                    メカニクス
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    ゲーム詳細ページの統計ラベルと同じ名称で指定できます。
-                  </span>
+        <Collapsible open={sectionsOpen.mechanics} onOpenChange={setSectionOpen('mechanics')}>
+          <CollapsibleTrigger asChild>
+            <button type="button" className={FILTER_TRIGGER_DEFAULT}>
+              <span className="space-y-1">
+                <span className="block text-base font-semibold text-muted-foreground">
+                  メカニクス
                 </span>
-                <span className="flex items-center gap-2">
-                  {mechanicsCount > 0 ? (
-                    <Badge variant="secondary" className="pointer-events-none">
-                      {mechanicsCount}件選択中
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">未選択</span>
+                <span className="block text-xs text-muted-foreground">
+                  ゲーム詳細ページの統計ラベルと同じ名称で指定できます。
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                {mechanicsCount > 0 ? (
+                  <Badge variant="secondary" className="pointer-events-none">
+                    {mechanicsCount}件選択中
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">未選択</span>
+                )}
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    sectionsOpen.mechanics ? '-rotate-180' : 'rotate-0'
                   )}
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 transition-transform',
-                      sectionsOpen.mechanics ? '-rotate-180' : 'rotate-0'
-                    )}
-                    aria-hidden
-                  />
-                </span>
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES)}>
-              <div className="space-y-3">
-                <ToggleGroup
-                  type="multiple"
-                  value={filters.selectedMechanics}
-                  onValueChange={values =>
-                    setFilters(prev => ({ ...prev, selectedMechanics: values }))
-                  }
-                  className="flex flex-wrap gap-2 w-full"
-                >
-                  {REVIEW_MECHANIC_OPTIONS.map(option => (
-                    <ToggleGroupItem
-                      key={option.label}
-                      value={option.label}
-                      variant="outline"
-                      className="min-w-[100px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
-                    >
-                      {option.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-
-        {/* カテゴリーセクション - メカニクスが展開されているときは非表示 */}
-        {!sectionsOpen.mechanics && (
-          <div className="transition-all duration-300 ease-in-out" data-categories-section>
-            <Collapsible open={sectionsOpen.categories} onOpenChange={setSectionOpen('categories')}>
-              <CollapsibleTrigger asChild>
-                <button type="button" className={FILTER_TRIGGER_DEFAULT}>
-                  <span className="space-y-1">
-                    <span className="block text-base font-semibold text-muted-foreground">
-                      カテゴリー
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      レビューで人気のカテゴリーから AND 条件で絞り込めます。
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-2">
-                    {categoriesCount > 0 ? (
-                      <Badge variant="secondary" className="pointer-events-none">
-                        {categoriesCount}件選択中
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">未選択</span>
-                    )}
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        sectionsOpen.categories ? '-rotate-180' : 'rotate-0'
-                      )}
-                      aria-hidden
-                    />
-                  </span>
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES)}>
-                <div className="space-y-3">
-                  <ToggleGroup
-                    type="multiple"
-                    value={filters.selectedCategories}
-                    onValueChange={values =>
-                      setFilters(prev => ({ ...prev, selectedCategories: values }))
-                    }
-                    className="flex flex-wrap gap-2 w-full"
+                  aria-hidden
+                />
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES, 'relative z-20 bg-white')}>
+            <div className="space-y-3">
+              <ToggleGroup
+                type="multiple"
+                value={filters.selectedMechanics}
+                onValueChange={values =>
+                  setFilters(prev => ({ ...prev, selectedMechanics: values }))
+                }
+                className="flex flex-wrap gap-2 w-full"
+              >
+                {REVIEW_MECHANIC_OPTIONS.map(option => (
+                  <ToggleGroupItem
+                    key={option.label}
+                    value={option.label}
+                    variant="outline"
+                    className="min-w-[100px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
                   >
-                    {REVIEW_CATEGORY_OPTIONS.map(option => (
-                      <ToggleGroupItem
-                        key={option.label}
-                        value={option.label}
-                        variant="outline"
-                        className="min-w-[100px] data-[state=on]:bg-blue-500 data-[state=on]:text-white data-[state=on]:border-blue-500"
-                      >
-                        {option.label}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        )}
-
-        {/* メカニクスが展開されているときのカテゴリーセクション */}
-        {sectionsOpen.mechanics && (
-          <div
-            className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg"
-            data-categories-section
-          >
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">カテゴリー</h3>
-              <p className="text-sm text-gray-600">
-                レビューで人気のカテゴリーから AND 条件で絞り込めます。
-              </p>
+                    {option.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        <Collapsible open={sectionsOpen.categories} onOpenChange={setSectionOpen('categories')}>
+          <CollapsibleTrigger asChild>
+            <button type="button" className={FILTER_TRIGGER_DEFAULT}>
+              <span className="space-y-1">
+                <span className="block text-base font-semibold text-muted-foreground">
+                  カテゴリー
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  レビューで人気のカテゴリーから AND 条件で絞り込めます。
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                {categoriesCount > 0 ? (
+                  <Badge variant="secondary" className="pointer-events-none">
+                    {categoriesCount}件選択中
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">未選択</span>
+                )}
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    sectionsOpen.categories ? '-rotate-180' : 'rotate-0'
+                  )}
+                  aria-hidden
+                />
+              </span>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className={cn(FILTER_CONTENT_CLASSES, 'relative z-10 bg-white')}>
             <div className="space-y-3">
               <ToggleGroup
                 type="multiple"
@@ -615,8 +571,8 @@ export default function IntegratedSearchForm({
                 ))}
               </ToggleGroup>
             </div>
-          </div>
-        )}
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   )
