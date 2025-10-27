@@ -397,7 +397,20 @@ export default function IntegratedSearchForm({
               sx={{ flexWrap: 'wrap', gap: 1 }}
             >
               {REVIEW_RECOMMENDED_PLAYER_COUNTS.map(option => (
-                <ToggleButton key={option.value} value={option.value.toString()} size="small">
+                <ToggleButton
+                  key={option.value}
+                  value={option.value.toString()}
+                  size="small"
+                  sx={{
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
                   {option.label}
                 </ToggleButton>
               ))}
@@ -437,7 +450,20 @@ export default function IntegratedSearchForm({
               sx={{ flexWrap: 'wrap', gap: 1 }}
             >
               {REVIEW_GAME_PLAYER_COUNTS.map(option => (
-                <ToggleButton key={option.value} value={option.value.toString()} size="small">
+                <ToggleButton
+                  key={option.value}
+                  value={option.value.toString()}
+                  size="small"
+                  sx={{
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
                   {option.label}
                 </ToggleButton>
               ))}
@@ -476,7 +502,20 @@ export default function IntegratedSearchForm({
               sx={{ flexWrap: 'wrap', gap: 1 }}
             >
               {REVIEW_MECHANIC_OPTIONS.map(option => (
-                <ToggleButton key={option.label} value={option.label} size="small">
+                <ToggleButton
+                  key={option.label}
+                  value={option.label}
+                  size="small"
+                  sx={{
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
                   {option.label}
                 </ToggleButton>
               ))}
@@ -515,7 +554,20 @@ export default function IntegratedSearchForm({
               sx={{ flexWrap: 'wrap', gap: 1 }}
             >
               {REVIEW_CATEGORY_OPTIONS.map(option => (
-                <ToggleButton key={option.label} value={option.label} size="small">
+                <ToggleButton
+                  key={option.label}
+                  value={option.label}
+                  size="small"
+                  sx={{
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
                   {option.label}
                 </ToggleButton>
               ))}
