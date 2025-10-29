@@ -8,9 +8,7 @@ import AnalyticsBeacon from '@/components/analytics/AnalyticsBeacon'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { Toaster } from '@/components/ui/toaster'
-import { ThemeProvider } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import theme from '@/theme' // カスタムテーマをインポート
+import ThemeRegistry from '@/components/providers/ThemeRegistry'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -106,8 +104,7 @@ export default function RootLayout({
         {/* preconnect to third-party removed to avoid render-blocking on first paint */}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline /> {/* MUIのリセットCSS */}
+        <ThemeRegistry>
           <GoogleAnalytics />
           <div className="min-h-screen flex flex-col">
             <Header />
@@ -118,7 +115,7 @@ export default function RootLayout({
           </div>
           <Toaster />
           {process.env.NODE_ENV === 'production' && <AnalyticsBeacon />}
-        </ThemeProvider>
+        </ThemeRegistry>
       </body>
     </html>
   )

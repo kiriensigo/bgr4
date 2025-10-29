@@ -20,7 +20,6 @@ import {
   CardActions,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { styled, Theme } from '@mui/material/styles' // styled と Theme を @mui/material/styles からインポート
 
 import {
   REVIEW_MECHANIC_OPTIONS,
@@ -72,18 +71,6 @@ const formatRangeLabel = (label: string, range: [number, number], suffix = '点'
 
 const isRangeEqual = (value: [number, number], defaults: [number, number]) =>
   value[0] === defaults[0] && value[1] === defaults[1]
-
-const StyledAccordionSummary = styled(AccordionSummary)(({ theme }: { theme: Theme }) => ({
-  backgroundColor:
-    theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.common.white,
-  flexDirection: 'row-reverse',
-  '& .MuiAccordionSummary-expandIconWrapper': {
-    marginLeft: theme.spacing(1),
-  },
-  '& .MuiAccordionSummary-content': {
-    marginLeft: theme.spacing(1),
-  },
-}))
 
 export default function IntegratedSearchForm({
   initialValues,
@@ -185,7 +172,18 @@ export default function IntegratedSearchForm({
         </Box>
 
         <Accordion expanded={expandedSections.scores} onChange={handleAccordionChange('scores')}>
-          <StyledAccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              flexDirection: 'row-reverse',
+              '& .MuiAccordionSummary-expandIconWrapper': {
+                marginLeft: '8px',
+              },
+              '& .MuiAccordionSummary-content': {
+                marginLeft: '8px',
+              },
+            }}
+          >
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                 5段階指標で絞り込む
@@ -197,7 +195,7 @@ export default function IntegratedSearchForm({
             {hasScoreFilters && (
               <Badge color="secondary" badgeContent="調整中" sx={{ alignSelf: 'center' }} />
             )}
-          </StyledAccordionSummary>
+          </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { md: '1fr 1fr' } }}>
               <Box>
@@ -370,7 +368,18 @@ export default function IntegratedSearchForm({
           expanded={expandedSections.recommendedPlayers}
           onChange={handleAccordionChange('recommendedPlayers')}
         >
-          <StyledAccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              flexDirection: 'row-reverse',
+              '& .MuiAccordionSummary-expandIconWrapper': {
+                marginLeft: '8px',
+              },
+              '& .MuiAccordionSummary-content': {
+                marginLeft: '8px',
+              },
+            }}
+          >
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
               おすすめプレイ人数
             </Typography>
@@ -381,7 +390,7 @@ export default function IntegratedSearchForm({
                 sx={{ ml: 2, alignSelf: 'center' }}
               />
             )}
-          </StyledAccordionSummary>
+          </AccordionSummary>
           <AccordionDetails>
             <ToggleButtonGroup
               value={filters.selectedRecommendedCounts.map(String)}
@@ -422,7 +431,18 @@ export default function IntegratedSearchForm({
           expanded={expandedSections.gamePlayers}
           onChange={handleAccordionChange('gamePlayers')}
         >
-          <StyledAccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              flexDirection: 'row-reverse',
+              '& .MuiAccordionSummary-expandIconWrapper': {
+                marginLeft: '8px',
+              },
+              '& .MuiAccordionSummary-content': {
+                marginLeft: '8px',
+              },
+            }}
+          >
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
               対応プレイ人数
             </Typography>
@@ -433,7 +453,7 @@ export default function IntegratedSearchForm({
                 sx={{ ml: 2, alignSelf: 'center' }}
               />
             )}
-          </StyledAccordionSummary>
+          </AccordionSummary>
           <AccordionDetails>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               ゲームの推奨プレイ人数ではなく、ルール上プレイ可能な人数で絞り込めます。
@@ -475,7 +495,18 @@ export default function IntegratedSearchForm({
           expanded={expandedSections.mechanics}
           onChange={handleAccordionChange('mechanics')}
         >
-          <StyledAccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              flexDirection: 'row-reverse',
+              '& .MuiAccordionSummary-expandIconWrapper': {
+                marginLeft: '8px',
+              },
+              '& .MuiAccordionSummary-content': {
+                marginLeft: '8px',
+              },
+            }}
+          >
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                 メカニクス
@@ -491,7 +522,7 @@ export default function IntegratedSearchForm({
                 sx={{ ml: 2, alignSelf: 'center' }}
               />
             )}
-          </StyledAccordionSummary>
+          </AccordionSummary>
           <AccordionDetails>
             <ToggleButtonGroup
               value={filters.selectedMechanics}
@@ -527,7 +558,18 @@ export default function IntegratedSearchForm({
           expanded={expandedSections.categories}
           onChange={handleAccordionChange('categories')}
         >
-          <StyledAccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            sx={{
+              flexDirection: 'row-reverse',
+              '& .MuiAccordionSummary-expandIconWrapper': {
+                marginLeft: '8px',
+              },
+              '& .MuiAccordionSummary-content': {
+                marginLeft: '8px',
+              },
+            }}
+          >
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                 カテゴリー
@@ -543,7 +585,7 @@ export default function IntegratedSearchForm({
                 sx={{ ml: 2, alignSelf: 'center' }}
               />
             )}
-          </StyledAccordionSummary>
+          </AccordionSummary>
           <AccordionDetails>
             <ToggleButtonGroup
               value={filters.selectedCategories}
