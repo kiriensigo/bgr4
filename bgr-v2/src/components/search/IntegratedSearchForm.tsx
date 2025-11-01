@@ -148,23 +148,49 @@ export default function IntegratedSearchForm({
             }}
             aria-label="ゲーム名・キーワード検索"
           />
-          <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', md: 'auto' } }}>
+          <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', md: 'auto' } }}>
             <Button
               variant="outlined"
-              size="small"
+              size="medium"
               onClick={handleReset}
               disabled={loading || activeFilterCount === 0}
-              startIcon={<RotateCcw />}
+              startIcon={<RotateCcw style={{ width: 18, height: 18 }} />}
+              sx={{
+                minWidth: '100px',
+                fontWeight: 500,
+                borderRadius: '8px',
+                textTransform: 'none',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  backgroundColor: 'action.hover',
+                },
+                '&:disabled': {
+                  opacity: 0.5,
+                },
+              }}
             >
               リセット
             </Button>
             <Button
               variant="contained"
-              size="large"
+              size="medium"
               onClick={handleSubmit}
               disabled={loading}
-              startIcon={<SearchIcon />}
-              sx={{ minWidth: '120px', bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+              startIcon={<SearchIcon style={{ width: 18, height: 18 }} />}
+              sx={{
+                minWidth: '120px',
+                fontWeight: 600,
+                borderRadius: '8px',
+                textTransform: 'none',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
+                '&:hover': {
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+                },
+                '&:disabled': {
+                  opacity: 0.6,
+                },
+              }}
             >
               検索
             </Button>
@@ -617,28 +643,65 @@ export default function IntegratedSearchForm({
           </AccordionDetails>
         </Accordion>
       </CardContent>
-      <CardActions sx={{ justifyContent: 'flex-end', gap: 1, p: 3, pt: 0 }}>
+      <CardActions sx={{ justifyContent: 'flex-end', gap: 1.5, p: 3, pt: 0 }}>
         {activeFilterCount > 0 && (
           <Badge
             color="secondary"
             badgeContent={`${activeFilterCount}件のフィルタ`}
-            sx={{ mr: 2 }}
+            sx={{
+              mr: 'auto',
+              '& .MuiBadge-badge': {
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                padding: '0 8px',
+                height: '22px',
+                borderRadius: '11px',
+              },
+            }}
           />
         )}
         <Button
           variant="outlined"
+          size="medium"
           onClick={handleReset}
           disabled={loading || activeFilterCount === 0}
-          startIcon={<RotateCcw />}
+          startIcon={<RotateCcw style={{ width: 18, height: 18 }} />}
+          sx={{
+            minWidth: '100px',
+            fontWeight: 500,
+            borderRadius: '8px',
+            textTransform: 'none',
+            borderColor: 'divider',
+            '&:hover': {
+              borderColor: 'primary.main',
+              backgroundColor: 'action.hover',
+            },
+            '&:disabled': {
+              opacity: 0.5,
+            },
+          }}
         >
           リセット
         </Button>
         <Button
           variant="contained"
+          size="medium"
           onClick={handleSubmit}
           disabled={loading}
-          startIcon={<SearchIcon />}
-          sx={{ bgcolor: '#1976d2', '&:hover': { bgcolor: '#1565c0' } }}
+          startIcon={<SearchIcon style={{ width: 18, height: 18 }} />}
+          sx={{
+            minWidth: '120px',
+            fontWeight: 600,
+            borderRadius: '8px',
+            textTransform: 'none',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
+            '&:hover': {
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+            },
+            '&:disabled': {
+              opacity: 0.6,
+            },
+          }}
         >
           検索
         </Button>
