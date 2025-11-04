@@ -223,7 +223,7 @@ export default function IntegratedSearchForm({
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box sx={{ px: 1 }}>
+              <Box sx={{ px: 2 }}>
                 <Typography variant="body2" fontWeight="medium">
                   {formatRangeLabel('総合評価', filters.overallScore)}
                 </Typography>
@@ -250,7 +250,7 @@ export default function IntegratedSearchForm({
                 </Box>
               </Box>
 
-              <Box sx={{ px: 1 }}>
+              <Box sx={{ px: 2 }}>
                 <Typography variant="body2" fontWeight="medium">
                   {formatRangeLabel('ルールの複雑さ', filters.ruleComplexity)}
                 </Typography>
@@ -277,7 +277,7 @@ export default function IntegratedSearchForm({
                 </Box>
               </Box>
 
-              <Box sx={{ px: 1 }}>
+              <Box sx={{ px: 2 }}>
                 <Typography variant="body2" fontWeight="medium">
                   {formatRangeLabel('運要素', filters.luckFactor)}
                 </Typography>
@@ -304,7 +304,7 @@ export default function IntegratedSearchForm({
                 </Box>
               </Box>
 
-              <Box sx={{ px: 1 }}>
+              <Box sx={{ px: 2 }}>
                 <Typography variant="body2" fontWeight="medium">
                   {formatRangeLabel('インタラクション', filters.interaction)}
                 </Typography>
@@ -331,7 +331,7 @@ export default function IntegratedSearchForm({
                 </Box>
               </Box>
 
-              <Box sx={{ px: 1 }}>
+              <Box sx={{ px: 2 }}>
                 <Typography variant="body2" fontWeight="medium">
                   {formatRangeLabel('ダウンタイム', filters.downtime)}
                 </Typography>
@@ -358,7 +358,7 @@ export default function IntegratedSearchForm({
                 </Box>
               </Box>
 
-              <Box sx={{ px: 1 }}>
+              <Box sx={{ px: 2 }}>
                 <Typography variant="body2" fontWeight="medium">
                   プレイ時間: {filters.playTimeRange[0]}分〜
                   {filters.playTimeRange[1] >= 180 ? '180分以上' : `${filters.playTimeRange[1]}分`}
