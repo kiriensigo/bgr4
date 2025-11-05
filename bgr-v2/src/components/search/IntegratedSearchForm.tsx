@@ -211,10 +211,10 @@ export default function IntegratedSearchForm({
           >
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                5段階指標で絞り込む
+                レビューの数値で絞り込む
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                レビューで集計した各指標のレンジを設定できます。
+                レビュー集計の数値で検索できます。
               </Typography>
             </Box>
             {hasScoreFilters && (
