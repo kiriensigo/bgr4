@@ -218,7 +218,7 @@ export default function IntegratedSearchForm({
               </Typography>
             </Box>
             {hasScoreFilters && (
-              <Badge color="secondary" badgeContent="絞り込み中" sx={{ alignSelf: 'center' }} />
+              <Badge color="secondary" badgeContent="絞" sx={{ alignSelf: 'center' }} />
             )}
           </AccordionSummary>
           <AccordionDetails>
