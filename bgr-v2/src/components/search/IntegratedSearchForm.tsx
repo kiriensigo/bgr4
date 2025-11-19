@@ -211,14 +211,14 @@ export default function IntegratedSearchForm({
           >
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                レビューの数値で絞り込む
+                レビューの数値で絞り込む。
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 レビュー集計の数値で検索できます。
               </Typography>
             </Box>
             {hasScoreFilters && (
-              <Badge color="secondary" badgeContent="絞" sx={{ alignSelf: 'center' }} />
+              <Badge color="secondary" badgeContent="●" sx={{ alignSelf: 'center' }} />
             )}
           </AccordionSummary>
           <AccordionDetails>
