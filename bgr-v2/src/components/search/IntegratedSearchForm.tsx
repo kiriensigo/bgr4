@@ -206,20 +206,37 @@ export default function IntegratedSearchForm({
               },
               '& .MuiAccordionSummary-content': {
                 marginLeft: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
               },
             }}
           >
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                レビューの数値で絞り込む。
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                レビュー集計の数値で検索できます。
-              </Typography>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                  レビューの数値で絞り込む。
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  レビュー集計の数値で検索できます。
+                </Typography>
+              </Box>
+              {hasScoreFilters && (
+                <Badge
+                  color="secondary"
+                  variant="dot"
+                  sx={{
+                    alignSelf: 'flex-start',
+                    mt: 0.5,
+                    '& .MuiBadge-dot': {
+                      width: '8px',
+                      height: '8px',
+                    },
+                  }}
+                />
+              )}
             </Box>
-            {hasScoreFilters && (
-              <Badge color="secondary" badgeContent="●" sx={{ alignSelf: 'center' }} />
-            )}
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -402,19 +419,32 @@ export default function IntegratedSearchForm({
               },
               '& .MuiAccordionSummary-content': {
                 marginLeft: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
               },
             }}
           >
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              おすすめプレイ人数
-            </Typography>
-            {recommendedCount > 0 && (
-              <Badge
-                color="secondary"
-                badgeContent={`${recommendedCount}件選択中`}
-                sx={{ ml: 2, alignSelf: 'center' }}
-              />
-            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                おすすめプレイ人数
+              </Typography>
+              {recommendedCount > 0 && (
+                <Badge
+                  color="secondary"
+                  badgeContent={recommendedCount}
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      minWidth: '20px',
+                      height: '20px',
+                    },
+                  }}
+                />
+              )}
+            </Box>
           </AccordionSummary>
           <AccordionDetails>
             <ToggleButtonGroup
@@ -465,19 +495,32 @@ export default function IntegratedSearchForm({
               },
               '& .MuiAccordionSummary-content': {
                 marginLeft: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
               },
             }}
           >
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              対応プレイ人数
-            </Typography>
-            {gameCount > 0 && (
-              <Badge
-                color="secondary"
-                badgeContent={`${gameCount}件選択中`}
-                sx={{ ml: 2, alignSelf: 'center' }}
-              />
-            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                対応プレイ人数
+              </Typography>
+              {gameCount > 0 && (
+                <Badge
+                  color="secondary"
+                  badgeContent={gameCount}
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      minWidth: '20px',
+                      height: '20px',
+                    },
+                  }}
+                />
+              )}
+            </Box>
           </AccordionSummary>
           <AccordionDetails>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -529,24 +572,39 @@ export default function IntegratedSearchForm({
               },
               '& .MuiAccordionSummary-content': {
                 marginLeft: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
               },
             }}
           >
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                メカニクス
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                ゲーム詳細ページの統計ラベルと同じ名称で指定できます。
-              </Typography>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                  メカニクス
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  ゲーム詳細ページの統計ラベルと同じ名称で指定できます。
+                </Typography>
+              </Box>
+              {mechanicsCount > 0 && (
+                <Badge
+                  color="secondary"
+                  badgeContent={mechanicsCount}
+                  sx={{
+                    alignSelf: 'flex-start',
+                    mt: 0.5,
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      minWidth: '20px',
+                      height: '20px',
+                    },
+                  }}
+                />
+              )}
             </Box>
-            {mechanicsCount > 0 && (
-              <Badge
-                color="secondary"
-                badgeContent={`${mechanicsCount}件選択中`}
-                sx={{ ml: 2, alignSelf: 'center' }}
-              />
-            )}
           </AccordionSummary>
           <AccordionDetails>
             <ToggleButtonGroup
@@ -592,24 +650,39 @@ export default function IntegratedSearchForm({
               },
               '& .MuiAccordionSummary-content': {
                 marginLeft: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
               },
             }}
           >
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                カテゴリー
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                レビューで人気のカテゴリーから AND 条件で絞り込めます。
-              </Typography>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                  カテゴリー
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  レビューで人気のカテゴリーから AND 条件で絞り込めます。
+                </Typography>
+              </Box>
+              {categoriesCount > 0 && (
+                <Badge
+                  color="secondary"
+                  badgeContent={categoriesCount}
+                  sx={{
+                    alignSelf: 'flex-start',
+                    mt: 0.5,
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      minWidth: '20px',
+                      height: '20px',
+                    },
+                  }}
+                />
+              )}
             </Box>
-            {categoriesCount > 0 && (
-              <Badge
-                color="secondary"
-                badgeContent={`${categoriesCount}件選択中`}
-                sx={{ ml: 2, alignSelf: 'center' }}
-              />
-            )}
           </AccordionSummary>
           <AccordionDetails>
             <ToggleButtonGroup
