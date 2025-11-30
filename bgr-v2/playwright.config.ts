@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test'
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './e2e',
   // すべてのテストを並列実行
   fullyParallel: true,
   // CI環境での失敗時は再試行しない
@@ -62,10 +62,10 @@ export default defineConfig({
   ],
 
   // 開発サーバー設定（既存サーバー使用のため無効化）
-  // webServer: {
-  //   command: 'npm run dev',
-  //   url: 'http://localhost:3001',
-  //   reuseExistingServer: !process.env['CI'],
-  //   timeout: 120 * 1000,
-  // },
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3001',
+    reuseExistingServer: !process.env['CI'],
+    timeout: 120 * 1000,
+  },
 })
