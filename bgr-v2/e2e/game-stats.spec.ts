@@ -76,10 +76,10 @@ test.describe('Game Statistics Display', () => {
 
   test('統計データの詳細情報が表示される', async ({ page }) => {
     // 統計データの読み込みを待機
-    await page.waitForTimeout(2000)
-    
+    await page.getByText(/レビュー\s*\d+票/).waitFor({ state: 'visible' });
+
     // レビュー票数の表示確認
-    await expect(page.locator('text=/レビュー.*\\d+票/')).toBeVisible()
+    await expect(page.getByText(/レビュー\s*\d+票/)).toBeVisible();
     
     // BGG票数の表示確認
     await expect(page.locator('text=/BGG.*\\d+票/')).toBeVisible()
