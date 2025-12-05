@@ -5,8 +5,17 @@ import { WebsiteJsonLd } from '@/components/seo/JsonLd'
 
 export const metadata: Metadata = {
   title: 'BGR - Board Game Review | ボードゲームレビューサイト',
-  description: 'ボードゲームのレビューと評価を集めるコミュニティサイト。詳細な評価指標やBGG連携で、あなたに合うボードゲームが見つかります。',
-  keywords: ['ボードゲーム', 'レビュー', 'BGG', 'Board Game Geek', 'アナログゲーム', 'テーブルゲーム', 'ボドゲ'],
+  description:
+    'ボードゲームのレビューと評価を集めるコミュニティ。詳細な評価指標やBGG連携で、あなたに合うボードゲームが見つかります。',
+  keywords: [
+    'ボードゲーム',
+    'レビュー',
+    'BGG',
+    'Board Game Geek',
+    'アナログゲーム',
+    'テーブルゲーム',
+    'ボドゲ',
+  ],
   openGraph: {
     title: 'BGR - Board Game Review',
     description: 'ボードゲームのレビューと評価を集めるコミュニティサイト',
@@ -38,7 +47,7 @@ function HomePageSkeleton() {
           </div>
         </div>
       </div>
-      
+
       {/* Content Skeleton */}
       <div className="container mx-auto px-4 py-16">
         <div className="space-y-16">
@@ -77,10 +86,10 @@ function URLCleaner() {
               window.location.href = '/login?error=oauth_failed';
             }
           })();
-        `
+        `,
       }}
     />
-  );
+  )
 }
 
 export default function HomePage() {
@@ -94,4 +103,3 @@ export default function HomePage() {
     </>
   )
 }
-

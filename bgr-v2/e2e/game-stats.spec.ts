@@ -17,6 +17,7 @@ test.describe('Game Statistics Display', () => {
   test('メカニクス統計データが表示される', async ({ page }) => {
     // メカニクスタブがデフォルトで選択されていることを確認
     const mechanicsTab = page.locator('[role="tab"]:has-text("メカニクス")')
+    await mechanicsTab.waitFor({ state: 'visible' }); // 要素が表示されるまで待機
     await expect(mechanicsTab).toHaveAttribute('data-state', 'active')
     
     // 統計データの読み込みを待機
