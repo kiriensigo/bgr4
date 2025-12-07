@@ -6,7 +6,7 @@ import { WebsiteJsonLd } from '@/components/seo/JsonLd'
 export const metadata: Metadata = {
   title: 'BGR - Board Game Review | ボードゲームレビューサイト',
   description:
-    'ボードゲームのレビューと評価を集めるコミュニティ。詳細な評価指標やBGG連携で、あなたに合うボードゲームが見つかります。',
+    'ボードゲームのレビューと評価を集めるコミュニティ。あなたに合うボードゲームが見つかります。',
   keywords: [
     'ボードゲーム',
     'レビュー',
