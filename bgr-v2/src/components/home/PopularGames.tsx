@@ -35,7 +35,7 @@ export function PopularGames({ games }: PopularGamesProps) {
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-4">人気ゲーム</h2>
             <p className="text-muted-foreground">
-              レビューされたゲームがまだありません
+              レビューされたゲームがまだありません.
             </p>
           </div>
         </div>
